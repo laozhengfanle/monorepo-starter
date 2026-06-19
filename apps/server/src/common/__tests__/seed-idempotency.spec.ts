@@ -28,7 +28,7 @@ describe('prisma/seed.ts — 幂等性结构', () => {
     describe('admin_role 种子', () => {
         it('使用 findFirst 守卫 + update/create 模式', () => {
             // 检查 findFirst + update/create 同时出现
-            const roleSection = seed.match(/BUSINESS_ROLES[\s\S]*?roleMap\.set\([\s\S]*?console\.log/);
+            const roleSection = seed.match(/BUSINESS_ROLES[\s\S]*?roleMap\.set\([\s\S]*?logger\.info/);
             expect(roleSection).toBeTruthy();
             const text = roleSection![0];
             expect(text).toMatch(/findFirst/);
@@ -70,7 +70,7 @@ describe('prisma/seed.ts — 幂等性结构', () => {
 
     describe('system_config 种子', () => {
         it('用 upsert by key', () => {
-            const cfgSection = seed.match(/systemConfigs[\s\S]*?console\.log\(\`\u2705 系统配置/);
+            const cfgSection = seed.match(/systemConfigs[\s\S]*?logger\.info\(\`\u2705 系统配置/);
             expect(cfgSection).toBeTruthy();
             expect(cfgSection![0]).toMatch(/upsert\(/);
             expect(cfgSection![0]).toMatch(/where:\s*\{\s*key:/);

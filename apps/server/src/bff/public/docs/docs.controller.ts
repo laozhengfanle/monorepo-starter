@@ -1,6 +1,7 @@
 import { Controller, Get, Param, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Public } from '../../../common/decorators/public.decorator.js';
 import { readdir, readFile } from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -53,7 +54,7 @@ async function scanDocsDir(
     group: string,
 ): Promise<{ name: string; slug: string; group: string }[]> {
     const result: { name: string; slug: string; group: string }[] = [];
-    let entries: string[];
+    let entries: Dirent[];
     try {
         entries = await readdir(dir, { withFileTypes: true });
     } catch {
@@ -134,7 +135,7 @@ export class DocsController {
      * @throws BadRequestException — slug 包含非法字符（路径穿越防护）
      * @throws NotFoundException — 文件不存在
      */
-    @Get(':slug(.*)')
+    @Get('*slug')
     async content(@Param('slug') slug: string): Promise<{ slug: string; content: string }> {
         // slug 可能包含 "/"（子目录），逐段校验
         const segments = slug.split('/');

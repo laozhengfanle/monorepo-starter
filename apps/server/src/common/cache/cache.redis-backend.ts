@@ -240,7 +240,12 @@ export class RedisCacheBackend implements CacheBackend {
 
     /** 关闭 Redis 连接 */
     async quit(): Promise<void> {
-        await this.redis.quit();
+        try {
+            await this.redis.quit();
+        } catch (err) {
+            // 关闭时 Redis 可能从未连接成功（socket 不可写），忽略错误
+            this.logger.warn(`Redis quit 失败（忽略，进程已在关闭中）: ${(err as Error).message}`);
+        }
     }
 
     /**

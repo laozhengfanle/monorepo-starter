@@ -54,18 +54,18 @@ describe.skipIf(SKIP)('优雅关闭 (SIGTERM)', () => {
         const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
         app = moduleRef.createNestApplication();
 
+        // 启用关闭钩子（必须在 app.init() 之前调用才会注册 SIGTERM/SIGINT 监听器）
+        app.enableShutdownHooks();
+
         await app.init();
 
-        // 保存原始 listeners（在 enableShutdownHooks 之后保存）
-        //   - enableShutdownHooks 内部会向 process 注册 SIGTERM/SIGINT 监听器
+        // 保存原始 listeners（在 init 之后保存，此时 hooks 已注册）
+        //   - enableShutdownHooks 在 init 期间向 process 注册 SIGTERM/SIGINT 监听器
         //   - 保存"原始"是为了 afterEach 恢复测试隔离（虽然 close() 通常会清理）
         originalListeners = {
             SIGTERM: process.listeners('SIGTERM')[0] as NodeJS.SignalsListener,
             SIGINT: process.listeners('SIGINT')[0] as NodeJS.SignalsListener,
         };
-
-        // 启用关闭钩子（必须调用才会触发 OnModuleDestroy 等）
-        app.enableShutdownHooks();
     }, 60_000);
 
     afterEach(async () => {
