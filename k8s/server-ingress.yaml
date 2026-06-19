@@ -1,0 +1,40 @@
+# Server Ingress
+# - 暴露 /api 与 /graphql 路径到 server-service
+# - 使用 cert-manager 自动签发 TLS 证书
+# - Nginx Ingress Controller 提供
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: server-ingress
+    namespace: monorepo
+    annotations:
+        nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+        nginx.ingress.kubernetes.io/proxy-body-size: '10m'
+        nginx.ingress.kubernetes.io/proxy-read-timeout: '60'
+        nginx.ingress.kubernetes.io/proxy-send-timeout: '60'
+        nginx.ingress.kubernetes.io/rate-limit: '100' # 每秒请求数限流
+        cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+spec:
+    ingressClassName: nginx
+    tls:
+        - hosts:
+              - api.example.com # 替换为实际域名
+          secretName: server-tls
+    rules:
+        - host: api.example.com
+          http:
+              paths:
+                  - path: /api
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: server-service
+                            port:
+                                number: 80
+                  - path: /graphql
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: server-service
+                            port:
+                                number: 80

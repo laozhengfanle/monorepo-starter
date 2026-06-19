@@ -1,0 +1,16 @@
+# Redis PersistentVolumeClaim
+# - 5Gi 起步（生产建议 10Gi+，取决于数据量）
+# - Redis 也支持 AOF 持久化（appendonly yes），数据更安全
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: redis-data
+    namespace: monorepo
+    labels:
+        app: redis
+spec:
+    accessModes:
+        - ReadWriteOnce
+    resources:
+        requests:
+            storage: 5Gi

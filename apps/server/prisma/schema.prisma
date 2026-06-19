@@ -1,0 +1,407 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+// ER 图生成器：从当前 schema 自动生成实体关系图到 docs/erd.svg
+// 安装方式：pnpm add -D prisma-erd-generator @mermaid-js/mermaid-cli
+// 使用方式：pnpm prisma generate
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../../docs/erd.svg"
+  theme    = "default"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// 认证层（4 张表）
+// ============================================================
+
+/// 统一账户表 — 身份容器，不存登录标识和密码
+model Account {
+  id           String    @id @db.Uuid
+  userType     String    @map("user_type") @db.VarChar(10)
+  enabled      Boolean   @default(true)
+  /// Token 版本号（Round 2 Polish 新增）
+  /// - JwtStrategy.validate 校验 payload.tokenVersion === account.tokenVersion
+  /// - 重置密码 / 软删账号 / 主动踢人时 increment(1) → 所有未携带新 version 的 token 全部失效
+  /// - 默认 0，与旧 JWT 签发时的 version=0 匹配，老数据无需迁移
+  tokenVersion Int       @default(0) @map("token_version")
+  lastLoginIp  String?   @map("last_login_ip") @db.VarChar(50)
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy    String?   @map("created_by") @db.Uuid
+  updatedBy    String?   @map("updated_by") @db.Uuid
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  identities       AccountIdentity[]
+  adminProfile     AdminProfile?
+  memberProfile    MemberProfile?
+  adminRoles       AdminAccountRole[]
+  adminMenus       AdminAccountMenu[]
+  memberRoles      MemberAccountRole[]
+  memberMenus      MemberAccountMenu[]
+  uploadFiles      UploadFile[]
+  auditLogs        AuditLog[]
+  tokenRevocations TokenRevocation[]
+
+  @@index([userType])
+  @@map("account")
+}
+
+/// Token 撤销记录（Round 2 Polish 新增）
+/// - 重置密码 / 软删账号时由 TokenBlacklistService 写入
+/// - 持久化的"已撤销 token 清单" → 即使 Redis 缓存丢失，DB 仍有兜底记录
+/// - isRevoked() 先查 Redis 缓存（O(1) 命中），miss 再查此表
+/// - expiresAt 与原 token 过期时间一致，过期后可由 cleanup 任务清理
+model TokenRevocation {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  /// JWT ID（来自 token payload.jti），用于精确匹配单个 token
+  jti       String   @db.VarChar(128)
+  /// 撤销原因：password_reset / password_changed / account_deleted / logout / token_reuse
+  reason    String   @db.VarChar(50)
+  /// 原 token 过期时间，过期后此行可由 cleanup 任务删除
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([jti])
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("token_revocation")
+}
+
+/// 登录标识表 — 一个账户可有多种登录方式
+model AccountIdentity {
+  id           String    @id @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  identityType String    @map("identity_type") @db.VarChar(20)
+  identifier   String    @db.VarChar(255)
+  credential   String?   @db.Text
+  verified     Boolean   @default(false)
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([identityType, identifier])
+  @@index([accountId])
+  @@map("account_identity")
+}
+
+/// 管理员档案 — 只存业务数据
+model AdminProfile {
+  id        String    @id @db.Uuid
+  accountId String    @unique @map("account_id") @db.Uuid
+  nickname  String    @default("") @db.VarChar(50)
+  phone     String    @default("") @db.VarChar(20)
+  email     String    @default("") @db.VarChar(100)
+  avatar    String    @default("") @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@map("admin_profile")
+}
+
+/// C端用户档案 — 只存业务数据
+model MemberProfile {
+  id        String    @id @db.Uuid
+  accountId String    @unique @map("account_id") @db.Uuid
+  phone     String?   @db.VarChar(20)
+  nickname  String    @default("") @db.VarChar(50)
+  avatar    String    @default("") @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@map("member_profile")
+}
+
+// ============================================================
+// 管理端 RBAC（5 张表）
+// ============================================================
+
+/// 管理端角色表
+model AdminRole {
+  id          String   @id @db.Uuid
+  name        String   @db.VarChar(50)
+  /// 角色唯一机器编码（前端业务术语叫「角色编码」）
+  code        String   @unique @db.VarChar(50)
+  description String   @default("") @db.VarChar(255)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy   String?  @map("created_by") @db.Uuid
+  updatedBy   String?  @map("updated_by") @db.Uuid
+
+  accountRoles AdminAccountRole[]
+  roleMenus    AdminRoleMenu[]
+
+  @@map("admin_role")
+}
+
+/// 管理端菜单权限表 — 统一管理目录/页面/按钮
+model AdminMenu {
+  id             String   @id @db.Uuid
+  parentId       String?  @map("parent_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  type           String   @db.VarChar(20)
+  path           String   @default("") @db.VarChar(255)
+  routeName      String   @default("") @map("route_name") @db.VarChar(100)
+  component      String   @default("") @db.VarChar(100)
+  /// 详情页高亮目标菜单 ID（如 /sys/user/detail 高亮 sys/user 菜单），详情页跳转用
+  activeMenuId   String?  @map("active_menu_id") @db.Uuid
+  icon           String   @default("") @db.VarChar(100)
+  permissionCode String   @default("") @map("permission_code") @db.VarChar(100)
+  sort           Int      @default(0)
+  visible        Boolean  @default(true)
+  keepAlive      Boolean  @default(true) @map("keep_alive")
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  roleMenus    AdminRoleMenu[]
+  accountMenus AdminAccountMenu[]
+
+  @@index([parentId])
+  @@index([activeMenuId])
+  @@map("admin_menu")
+}
+
+/// 管理端 账户-角色关联
+model AdminAccountRole {
+  id        String @id @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+  roleId    String @map("role_id") @db.Uuid
+
+  account Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  role    AdminRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, roleId])
+  @@map("admin_account_role")
+}
+
+/// 管理端 角色-菜单关联
+model AdminRoleMenu {
+  id     String @id @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+  menuId String @map("menu_id") @db.Uuid
+
+  role AdminRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  menu AdminMenu @relation(fields: [menuId], references: [id], onDelete: Restrict)
+
+  @@unique([roleId, menuId])
+  @@map("admin_role_menu")
+}
+
+/// 管理端 账户额外菜单权限 — grant 授权 / deny 禁止
+model AdminAccountMenu {
+  id        String @id @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+  menuId    String @map("menu_id") @db.Uuid
+  type      String @default("grant") @db.VarChar(10)
+
+  account Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  menu    AdminMenu @relation(fields: [menuId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, menuId])
+  @@map("admin_account_menu")
+}
+
+// ============================================================
+// C端 RBAC（5 张表）— 与管理端镜像结构
+// ============================================================
+
+/// C端角色/等级表
+model MemberRole {
+  id          String   @id @db.Uuid
+  name        String   @db.VarChar(50)
+  code        String   @unique @db.VarChar(50)
+  description String   @default("") @db.VarChar(255)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy   String?  @map("created_by") @db.Uuid
+  updatedBy   String?  @map("updated_by") @db.Uuid
+
+  accountRoles MemberAccountRole[]
+  roleMenus    MemberRoleMenu[]
+
+  @@map("member_role")
+}
+
+/// C端菜单权限表
+model MemberMenu {
+  id             String   @id @db.Uuid
+  parentId       String?  @map("parent_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  type           String   @db.VarChar(20)
+  path           String   @default("") @db.VarChar(255)
+  routeName      String   @default("") @map("route_name") @db.VarChar(100)
+  icon           String   @default("") @db.VarChar(100)
+  permissionCode String   @default("") @map("permission_code") @db.VarChar(100)
+  sort           Int      @default(0)
+  visible        Boolean  @default(true)
+  keepAlive      Boolean  @default(true) @map("keep_alive")
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  roleMenus    MemberRoleMenu[]
+  accountMenus MemberAccountMenu[]
+
+  @@index([parentId])
+  @@map("member_menu")
+}
+
+/// C端 账户-等级关联
+model MemberAccountRole {
+  id        String @id @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+  roleId    String @map("role_id") @db.Uuid
+
+  account Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  role    MemberRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, roleId])
+  @@map("member_account_role")
+}
+
+/// C端 等级-菜单关联
+model MemberRoleMenu {
+  id     String @id @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+  menuId String @map("menu_id") @db.Uuid
+
+  role MemberRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  menu MemberMenu @relation(fields: [menuId], references: [id], onDelete: Restrict)
+
+  @@unique([roleId, menuId])
+  @@map("member_role_menu")
+}
+
+/// C端 账户额外菜单权限
+model MemberAccountMenu {
+  id        String @id @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+  menuId    String @map("menu_id") @db.Uuid
+  type      String @default("grant") @db.VarChar(10)
+
+  account Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  menu    MemberMenu @relation(fields: [menuId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, menuId])
+  @@map("member_account_menu")
+}
+
+// ============================================================
+// 审计日志（1 张表）
+// ============================================================
+
+/// 安全审计日志表
+model AuditLog {
+  id           String   @id @db.Uuid
+  accountId    String?  @map("account_id") @db.Uuid
+  action       String   @db.VarChar(50)
+  resourceType String?  @map("resource_type") @db.VarChar(50)
+  resourceId   String?  @map("resource_id") @db.Uuid
+  detail       Json?
+  ip           String?  @db.VarChar(50)
+  userAgent    String?  @map("user_agent") @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  account Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ============================================================
+// 文件管理（1 张表）
+// ============================================================
+
+/// 文件元数据表
+model UploadFile {
+  id           String    @id @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  originalName String    @map("original_name") @db.VarChar(255)
+  storedName   String    @map("stored_name") @db.VarChar(255)
+  mimeType     String    @map("mime_type") @db.VarChar(100)
+  size         BigInt
+  storage      String    @default("local") @db.VarChar(20)
+  folder       String    @default("files") @db.VarChar(100)
+  url          String    @db.VarChar(500)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId])
+  @@index([createdAt])
+  @@index([mimeType])
+  @@index([deletedAt])
+  @@map("upload_file")
+}
+
+// ============================================================
+// 系统配置（2 张表）
+// ============================================================
+
+/// 验证码审计表 — 与 Redis 验证码互补，用于审计回溯
+model VerificationCode {
+  id         String    @id @db.Uuid
+  identifier String    @db.VarChar(100) // 接收标识（手机号 E.164 / 邮箱）
+  code       String    @default("******") @db.VarChar(10) // 审计表不存明文，固定存 ******
+  purpose    String    @db.VarChar(50) // 用途：login / register / reset_password / bind_phone / verify_email
+  channel    String    @default("sms") @db.VarChar(20) // 渠道：sms / email
+  ip         String?   @db.VarChar(50) // 客户端 IP，用于防刷统计
+  status     String    @default("sent") @db.VarChar(20) // 状态：sent / verified / expired / failed
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz // 验证码过期时间
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz // 验证通过时间
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([identifier])
+  @@index([purpose])
+  @@index([createdAt])
+  @@index([ip])
+  @@index([status])
+  @@map("verification_code")
+}
+
+/// 系统配置表 — 管理后台动态配置项
+model SystemConfig {
+  id        String    @id @db.Uuid
+  key       String    @unique @db.VarChar(100)
+  value     Json
+  remark    String?   @db.VarChar(255)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  // 软删除时间戳：删除时由 service 设置，列表查询时过滤掉
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("system_config")
+}

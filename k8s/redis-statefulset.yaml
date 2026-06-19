@@ -1,0 +1,67 @@
+# Redis StatefulSet
+# - 单实例 StatefulSet（生产建议用云托管 ElastiCache，通过 ExternalName Service 接入）
+# - 启用 AOF 持久化（appendonly yes）+ LRU 淘汰策略（maxmemory 256mb）
+# - 资源限制：256Mi memory / 500m cpu
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: redis
+    namespace: monorepo
+    labels:
+        app: redis
+spec:
+    serviceName: redis-service
+    replicas: 1
+    selector:
+        matchLabels:
+            app: redis
+    template:
+        metadata:
+            labels:
+                app: redis
+        spec:
+            securityContext:
+                runAsNonRoot: true
+                runAsUser: 999 # redis 镜像内置用户
+                runAsGroup: 999
+                fsGroup: 999
+            containers:
+                - name: redis
+                  image: redis:7-alpine
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                      - containerPort: 6379
+                        name: redis
+                  command:
+                      - redis-server
+                      - '--appendonly'
+                      - 'yes'
+                      - '--maxmemory'
+                      - '256mb'
+                      - '--maxmemory-policy'
+                      - 'allkeys-lru'
+                  volumeMounts:
+                      - name: redis-data
+                        mountPath: /data
+                  resources:
+                      requests:
+                          memory: 128Mi
+                          cpu: 100m
+                      limits:
+                          memory: 512Mi
+                          cpu: 500m
+                  livenessProbe:
+                      exec:
+                          command: ['redis-cli', 'ping']
+                      initialDelaySeconds: 30
+                      periodSeconds: 30
+                      timeoutSeconds: 5
+                      failureThreshold: 3
+                  readinessProbe:
+                      exec:
+                          command: ['redis-cli', 'ping']
+                      initialDelaySeconds: 5
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                      failureThreshold: 3
+            terminationGracePeriodSeconds: 30

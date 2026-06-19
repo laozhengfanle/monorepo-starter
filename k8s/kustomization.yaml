@@ -1,0 +1,82 @@
+# Kustomization：一键部署 MonoKit 全栈到 K8s
+# 用法：kubectl apply -k k8s/
+# 依赖：
+#   - cert-manager + letsencrypt-prod ClusterIssuer（TLS 自动签发）
+#   - Nginx Ingress Controller（ingressClassName: nginx）
+#   - metrics-server（HPA 需要）
+#   - Sealed Secrets 或 External Secrets（生产 secrets 注入）
+#
+# 部署顺序建议：
+#   1. kubectl apply -f k8s/namespace.yaml
+#   2. kubectl apply -f k8s/postgres-pvc.yaml
+#   3. kubectl apply -f k8s/postgres-statefulset.yaml
+#   4. kubectl apply -f k8s/postgres-service.yaml
+#   5. kubectl apply -f k8s/redis-pvc.yaml
+#   6. kubectl apply -f k8s/redis-statefulset.yaml
+#   7. kubectl apply -f k8s/redis-service.yaml
+#   8. kubectl apply -f k8s/server-deployment.yaml
+#   9. kubectl apply -f k8s/server-service.yaml
+#   10. kubectl apply -f k8s/admin-deployment.yaml
+#   11. kubectl apply -f k8s/admin-service.yaml
+#   12. kubectl apply -f k8s/web-deployment.yaml
+#   13. kubectl apply -f k8s/web-service.yaml
+#   14. kubectl apply -f k8s/server-ingress.yaml
+#   15. kubectl apply -f k8s/admin-ingress.yaml
+#   16. kubectl apply -f k8s/web-ingress.yaml
+# 或者直接：kubectl apply -k k8s/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 资源加载顺序：kustomize 会按数组顺序 apply
+resources:
+    # 1. 命名空间
+    - namespace.yaml
+
+    # 2. PostgreSQL 基础设施
+    - postgres-pvc.yaml
+    - postgres-statefulset.yaml
+    - postgres-service.yaml
+
+    # 3. Redis 基础设施
+    - redis-pvc.yaml
+    - redis-statefulset.yaml
+    - redis-service.yaml
+
+    # 4. Server（后端 API + HPA）
+    - server-deployment.yaml
+    - server-service.yaml
+    - server-ingress.yaml
+
+    # 5. Admin（管理后台 SPA）
+    - admin-deployment.yaml
+    - admin-service.yaml
+    - admin-ingress.yaml
+
+    # 6. Web（C 端 SPA）
+    - web-deployment.yaml
+    - web-service.yaml
+    - web-ingress.yaml
+
+# 公共标签：所有资源都会带上这些 label
+commonLabels:
+    app.kubernetes.io/part-of: monorepo
+    app.kubernetes.io/managed-by: kustomize
+
+# 公共注解：所有资源都会带上
+commonAnnotations:
+    monorepo.io/docs: https://github.com/your-org/monokit/blob/main/k8s/README.md
+
+# 镜像 tag 占位（生产替换为实际版本）
+images:
+    # 全部镜像使用同一个环境变量 IMAGE_TAG 注入 tag
+    # 用法：kustomize edit set image ... 或 envsubst
+    # 此处留空，由 CI 替换或运维手工 edit
+    - name: server
+      newName: <registry>/monorepo-server
+      newTag: latest # 替换为实际 tag
+    - name: admin
+      newName: <registry>/monorepo-admin
+      newTag: latest
+    - name: web
+      newName: <registry>/monorepo-web
+      newTag: latest

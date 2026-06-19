@@ -1,0 +1,69 @@
+# Docker 构建排除清单
+# 镜像内不需要这些文件：减少 build context 大小 + 防止 .env / 密钥泄漏
+
+# ── 依赖（容器内 pnpm install 重新装）──
+node_modules
+**/node_modules
+.pnpm-store
+
+# ── 构建产物（容器内 pnpm build 重新生成）──
+dist
+**/dist
+*.tsbuildinfo
+.swc
+
+# ── 敏感文件 ──
+.env
+.env.*
+!.env.example
+.envrc
+
+# ── 测试 / 调试 ──
+coverage
+**/coverage
+.vitest-cache
+**/.vitest-cache
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ── IDE / 编辑器 ──
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# ── VCS ──
+.git
+.gitignore
+.gitattributes
+
+# ── 临时文件（CLAUDE.md 规定：所有临时文件放 .tmp/，不入仓）──
+.tmp
+**/.tmp
+
+# ── 文档（生产镜像不需要 docs 资源）──
+docs
+**/docs
+# 例外：prisma schema 文件夹要保留（prisma generate 需要 schema.prisma）
+# 但 prisma/docs 之类的子文档可排除
+prisma/docs
+
+# ── 端到端测试 ──
+test-results
+playwright-report
+playwright/.cache
+screenshots
+**/screenshots
+
+# ── Dockerfile 自身（嵌套构建不需要）──
+Dockerfile
+Dockerfile.*
+**/Dockerfile
+**/Dockerfile.*
+
+# ── 不必要的根文件 ──
+README.md
+CHANGELOG.md
+LICENSE
+.husky

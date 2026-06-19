@@ -1,0 +1,16 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "removeComments": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true,
+        "outDir": "./dist",
+        "types": ["node"],
+        "incremental": false,
+        "strictNullChecks": true,
+        "noImplicitAny": false
+    },
+    "include": ["src/**/*", "prisma/generated/**/*"],
+    "exclude": ["node_modules", "dist", "src/**/__tests__"]
+}

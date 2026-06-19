@@ -1,0 +1,44 @@
+# NetworkPolicy — 数据库流量限制
+# 仅允许 server Pod 访问 PostgreSQL 和 Redis，阻止其他 Pod 直连数据库
+# 前置条件：集群 CNI 插件支持 NetworkPolicy（Calico / Cilium / Weave 等）
+# 如果使用 flannel 等不支持 NetworkPolicy 的 CNI，此配置不会生效（不报错但也不拦截）
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-deny-all
+  namespace: monorepo
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: server
+      ports:
+        - port: 5432
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-deny-all
+  namespace: monorepo
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: server
+      ports:
+        - port: 6379
+          protocol: TCP

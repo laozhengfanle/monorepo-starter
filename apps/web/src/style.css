@@ -1,0 +1,23 @@
+/**
+ * 全局样式入口 — C端（会员端）
+ *
+ * Tailwind CSS v4 的新写法：
+ *   - @import "tailwindcss" 代替旧版的 @tailwind base/components/utilities 三段式
+ *   - 自动按需扫描 .vue / .ts / .css 文件中用到的 utility
+ *
+ * 全局重置：
+ *   - html / body / #app 高度填满
+ *   - 关闭 body 默认 margin
+ */
+@import 'tailwindcss';
+
+/* 全局基础样式：让根元素撑满视口，避免 Tailwind 重置后高度塌陷 */
+html,
+body,
+#app {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+}

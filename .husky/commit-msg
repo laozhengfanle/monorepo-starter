@@ -1,0 +1,20 @@
+# ============================================
+# commit-msg Git Hook
+# ============================================
+# 触发时机：git commit 时（commit message 写入后）
+# 职责：用 commitlint 校验 commit message 格式
+#
+# 提交信息格式（约定式提交）：
+#   <type>(<scope>): <subject>
+#   <空行>
+#   <body>
+#   <空行>
+#   <footer>
+#
+# 完整规则见：commitlint.config.cjs
+# 文档：https://www.conventionalcommits.org/zh-hans/
+# ============================================
+
+# 使用 npx --no-install 避免每次 commit 都去 npm 仓库查包
+# 依赖已在 devDependencies 中：@commitlint/cli + @commitlint/config-conventional
+npx --no-install commitlint --edit "$1"

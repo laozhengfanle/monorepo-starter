@@ -1,0 +1,83 @@
+# PostgreSQL StatefulSet
+# - 单实例 StatefulSet（生产建议用云托管 RDS，通过 ExternalName Service 接入）
+# - 数据目录 /var/lib/postgresql/data 挂在预创建的 PVC postgres-data（见 postgres-pvc.yaml）
+# - 环境变量通过 envFrom 引用 Secret（生产用 sealed-secrets / external-secrets 注入）
+#   此处留占位值 '<from-vault>' 提醒运维替换
+# - 资源限制：1Gi memory / 1000m cpu（生产建议 4Gi+ / 2000m+）
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: postgres
+    namespace: monorepo
+    labels:
+        app: postgres
+spec:
+    serviceName: postgres-service
+    replicas: 1
+    selector:
+        matchLabels:
+            app: postgres
+    template:
+        metadata:
+            labels:
+                app: postgres
+        spec:
+            # Pod 安全上下文（非 root 用户运行）
+            securityContext:
+                runAsNonRoot: true
+                runAsUser: 999 # postgres 镜像内置用户
+                runAsGroup: 999
+                fsGroup: 999
+            containers:
+                - name: postgres
+                  image: postgres:16-alpine
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                      - containerPort: 5432
+                        name: postgres
+                  env:
+                      - name: POSTGRES_USER
+                        valueFrom:
+                            secretKeyRef:
+                                # 占位 Secret：生产用 sealed-secrets 替换
+                                name: postgres-credentials
+                                key: username
+                      - name: POSTGRES_PASSWORD
+                        valueFrom:
+                            secretKeyRef:
+                                name: postgres-credentials
+                                key: password
+                      - name: POSTGRES_DB
+                        value: mono_prod
+                      # 性能调优（与生产 RDS 默认参数对齐）
+                      - name: POSTGRES_INITDB_ARGS
+                        value: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+                  volumeMounts:
+                      - name: postgres-data
+                        mountPath: /var/lib/postgresql/data
+                  resources:
+                      requests:
+                          memory: 256Mi
+                          cpu: 250m
+                      limits:
+                          memory: 2Gi
+                          cpu: '2'
+                  # 探针：pg_isready 验证 PG 已就绪接收连接
+                  livenessProbe:
+                      exec:
+                          command: ['pg_isready', '-U', '$(POSTGRES_USER)']
+                      initialDelaySeconds: 30
+                      periodSeconds: 30
+                      timeoutSeconds: 5
+                      failureThreshold: 3
+                  readinessProbe:
+                      exec:
+                          command: ['pg_isready', '-U', '$(POSTGRES_USER)']
+                      initialDelaySeconds: 5
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                      failureThreshold: 3
+            # 优雅关闭宽限期（让 PG 完成 checkpoint 再退出）
+            terminationGracePeriodSeconds: 30
+    # 不使用 volumeClaimTemplates（PVC 已由 postgres-pvc.yaml 预创建）
+    # 这样运维可独立管理存储容量，无需动 StatefulSet

@@ -1,0 +1,20 @@
+# PostgreSQL Service
+# - ClusterIP 类型：仅 K8s 集群内部访问（server pod 通过 DNS 名 postgres-service 访问）
+# - 端口 5432（PG 默认端口）
+# - 通过 selector 把流量转到 app=postgres 的 Pod
+apiVersion: v1
+kind: Service
+metadata:
+    name: postgres-service
+    namespace: monorepo
+    labels:
+        app: postgres
+spec:
+    type: ClusterIP
+    ports:
+        - port: 5432
+          targetPort: 5432
+          protocol: TCP
+          name: postgres
+    selector:
+        app: postgres

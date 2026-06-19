@@ -1,0 +1,47 @@
+{
+    "name": "monorepo-starter",
+    "version": "1.2.0",
+    "description": "MonoKit — 开源企业级全栈基座（NestJS 11 + Vue 3 + Prisma 7 + GraphQL + RBAC）",
+    "private": true,
+    "scripts": {
+        "test": "pnpm -r test",
+        "dev": "pnpm dev:web & pnpm dev:admin & pnpm dev:server & wait",
+        "predev:server": "pnpm -F @packages/shared build",
+        "dev:web": "lsof -ti:5174 | xargs kill -9 2>/dev/null || true && pnpm -F @apps/web dev",
+        "dev:admin": "lsof -ti:5173 | xargs kill -9 2>/dev/null || true && pnpm -F @apps/admin dev",
+        "dev:server": "PORT=$(grep '^PORT=' apps/server/.env | cut -d= -f2) && PORT=${PORT:-3000} && lsof -ti:$PORT | xargs kill -9 2>/dev/null || true && pnpm -F @apps/server start:dev",
+        "prepare": "husky",
+        "format": "prettier --write .",
+        "lint": "pnpm -r lint",
+        "typecheck": "pnpm -r typecheck",
+        "build": "pnpm -r build",
+        "env:check": "node scripts/env-check.mjs",
+        "db:studio": "cd apps/server && pnpm exec prisma studio --browser none",
+        "db:migrate": "cd apps/server && pnpm exec prisma migrate dev",
+        "db:generate": "cd apps/server && pnpm exec prisma generate",
+        "db:format": "cd apps/server && pnpm exec prisma format",
+        "db:format:check": "cd apps/server && pnpm exec prisma format --check",
+        "db:check": "cd apps/server && pnpm run migration:check"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "packageManager": "pnpm@11.4.0",
+    "type": "module",
+    "lint-staged": {
+        "*.{ts,vue,css,json}": "pnpm exec prettier --write",
+        "*.{ts,vue}": "pnpm exec eslint --fix"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^21.0.2",
+        "@commitlint/config-conventional": "^21.0.2",
+        "@packages/config": "workspace:*",
+        "@playwright/test": "^1.60.0",
+        "eslint": "^10.4.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^17.0.5",
+        "prettier": "^3.8.3",
+        "tsx": "^4.22.4",
+        "typedoc": "^0.28.19"
+    }
+}

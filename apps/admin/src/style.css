@@ -1,0 +1,494 @@
+@import 'tailwindcss';
+/* 让 Tailwind dark: 变体跟随 <html> 上的 .dark class，而非系统偏好 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 
+Breakpoint	        Class infix	    Dimensions
+Extra small	        None	        <576px
+Small	            sm	            ≥576px
+Medium	            md	            ≥768px
+Large	            lg	            ≥992px
+Extra large	        xl	            ≥1200px
+Extra extra large	xxl	            ≥1400px 
+*/
+
+html,
+body,
+#app {
+    height: 100%;
+}
+
+/* overscroll 漏出区域颜色跟随 Naive UI header 背景 */
+html {
+    background-color: #fff;
+}
+html.dark {
+    background-color: rgb(24, 24, 28);
+}
+
+:root {
+    --gap: 20px;
+}
+
+/* ===== 色弱模式 =====
+   在 <html> 上添加 .color-blind 类后生效。
+   优先使用 SVG 滤镜（基于 VBM LMS daltonization 模型），
+   不支持 SVG 滤镜的浏览器退化为 contrast + saturate 兜底。 */
+html.color-blind {
+    filter: url(#color-blind-filter);
+}
+@supports not (filter: url(#color-blind-filter)) {
+    html.color-blind {
+        filter: contrast(1.15) saturate(1.25);
+    }
+}
+
+/* ===== Chrome 自动填充样式覆盖 =====
+   Chrome 自动填充会用 -webkit-box-shadow 覆盖 input/textarea 背景色，
+   暗色模式下透出亮色底色。用实色硬编码覆盖，与 Naive UI 主题保持一致。 */
+.n-input__input-el:-webkit-autofill,
+.n-input__input-el:-webkit-autofill:hover,
+.n-input__input-el:-webkit-autofill:focus,
+.n-input__input-el:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #fff inset !important;
+    -webkit-text-fill-color: rgb(51, 54, 57) !important;
+    caret-color: rgb(51, 54, 57);
+}
+
+html.dark .n-input__input-el:-webkit-autofill,
+html.dark .n-input__input-el:-webkit-autofill:hover,
+html.dark .n-input__input-el:-webkit-autofill:focus,
+html.dark .n-input__input-el:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgb(47, 47, 51) inset !important;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.82) !important;
+    caret-color: rgba(255, 255, 255, 0.82);
+}
+
+/* ========================================
+   页面切换动画 — 10 种动画类型
+   mode="out-in" 与 keep-alive 冲突 → 动态路由空白屏。
+   改用同步模式 + Grid 重叠层，进出组件在同一单元格中过渡。
+   ======================================== */
+
+/* ---- Grid 重叠层：消除进出两帧垂直堆叠 ---- */
+.page-transition-wrapper {
+    display: grid;
+    flex: 1;
+}
+.page-transition-wrapper > * {
+    grid-area: 1 / 1;
+}
+
+/* ---- fade：淡入淡出 ---- */
+.page-fade-enter-active,
+.page-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.page-fade-enter-from,
+.page-fade-leave-to {
+    opacity: 0;
+}
+
+/* ---- pop：弹出缩放 ---- */
+.page-pop-enter-active,
+.page-pop-leave-active {
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+.page-pop-enter-from,
+.page-pop-leave-to {
+    opacity: 0;
+    transform: scale(0.85);
+}
+
+/* ---- slide-left：从左侧滑入，向右侧滑出 ---- */
+.page-slide-left-enter-active,
+.page-slide-left-leave-active {
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+.page-slide-left-enter-from {
+    transform: translateX(-40px);
+    opacity: 0;
+}
+.page-slide-left-leave-to {
+    transform: translateX(40px);
+    opacity: 0;
+}
+
+/* ---- slide-right：从右侧滑入，向左侧滑出 ---- */
+.page-slide-right-enter-active,
+.page-slide-right-leave-active {
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+.page-slide-right-enter-from {
+    transform: translateX(40px);
+    opacity: 0;
+}
+.page-slide-right-leave-to {
+    transform: translateX(-40px);
+    opacity: 0;
+}
+
+/* ---- slide-top：从上方滑入，向下方滑出 ---- */
+.page-slide-top-enter-active,
+.page-slide-top-leave-active {
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+.page-slide-top-enter-from {
+    transform: translateY(-40px);
+    opacity: 0;
+}
+.page-slide-top-leave-to {
+    transform: translateY(40px);
+    opacity: 0;
+}
+
+/* ---- slide-bottom：从下方滑入，向上方滑出 ---- */
+.page-slide-bottom-enter-active,
+.page-slide-bottom-leave-active {
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+.page-slide-bottom-enter-from {
+    transform: translateY(40px);
+    opacity: 0;
+}
+.page-slide-bottom-leave-to {
+    transform: translateY(-40px);
+    opacity: 0;
+}
+
+/* ---- roll-left：从左侧滚入，向右侧滚出 ---- */
+.page-roll-left-enter-active,
+.page-roll-left-leave-active {
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+}
+.page-roll-left-enter-from {
+    transform: translateX(-40px) rotate(-15deg);
+    opacity: 0;
+}
+.page-roll-left-leave-to {
+    transform: translateX(40px) rotate(15deg);
+    opacity: 0;
+}
+
+/* ---- roll-right：从右侧滚入，向左侧滚出 ---- */
+.page-roll-right-enter-active,
+.page-roll-right-leave-active {
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+}
+.page-roll-right-enter-from {
+    transform: translateX(40px) rotate(15deg);
+    opacity: 0;
+}
+.page-roll-right-leave-to {
+    transform: translateX(-40px) rotate(-15deg);
+    opacity: 0;
+}
+
+/* ---- roll-top：从上方滚入，向下方滚出 ---- */
+.page-roll-top-enter-active,
+.page-roll-top-leave-active {
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+}
+.page-roll-top-enter-from {
+    transform: translateY(-40px) rotate(-10deg);
+    opacity: 0;
+}
+.page-roll-top-leave-to {
+    transform: translateY(40px) rotate(10deg);
+    opacity: 0;
+}
+
+/* ---- roll-bottom：从下方滚入，向上方滚出 ---- */
+.page-roll-bottom-enter-active,
+.page-roll-bottom-leave-active {
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+}
+.page-roll-bottom-enter-from {
+    transform: translateY(40px) rotate(10deg);
+    opacity: 0;
+}
+.page-roll-bottom-leave-to {
+    transform: translateY(-40px) rotate(-10deg);
+    opacity: 0;
+}
+
+/* ========================================
+   文档渲染（markdown-body）
+   用于 /docs 页面的 .md 文件渲染
+   自动适配 Naive UI 亮色 / 暗色主题
+   ======================================== */
+
+/* 引入 highlight.js github 主题（亮色模式） */
+@import 'highlight.js/styles/github.css';
+
+.markdown-body {
+    line-height: 1.75;
+    color: rgb(51, 54, 57);
+    word-break: break-word;
+}
+
+/* ---- 标题 ---- */
+.markdown-body h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgb(229, 231, 235);
+}
+.markdown-body h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid rgb(239, 239, 245);
+}
+.markdown-body h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+.markdown-body h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+.markdown-body h5,
+.markdown-body h6 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ---- 段落 / 列表 ---- */
+.markdown-body p {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.markdown-body ul,
+.markdown-body ol {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+}
+.markdown-body li {
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+.markdown-body ul > li {
+    list-style-type: disc;
+}
+.markdown-body ol > li {
+    list-style-type: decimal;
+}
+
+/* ---- 内联代码 ---- */
+.markdown-body code:not(pre code) {
+    background: rgb(245, 245, 250);
+    color: rgb(199, 37, 78);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, Monaco, monospace;
+}
+
+/* ---- 代码块 ---- */
+.markdown-body pre {
+    background: rgb(246, 248, 250);
+    border: 1px solid rgb(229, 231, 235);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+.markdown-body pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: 0.875rem;
+}
+
+/* ---- 表格 ---- */
+.markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+.markdown-body th,
+.markdown-body td {
+    border: 1px solid rgb(229, 231, 235);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+.markdown-body th {
+    background: rgb(250, 250, 252);
+    font-weight: 600;
+}
+.markdown-body tr:nth-child(even) {
+    background: rgb(250, 250, 252);
+}
+
+/* ---- 引用 ---- */
+.markdown-body blockquote {
+    border-left: 4px solid rgb(200, 200, 210);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+    color: rgb(110, 110, 120);
+    background: rgb(250, 250, 252);
+    border-radius: 0 4px 4px 0;
+}
+
+/* ---- 链接 ---- */
+.markdown-body a {
+    color: rgb(24, 160, 88);
+    text-decoration: none;
+}
+.markdown-body a:hover {
+    text-decoration: underline;
+}
+
+/* ---- 图片 ---- */
+.markdown-body img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ---- 水平线 ---- */
+.markdown-body hr {
+    border: none;
+    border-top: 1px solid rgb(229, 231, 235);
+    margin: 1.5rem 0;
+}
+
+/* ---- 任务列表 ---- */
+.markdown-body input[type='checkbox'] {
+    margin-right: 0.5rem;
+}
+
+/* ========================================
+   暗色模式覆盖
+   ======================================== */
+html.dark .markdown-body {
+    color: rgba(255, 255, 255, 0.82);
+}
+html.dark .markdown-body h1 {
+    border-bottom-color: rgb(50, 50, 54);
+}
+html.dark .markdown-body h2 {
+    border-bottom-color: rgb(40, 40, 44);
+}
+html.dark .markdown-body code:not(pre code) {
+    background: rgb(50, 50, 54);
+    color: rgb(255, 160, 120);
+}
+html.dark .markdown-body pre {
+    background: rgb(30, 30, 34);
+    border-color: rgb(50, 50, 54);
+}
+html.dark .markdown-body th,
+html.dark .markdown-body td {
+    border-color: rgb(50, 50, 54);
+}
+html.dark .markdown-body th {
+    background: rgb(30, 30, 34);
+}
+html.dark .markdown-body tr:nth-child(even) {
+    background: rgb(35, 35, 39);
+}
+html.dark .markdown-body blockquote {
+    border-left-color: rgb(80, 80, 90);
+    color: rgba(255, 255, 255, 0.55);
+    background: rgb(30, 30, 34);
+}
+html.dark .markdown-body hr {
+    border-top-color: rgb(50, 50, 54);
+}
+html.dark .markdown-body a {
+    color: rgb(99, 210, 130);
+}
+
+/* ---- 暗色模式 highlight.js 覆盖 ---- */
+html.dark .markdown-body pre code.hljs {
+    background: rgb(30, 30, 34);
+}
+html.dark .hljs {
+    background: rgb(30, 30, 34);
+    color: #c9d1d9;
+}
+
+/* ===== 无障碍：尊重用户 prefers-reduced-motion 系统偏好 =====
+   当用户在操作系统中开启了"减少动态效果"时，禁用所有页面切换动画。 */
+@media (prefers-reduced-motion: reduce) {
+    .page-fade-enter-active,
+    .page-fade-leave-active,
+    .page-pop-enter-active,
+    .page-pop-leave-active,
+    .page-slide-left-enter-active,
+    .page-slide-left-leave-active,
+    .page-slide-right-enter-active,
+    .page-slide-right-leave-active,
+    .page-slide-top-enter-active,
+    .page-slide-top-leave-active,
+    .page-slide-bottom-enter-active,
+    .page-slide-bottom-leave-active,
+    .page-roll-left-enter-active,
+    .page-roll-left-leave-active,
+    .page-roll-right-enter-active,
+    .page-roll-right-leave-active,
+    .page-roll-top-enter-active,
+    .page-roll-top-leave-active,
+    .page-roll-bottom-enter-active,
+    .page-roll-bottom-leave-active {
+        transition: none !important;
+    }
+    .page-fade-enter-from,
+    .page-fade-leave-to,
+    .page-pop-enter-from,
+    .page-pop-leave-to,
+    .page-slide-left-enter-from,
+    .page-slide-left-leave-to,
+    .page-slide-right-enter-from,
+    .page-slide-right-leave-to,
+    .page-slide-top-enter-from,
+    .page-slide-top-leave-to,
+    .page-slide-bottom-enter-from,
+    .page-slide-bottom-leave-to,
+    .page-roll-left-enter-from,
+    .page-roll-left-leave-to,
+    .page-roll-right-enter-from,
+    .page-roll-right-leave-to,
+    .page-roll-top-enter-from,
+    .page-roll-top-leave-to,
+    .page-roll-bottom-enter-from,
+    .page-roll-bottom-leave-to {
+        transform: none !important;
+        opacity: 1 !important;
+    }
+}

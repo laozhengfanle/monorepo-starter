@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/png" href="/hero.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Naive Admin</title>
+        <style>
+            /* 首屏加载骨架 — 颜色通过 CSS 变量注入，默认使用 Naive UI 主色 */
+            :root {
+                --loading-primary: #18a058;
+                --loading-primary-soft: #63e2a7;
+            }
+            #app-loading {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: #fff;
+                z-index: 9999;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+            .app-loading-ring {
+                width: 40px;
+                height: 40px;
+                border: 3px solid #e8e8e8;
+                border-top-color: var(--loading-primary);
+                border-radius: 50%;
+                animation: app-spin 0.8s linear infinite;
+            }
+            .app-loading-text {
+                margin-top: 16px;
+                font-size: 14px;
+                color: #999;
+                letter-spacing: 0.5px;
+            }
+            @keyframes app-spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            /* 暗色覆盖 */
+            html[data-theme='dark'] #app-loading {
+                background: #101014;
+            }
+            html[data-theme='dark'] .app-loading-ring {
+                border-color: rgba(255, 255, 255, 0.08);
+                border-top-color: var(--loading-primary-soft);
+            }
+            html[data-theme='dark'] .app-loading-text {
+                color: rgba(255, 255, 255, 0.35);
+            }
+
+            /* 兜底：Vue mount 瞬间 #app-loading 被替换后，body 背景暴露出来。
+               与 data-theme 联动确保暗色模式下始终是深色，避免白屏闪烁。 */
+            body {
+                background: #fff;
+            }
+            html[data-theme='dark'] body {
+                background: #101014;
+            }
+        </style>
+        <script>
+            /* 读取用户主题和主色设置，注入 CSS 变量，控制 loading 外观 */
+            (function () {
+                var theme, primaryColor;
+                try {
+                    theme = JSON.parse(localStorage.getItem('theme'));
+                    primaryColor = JSON.parse(localStorage.getItem('primaryColor'));
+                } catch (e) {
+                    /* ignore */
+                }
+                var isDark =
+                    theme === 'dark' ||
+                    ((theme === 'auto' || !theme) &&
+                        window.matchMedia &&
+                        window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (isDark) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+
+                /* 注入自定义主色为 CSS 变量 */
+                if (primaryColor && typeof primaryColor === 'string' && primaryColor.startsWith('#')) {
+                    var root = document.documentElement;
+                    root.style.setProperty('--loading-primary', primaryColor);
+
+                    /* 为暗色模式计算柔和变体：RGB 各通道加亮 */
+                    var h = primaryColor.replace('#', '');
+                    if (h.length === 3) {
+                        h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+                    }
+                    var r = parseInt(h.substring(0, 2), 16);
+                    var g = parseInt(h.substring(2, 4), 16);
+                    var b = parseInt(h.substring(4, 6), 16);
+                    var clamp = function (v) {
+                        return Math.max(0, Math.min(255, Math.round(v)));
+                    };
+                    var soft =
+                        '#' +
+                        clamp(r + 75)
+                            .toString(16)
+                            .padStart(2, '0') +
+                        clamp(g + 75)
+                            .toString(16)
+                            .padStart(2, '0') +
+                        clamp(b + 75)
+                            .toString(16)
+                            .padStart(2, '0');
+                    root.style.setProperty('--loading-primary-soft', soft);
+                }
+            })();
+        </script>
+    </head>
+    <body>
+        <svg xmlns="http://www.w3.org/2000/svg" style="position: absolute; width: 0; height: 0" aria-hidden="true">
+            <filter id="color-blind-filter" color-interpolation-filters="sRGB">
+                <!--
+                  Rʹ = 0.625R + 0.375G    → 红色通道混入绿色亮度，增强区分度
+                  Gʹ = 0.700R + 0.300G    → 绿色通道混入红色亮度，拉开红绿差距
+                  Bʹ = B + 0.100(G − R)   → 蓝色通道承载红绿差值信号
+                -->
+                <feColorMatrix
+                    type="matrix"
+                    values="
+                        0.625  0.375  0.000  0  0
+                        0.700  0.300  0.000  0  0
+                       -0.100  0.100  1.000  0  0
+                        0      0      0      1  0
+                    "
+                />
+            </filter>
+        </svg>
+
+        <div id="app">
+            <div id="app-loading">
+                <div class="app-loading-ring" style="width: 40px; height: 40px"></div>
+                <div class="app-loading-text">加载中...</div>
+            </div>
+        </div>
+
+        <script type="module" src="/src/main.ts"></script>
+    </body>
+</html>

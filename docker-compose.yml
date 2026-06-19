@@ -1,0 +1,131 @@
+# ⚠️ 这是开发编排（DEVELOPMENT）
+# - 含 minio / mailhog / adminer 等 dev-only 工具
+# - 资源限制宽松（无 cpus/memory 限制）
+# - 安全选项宽松（no-new-privileges 未启用）
+#
+# 所有端口、版本、凭据均通过变量配置，默认值即可本地启动：
+#   docker compose up -d
+#
+# 自定义（可选）：
+#   SERVER_PORT=4000 POSTGRES_PASSWORD=secret docker compose up -d
+#
+# 生产用 docker-compose.prod.yml：
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# ============================================
+
+name: ${COMPOSE_PROJECT_NAME:-monorepo}
+
+services:
+    # ──────────────────────────────────────────────
+    # 应用服务：NestJS server
+    # ──────────────────────────────────────────────
+    server:
+        build:
+            context: .
+            dockerfile: apps/server/Dockerfile.dev
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        env_file:
+            - ./apps/server/.env
+        environment:
+            DATABASE_URL: postgresql://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-dev123}@postgres:5432/${POSTGRES_DB:-mono_dev}
+            REDIS_URL: redis://redis:${REDIS_PORT:-6379}
+            NODE_ENV: development
+        ports:
+            - '127.0.0.1:${SERVER_PORT:-3000}:3000'
+        healthcheck:
+            test: ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1:${SERVER_PORT:-3000}/api/health/liveness']
+            interval: 15s
+            timeout: 5s
+            retries: 5
+            start_period: 60s
+
+        develop:
+            watch:
+                - action: sync
+                  path: ./apps/server/src
+                  target: /app/apps/server/src
+                - action: sync
+                  path: ./apps/server/prisma
+                  target: /app/apps/server/prisma
+                  ignore:
+                      - generated/**
+                - action: sync
+                  path: ./apps/server/scripts
+                  target: /app/apps/server/scripts
+                - action: sync
+                  path: ./packages/shared/src
+                  target: /app/packages/shared/src
+                - action: rebuild
+                  path: ./apps/server/package.json
+                - action: rebuild
+                  path: ./apps/server/Dockerfile.dev
+                - action: rebuild
+                  path: ./pnpm-lock.yaml
+                - action: rebuild
+                  path: ./package.json
+
+    # ──────────────────────────────────────────────
+    # 基础设施：PostgreSQL
+    # ──────────────────────────────────────────────
+    postgres:
+        image: postgres:${POSTGRES_VERSION:-16}-alpine
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:-root}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev123}
+            POSTGRES_DB: ${POSTGRES_DB:-mono_dev}
+        ports:
+            - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-mono_dev}']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+
+    # ──────────────────────────────────────────────
+    # 基础设施：Redis
+    # ──────────────────────────────────────────────
+    redis:
+        image: redis:${REDIS_VERSION:-7}-alpine
+        restart: unless-stopped
+        ports:
+            - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+        volumes:
+            - redisdata:/data
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
+    # ──────────────────────────────────────────────
+    # 工具：MinIO（S3 兼容对象存储，仅 s3 profile 启动）
+    # ──────────────────────────────────────────────
+    minio:
+        image: minio/minio:latest
+        command: server /data --console-address ":9001"
+        ports:
+            - '${MINIO_API_PORT:-9000}:9000'
+            - '${MINIO_CONSOLE_PORT:-9001}:9001'
+        environment:
+            MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+            MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+        volumes:
+            - miniodata:/data
+        profiles:
+            - s3
+
+volumes:
+    pgdata:
+    redisdata:
+    miniodata:

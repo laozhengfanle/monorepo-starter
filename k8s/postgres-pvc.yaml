@@ -1,0 +1,19 @@
+# PostgreSQL PersistentVolumeClaim
+# - StatefulSet 使用 volumeClaimTemplates 动态生成 PVC，但本基座采用预创建方式
+#   方便运维提前评估存储容量 / 选择 storage class
+# - 10Gi 起步（生产建议 50Gi+），开发环境调小
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: postgres-data
+    namespace: monorepo
+    labels:
+        app: postgres
+spec:
+    accessModes:
+        - ReadWriteOnce
+    resources:
+        requests:
+            storage: 10Gi
+    # 生产环境推荐指定 storageClass（如 gp3 / ssd），此处保留默认
+    # storageClassName: gp3

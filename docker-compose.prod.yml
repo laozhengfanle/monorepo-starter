@@ -1,0 +1,272 @@
+# ============================================
+# 生产编排（PRODUCTION）
+# ============================================
+# 服务：server / admin / web / postgres / redis
+# 不含 minio / mailhog / adminer（dev only）
+#
+# 所有端口、版本、凭据、资源限制均通过变量配置。
+# 启动前创建 .env.production 文件（参考 apps/server/.env.example 末尾 Docker 段）：
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# 资源：所有服务都声明 cpus / memory / pids_limit（防容器逃逸 + 资源争抢）
+# 安全：所有服务 security_opt no-new-privileges + read_only fs
+# 例外：server / postgres 需 /tmp 写 → tmpfs
+# ============================================
+
+name: ${COMPOSE_PROJECT_NAME:-monorepo-prod}
+
+services:
+    # ==========================================
+    # Backend: NestJS
+    # ==========================================
+    server:
+        image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:-your-org}/monorepo-server:${IMAGE_TAG:-latest}
+        container_name: ${COMPOSE_PROJECT_NAME:-monorepo}-server
+        restart: unless-stopped
+        user: '${SERVER_UID:-1001}:${SERVER_UID:-1001}'
+        read_only: true
+        tmpfs:
+            - /tmp:size=100m,mode=1777
+        security_opt:
+            - 'no-new-privileges:true'
+        cap_drop:
+            - ALL
+        cap_add:
+            - NET_BIND_SERVICE
+        ports:
+            - '${SERVER_PORT:-3000}:3000'
+        environment:
+            NODE_ENV: production
+            PORT: '${SERVER_PORT:-3000}'
+            DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+            REDIS_URL: redis://redis:${REDIS_PORT:-6379}/0
+            JWT_SECRET: ${JWT_SECRET}
+            COOKIE_SECURE: '${COOKIE_SECURE:-true}'
+            COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+            CORS_ORIGINS: ${CORS_ORIGINS}
+            TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
+            TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
+            CSRF_COOKIE_SECURE: '${CSRF_COOKIE_SECURE:-true}'
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        networks:
+            - monorepo-net
+        volumes:
+            - uploads_data:/app/uploads
+        healthcheck:
+            test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:${SERVER_PORT:-3000}/health']
+            interval: 30s
+            timeout: 5s
+            start_period: 30s
+            retries: 3
+        deploy:
+            resources:
+                limits:
+                    cpus: '${SERVER_CPUS:-1.5}'
+                    memory: ${SERVER_MEMORY:-1G}
+                    pids: 512
+        logging:
+            driver: json-file
+            options:
+                max-size: '${LOG_MAX_SIZE:-10m}'
+                max-file: '${LOG_MAX_FILE:-3}'
+
+    # ==========================================
+    # Admin SPA: nginx
+    # ==========================================
+    admin:
+        image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:-your-org}/monorepo-admin:${IMAGE_TAG:-latest}
+        container_name: ${COMPOSE_PROJECT_NAME:-monorepo}-admin
+        restart: unless-stopped
+        read_only: true
+        tmpfs:
+            - /var/cache/nginx:size=50m
+            - /var/run:size=10m
+        security_opt:
+            - 'no-new-privileges:true'
+        cap_drop:
+            - ALL
+        cap_add:
+            - NET_BIND_SERVICE
+            - CHOWN
+            - SETUID
+            - SETGID
+        environment:
+            SERVER_PORT: ${SERVER_PORT:-3000}
+            NGINX_PORT: ${NGINX_PORT:-80}
+        ports:
+            - '${ADMIN_PORT:-8080}:80'
+        depends_on:
+            - server
+        networks:
+            - monorepo-net
+        healthcheck:
+            test: ['CMD', 'wget', '-q', '--spider', 'http://localhost/']
+            interval: 30s
+            timeout: 3s
+            start_period: 10s
+            retries: 3
+        deploy:
+            resources:
+                limits:
+                    cpus: '${ADMIN_CPUS:-0.5}'
+                    memory: ${ADMIN_MEMORY:-256M}
+                    pids: 128
+        logging:
+            driver: json-file
+            options:
+                max-size: '${LOG_MAX_SIZE:-10m}'
+                max-file: '${LOG_MAX_FILE:-3}'
+
+    # ==========================================
+    # Web SPA: nginx
+    # ==========================================
+    web:
+        image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:-your-org}/monorepo-web:${IMAGE_TAG:-latest}
+        container_name: ${COMPOSE_PROJECT_NAME:-monorepo}-web
+        restart: unless-stopped
+        read_only: true
+        tmpfs:
+            - /var/cache/nginx:size=50m
+            - /var/run:size=10m
+        security_opt:
+            - 'no-new-privileges:true'
+        cap_drop:
+            - ALL
+        cap_add:
+            - NET_BIND_SERVICE
+            - CHOWN
+            - SETUID
+            - SETGID
+        environment:
+            SERVER_PORT: ${SERVER_PORT:-3000}
+            NGINX_PORT: ${NGINX_PORT:-80}
+        ports:
+            - '${WEB_PORT:-8081}:80'
+        depends_on:
+            - server
+        networks:
+            - monorepo-net
+        healthcheck:
+            test: ['CMD', 'wget', '-q', '--spider', 'http://localhost/']
+            interval: 30s
+            timeout: 3s
+            start_period: 10s
+            retries: 3
+        deploy:
+            resources:
+                limits:
+                    cpus: '${WEB_CPUS:-0.5}'
+                    memory: ${WEB_MEMORY:-256M}
+                    pids: 128
+        logging:
+            driver: json-file
+            options:
+                max-size: '${LOG_MAX_SIZE:-10m}'
+                max-file: '${LOG_MAX_FILE:-3}'
+
+    # ==========================================
+    # PostgreSQL
+    # ==========================================
+    postgres:
+        image: postgres:${POSTGRES_VERSION:-16}-alpine
+        container_name: ${COMPOSE_PROJECT_NAME:-monorepo}-postgres
+        restart: unless-stopped
+        user: '${POSTGRES_UID:-999}:${POSTGRES_UID:-999}'
+        read_only: true
+        tmpfs:
+            - /tmp:size=100m
+            - /run/postgresql:size=50m
+        security_opt:
+            - 'no-new-privileges:true'
+        cap_drop:
+            - ALL
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        networks:
+            - monorepo-net
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+            interval: 15s
+            timeout: 5s
+            start_period: 30s
+            retries: 5
+        deploy:
+            resources:
+                limits:
+                    cpus: '${POSTGRES_CPUS:-2}'
+                    memory: ${POSTGRES_MEMORY:-2G}
+                    pids: 256
+        logging:
+            driver: json-file
+            options:
+                max-size: '${LOG_MAX_SIZE:-10m}'
+                max-file: '${LOG_MAX_FILE:-3}'
+
+    # ==========================================
+    # Redis
+    # ==========================================
+    redis:
+        image: redis:${REDIS_VERSION:-7}-alpine
+        container_name: ${COMPOSE_PROJECT_NAME:-monorepo}-redis
+        restart: unless-stopped
+        user: '${REDIS_UID:-999}:${REDIS_UID:-999}'
+        read_only: true
+        tmpfs:
+            - /data:size=50m
+        security_opt:
+            - 'no-new-privileges:true'
+        cap_drop:
+            - ALL
+        command:
+            - 'redis-server'
+            - '--appendonly'
+            - 'yes'
+            - '--maxmemory'
+            - '${REDIS_MAXMEMORY:-256mb}'
+            - '--maxmemory-policy'
+            - 'allkeys-lru'
+            - '--save'
+            - ''
+        volumes:
+            - redis_data:/data
+        networks:
+            - monorepo-net
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 15s
+            timeout: 3s
+            start_period: 10s
+            retries: 3
+        deploy:
+            resources:
+                limits:
+                    cpus: '${REDIS_CPUS:-1}'
+                    memory: ${REDIS_MEMORY:-512M}
+                    pids: 128
+        logging:
+            driver: json-file
+            options:
+                max-size: '${LOG_MAX_SIZE:-10m}'
+                max-file: '${LOG_MAX_FILE:-3}'
+
+networks:
+    monorepo-net:
+        driver: bridge
+        name: ${COMPOSE_PROJECT_NAME:-monorepo}-net
+
+volumes:
+    postgres_data:
+        name: ${COMPOSE_PROJECT_NAME:-monorepo}-postgres-data
+    redis_data:
+        name: ${COMPOSE_PROJECT_NAME:-monorepo}-redis-data
+    uploads_data:
+        name: ${COMPOSE_PROJECT_NAME:-monorepo}-uploads-data

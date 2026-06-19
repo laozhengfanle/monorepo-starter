@@ -1,0 +1,21 @@
+{
+    "name": "@packages/config",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./eslint": "./src/eslint.js"
+    },
+    "dependencies": {
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.5.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-vue": "^10.9.2",
+        "globals": "^17.6.0",
+        "typescript-eslint": "^8.61.1"
+    },
+    "devDependencies": {
+        "@types/node": "^25.9.1",
+        "vite": "^8.0.16"
+    }
+}

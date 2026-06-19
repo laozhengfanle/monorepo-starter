@@ -1,0 +1,50 @@
+node_modules/
+dist/
+.pnpm-store/
+*.local
+*.tsbuildinfo
+.DS_Store
+.vscode/
+.idea/
+.claude/
+.tmp/
+.trae/
+
+# Prisma 生成的客户端（由 prisma generate 生成，不需要提交）
+apps/server/prisma/generated/
+
+# 环境变量
+# .env.example 是模板（含字段说明和占位值），提交到 git
+# .env / .env.development / .env.production 含真实密钥，不提交
+.env
+.env.development
+.env.production
+.env.local
+
+
+# 运行时生成的文件
+auto-imports.d.ts
+components.d.ts
+
+# 测试覆盖率
+coverage/
+
+# 上传的文件（运行时数据）
+apps/server/uploads/
+
+# 临时测试产物（统一走 .tmp/，见 CLAUDE.md 临时文件管理规则）
+# Playwright 产物
+playwright-report/
+test-results/
+playwright/.cache/
+
+# 备份与临时文件
+*.bak
+*.tmp
+*.log
+
+# TypeDoc 生成的 API 文档（polish-medium-batch Task 3.2）
+docs/api/
+
+# vite-plugin-bundlesize 生成的构建产物（每个 app 根目录）
+apps/*/bundlemeta.json

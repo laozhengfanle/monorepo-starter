@@ -1,0 +1,133 @@
+# Server Deployment
+# - MonoKit 后端 NestJS 统一 API
+# - 2 replica 起（生产建议 ≥ 3，配合 HPA 自动扩缩容到 2-5）
+# - liveness / readiness / startup 三种探针
+# - 优雅关闭：preStop sleep 5（让 Service 端点摘除完成）
+# - 环境变量通过 envFrom 引用 ConfigMap + Secret
+# - 镜像 tag 留 placeholder：<registry>/monorepo-server:<tag>
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: server
+    namespace: monorepo
+    labels:
+        app: server
+spec:
+    replicas: 2
+    selector:
+        matchLabels:
+            app: server
+    # 滚动更新策略
+    strategy:
+        type: RollingUpdate
+        rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0 # 更新期间不允许 Pod 不可用
+    template:
+        metadata:
+            labels:
+                app: server
+        spec:
+            securityContext:
+                runAsNonRoot: true
+                runAsUser: 1001 # nestjs 用户（与 Dockerfile 一致）
+                runAsGroup: 1001
+                fsGroup: 1001
+                readOnlyRootFilesystem: true
+            containers:
+                - name: server
+                  # 占位：替换为实际镜像仓库 + tag
+                  # 例：ghcr.io/your-org/monorepo-server:v1.0.0
+                  image: <registry>/monorepo-server:<tag>
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                      - containerPort: 3000
+                        name: http
+                  envFrom:
+                      - configMapRef:
+                            name: server-config
+                      - secretRef:
+                            name: server-secrets
+                  resources:
+                      requests:
+                          memory: 256Mi
+                          cpu: 250m
+                      limits:
+                          memory: 512Mi
+                          cpu: '1'
+                  # 存活探针：进程是否健康
+                  livenessProbe:
+                      httpGet:
+                          path: /health/liveness
+                          port: 3000
+                      initialDelaySeconds: 15
+                      periodSeconds: 30
+                      timeoutSeconds: 5
+                      failureThreshold: 3
+                  # 就绪探针：是否能接收流量
+                  readinessProbe:
+                      httpGet:
+                          path: /health/readiness
+                          port: 3000
+                      initialDelaySeconds: 5
+                      periodSeconds: 10
+                      timeoutSeconds: 3
+                      failureThreshold: 3
+                  # 启动探针：慢启动保护（防止大应用启动期被 liveness 杀死）
+                  startupProbe:
+                      httpGet:
+                          path: /health/liveness
+                          port: 3000
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+                      failureThreshold: 12 # 最多等 60 秒启动
+                  # 优雅关闭：先 sleep 5s 让 Service 端点摘除，再 SIGTERM
+                  lifecycle:
+                      preStop:
+                          exec:
+                              command: ['sh', '-c', 'sleep 5']
+            terminationGracePeriodSeconds: 30
+---
+# HorizontalPodAutoscaler：2-5 replica 自动扩缩容
+# - CPU 利用率 70% 触发扩容
+# - 内存利用率 80% 触发扩容
+# - 扩容行为：紧急时可翻倍（periodSeconds=60 允许 100% 增长）
+# - 缩容行为：保守缩容（5 分钟冷却 + 每分钟最多减 10%）
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+    name: server-hpa
+    namespace: monorepo
+spec:
+    scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: server
+    minReplicas: 2
+    maxReplicas: 5
+    metrics:
+        - type: Resource
+          resource:
+              name: cpu
+              target:
+                  type: Utilization
+                  averageUtilization: 70
+        - type: Resource
+          resource:
+              name: memory
+              target:
+                  type: Utilization
+                  averageUtilization: 80
+    behavior:
+        scaleDown:
+            stabilizationWindowSeconds: 300 # 缩容冷却 5 分钟
+            policies:
+                - type: Percent
+                  value: 10
+                  periodSeconds: 60
+        scaleUp:
+            stabilizationWindowSeconds: 60
+            policies:
+                - type: Percent
+                  value: 100 # 紧急时可翻倍扩容
+                  periodSeconds: 60

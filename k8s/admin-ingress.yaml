@@ -1,0 +1,32 @@
+# Admin Ingress
+# - 暴露 / 路径到 admin-service（SPA，所有路由前端处理）
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: admin-ingress
+    namespace: monorepo
+    annotations:
+        nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+        cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+        # SPA fallback：所有未匹配路径返回 index.html
+        nginx.ingress.kubernetes.io/configuration-snippet: |
+            if (!-f $request_filename) {
+                rewrite ^.*$ /index.html break;
+            }
+spec:
+    ingressClassName: nginx
+    tls:
+        - hosts:
+              - admin.example.com
+          secretName: admin-tls
+    rules:
+        - host: admin.example.com
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: admin-service
+                            port:
+                                number: 80

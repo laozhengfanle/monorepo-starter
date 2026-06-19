@@ -1,0 +1,82 @@
+# ============================================
+# Prettier 忽略规则
+# ============================================
+# 参考：https://prettier.io/docs/ignore.html
+# 优先级：从上到下匹配，规则类似 .gitignore
+# ============================================
+
+# 依赖
+node_modules/
+**/node_modules/
+
+# 构建产物
+dist/
+**/dist/
+build/
+**/build/
+out/
+**/out/
+*.tsbuildinfo
+
+# 覆盖率
+coverage/
+**/coverage/
+
+# 缓存
+.cache/
+**/.cache/
+.turbo/
+**/.turbo/
+.vite/
+**/.vite/
+
+# 锁定文件
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# 运行时生成的文件
+**/auto-imports.d.ts
+**/components.d.ts
+**/prisma/generated/
+# GraphQL schema（apps/server 生成产物）
+apps/server/graphql/schema.gql
+**/docs/
+**/docs-site/
+
+# vite-plugin-bundlesize 构建产物
+**/bundlemeta.json
+
+# 测试产物
+playwright-report/
+test-results/
+playwright/.cache/
+
+# 日志
+*.log
+**/logs/
+**/*.log
+
+# 临时文件
+*.bak
+*.tmp
+.DS_Store
+
+# 已知 Prettier 解析失败的文件
+# scripts/jsdoc-coverage.ts 在 else 块内有 /** 注释导致 Prettier 解析失败
+scripts/jsdoc-coverage.ts
+scripts/screenshots.ts
+scripts/env-check.mjs
+
+# 中文开发计划目录（markdown 文档不强制格式化）
+开发计划/
+
+# CI/CD 产物
+.github/workflows/
+
+# 生成的 ER 图
+docs-site/
+
+# Monorepo 配置文件
+.gitignore
+.dockerignore

@@ -1,0 +1,65 @@
+# 开发模式 Dockerfile
+#
+# 设计意图：
+# - 单阶段镜像：开发时频繁改代码，单阶段避免 build cache 失效
+# - 包含完整 dev 工具链：swc-node-register（NestJS 装饰器元数据生成）、prisma CLI
+# - pnpm install 用 build 时缓存，宿主改 src 后用 docker compose watch 同步
+# - 跑 `pnpm start:dev` 而不是 `node dist/main`：走 swc-register 实时编译
+#
+# 生产构建见 apps/server/Dockerfile（多阶段，只含 dist + production node_modules）
+
+# ── 基础镜像 ──
+# - node:22-alpine：Node 22 LTS（与 .nvmrc 一致），alpine 体积小
+FROM node:22-alpine
+
+# 关键依赖：
+# - openssl：Prisma engine 需要
+# - libc6-compat：bcrypt 等 native 模块需要 glibc 兼容层
+RUN apk add --no-cache openssl libc6-compat
+
+# pnpm 走 corepack（pnpm 自带 corepack 支持，避免单独安装）
+# 锁定 pnpm 版本与宿主 package.json#packageManager 一致（pnpm@11.4.0）
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack prepare pnpm@11.4.0 --activate
+
+# 工作目录：monorepo 根
+WORKDIR /app
+
+# ── 依赖安装（缓存层）──
+# 先 copy 锁文件 + 所有 package.json：依赖文件不常变，docker build 命中缓存
+# 注意：根 package.json 必须包含所有 workspace 包的引用
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# patches/ 必须在 pnpm install 之前 copy：pnpm-workspace.yaml.patchedDependencies 引用
+COPY patches/ ./patches/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/config/package.json ./packages/config/
+COPY apps/server/package.json ./apps/server/
+COPY apps/admin/package.json ./apps/admin/
+COPY apps/web/package.json ./apps/web/
+
+# pnpm install：--frozen-lockfile 锁版本，--prefer-offline 命中本地缓存
+# 跳过 scripts 阶段的 postinstall（prisma generate 等在 build 阶段做）
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# ── 源代码（运行时由 docker compose watch 覆盖）──
+# 全部复制：包含 apps/server/src、prisma/schema.prisma、tsconfig.base.json 等
+COPY . .
+
+# 构建 packages/shared：apps/server 依赖 @packages/shared 的 dist 产物
+# 改 shared/src 后需手动重 build（与宿主机 dev:server 一致，predev:server hook 已封装）
+# 容器内跑：cd /app/packages/shared && pnpm build
+WORKDIR /app/packages/shared
+RUN pnpm build
+
+# Prisma generate：必须在 start:dev 之前跑完
+# 不在 pnpm install 阶段跑（用了 --ignore-scripts），单独 RUN 一次
+# 容器内只生成 client，跳过 erd（prisma-erd-generator 依赖 puppeteer + chrome，容器内不安装）
+WORKDIR /app/apps/server
+RUN pnpm exec prisma generate --generator client
+
+# 暴露端口（NestJS 监听 3000，与 .env PORT 默认值一致）
+EXPOSE 3000
+
+# 默认命令：跑 dev 模式（swc 实时编译）
+# 用 dumb-init 转发信号（PID 1 信号处理）
+CMD ["sh", "-c", "node --import ./scripts/swc-register.mjs src/main.ts"]

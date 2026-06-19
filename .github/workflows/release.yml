@@ -1,0 +1,240 @@
+# ============================================
+# Release 工作流
+# ============================================
+# 触发：
+#   1. 推送 tag 形如 v*.*.*（如 v1.0.0、v2.3.4）
+#
+# 流程：
+#   Job 1 (build-artifacts)：构建 docker 镜像 + 生成变更日志 + 生成 API 文档
+#   Job 2 (publish-release)：发布 GitHub Release（包含 artifacts 和变更日志）
+#
+# 注意事项：
+#   - 此 workflow 专注于构建和发布制品，部署由 deploy.yml 负责
+#   - 需要在 GitHub Secrets 中配置 GHCR 相关权限
+# ============================================
+
+name: Release
+
+on:
+    push:
+        tags:
+            - 'v*.*.*'
+
+# 取消同 tag 旧的 run
+concurrency:
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
+
+# 最小权限原则
+permissions:
+    contents: write
+    packages: write
+
+env:
+    # 使用 tag 名作为镜像版本
+    IMAGE_VERSION: ${{ github.ref_name }}
+    REGISTRY: ghcr.io
+    OWNER: ${{ github.repository_owner }}
+
+jobs:
+    # ============================================
+    # Job 1: 构建 docker 镜像
+    # ============================================
+    build-images:
+        name: Build Docker Images
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+
+        steps:
+            # 拉取代码
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0  # 获取完整历史，用于生成 changelog
+
+            # 获取 tag 注释作为 release 说明
+            - name: Get tag annotation
+              id: tag-info
+              run: |
+                  # 获取 tag 的 annotated message（如果有的话）
+                  TAG_MSG=$(git tag -l --format='%(contents:subject)' ${{ github.ref_name }} 2>/dev/null || echo "")
+                  # 如果 tag message 为空，使用 commit message
+                  if [ -z "$TAG_MSG" ]; then
+                      TAG_MSG=$(git log -1 --format='%s' ${{ github.ref_name }})
+                  fi
+                  echo "message=$TAG_MSG" >> $GITHUB_OUTPUT
+                  echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+            # 启用 buildx
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            # 登录 GHCR
+            - name: Login to GHCR
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            # 提取 server 镜像元数据
+            - name: Extract metadata (server)
+              id: meta-server
+              uses: docker/metadata-action@v5
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-server
+                  tags: |
+                      type=ref,event=tag
+                      type=sha,prefix=,format=short
+                      type=raw,value=latest,enable={{is_default_branch}}
+
+            # 构建并推送 server 镜像
+            - name: Build and push (server)
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: apps/server/Dockerfile
+                  push: true
+                  tags: ${{ steps.meta-server.outputs.tags }}
+                  labels: ${{ steps.meta-server.outputs.labels }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  build-args: |
+                      NODE_VERSION=22
+
+            # 提取 admin 镜像元数据
+            - name: Extract metadata (admin)
+              id: meta-admin
+              uses: docker/metadata-action@v5
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-admin
+                  tags: |
+                      type=ref,event=tag
+                      type=sha,prefix=,format=short
+                      type=raw,value=latest,enable={{is_default_branch}}
+
+            # 构建并推送 admin 镜像
+            - name: Build and push (admin)
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: apps/admin/Dockerfile
+                  push: true
+                  tags: ${{ steps.meta-admin.outputs.tags }}
+                  labels: ${{ steps.meta-admin.outputs.labels }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+            # 提取 web 镜像元数据
+            - name: Extract metadata (web)
+              id: meta-web
+              uses: docker/metadata-action@v5
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-web
+                  tags: |
+                      type=ref,event=tag
+                      type=sha,prefix=,format=short
+                      type=raw,value=latest,enable={{is_default_branch}}
+
+            # 构建并推送 web 镜像
+            - name: Build and push (web)
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: apps/web/Dockerfile
+                  push: true
+                  tags: ${{ steps.meta-web.outputs.tags }}
+                  labels: ${{ steps.meta-web.outputs.labels }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+            # 输出镜像信息供后续 job 使用
+            - name: Export image info
+              run: |
+                  echo "## Docker Images" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "| Service | Image |" >> $GITHUB_STEP_SUMMARY
+                  echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Server | \`${{ steps.meta-server.outputs.tags }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Admin | \`${{ steps.meta-admin.outputs.tags }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Web | \`${{ steps.meta-web.outputs.tags }}\` |" >> $GITHUB_STEP_SUMMARY
+
+    # ============================================
+    # Job 2: 生成变更日志
+    # ============================================
+    generate-changelog:
+        name: Generate Changelog
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Generate changelog
+              uses: mikepenz/release-changelog-builder-action@v4
+              with:
+                  configuration: |
+                      template: |
+                          $CHANGES
+
+                          ## Docker Images
+
+                          This release includes the following Docker images:
+
+                          | Service | Image Tag |
+                          | --- | --- |
+                          | Server | `ghcr.io/${{ env.OWNER }}/monorepo-server:${{ github.ref_name }}` |
+                          | Admin | `ghcr.io/${{ env.OWNER }}/monorepo-admin:${{ github.ref_name }}` |
+                          | Web | `ghcr.io/${{ env.OWNER }}/monorepo-web:${{ github.ref_name }}` |
+
+                          ## Installation
+
+                          ```bash
+                          # Pull images
+                          docker pull ghcr.io/${{ env.OWNER }}/monorepo-server:${{ github.ref_name }}
+                          docker pull ghcr.io/${{ env.OWNER }}/monorepo-admin:${{ github.ref_name }}
+                          docker pull ghcr.io/${{ env.OWNER }}/monorepo-web:${{ github.ref_name }}
+                          ```
+                  ignoreLabels: |
+                      ignore-for-release
+                  duplicateFilter: true
+              id: changelog
+
+            - name: Save changelog
+              run: |
+                  echo "${{ steps.changelog.outputs.changelog }}" > CHANGELOG.md
+
+            - name: Upload changelog as artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: changelog
+                  path: CHANGELOG.md
+                  retention-days: 30
+
+    # ============================================
+    # Job 3: 发布 GitHub Release
+    # ============================================
+    publish-release:
+        name: Publish Release
+        runs-on: ubuntu-latest
+        needs: [build-images, generate-changelog]
+        timeout-minutes: 10
+
+        steps:
+            - name: Download changelog
+              uses: actions/download-artifact@v4
+              with:
+                  name: changelog
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  body_path: CHANGELOG.md
+                  draft: false
+                  prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+                  generate_release_notes: true
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

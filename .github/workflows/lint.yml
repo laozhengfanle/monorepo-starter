@@ -1,0 +1,90 @@
+# ⚠️ 此文件是 ci.yml 的 fast-fail 触发器：
+# - ci.yml 在 push main + PR 触发完整 pipeline（lint + typecheck + test + build + docker + trivy）
+# - lint.yml 保留：仅在改动命中 lint/typecheck 相关路径时快速失败，节省 CI 资源
+# - 推荐：日常 PR 默认走 ci.yml，无需手动触发
+name: Lint (fast-fail)
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - '**/*.{ts,vue,js,mjs,cjs}'
+            - '**/*.{json,md,yml,yaml}'
+            - '**/.eslintrc*'
+            - '**/eslint.config.*'
+    pull_request:
+        branches: [main]
+
+# 取消同 branch 旧的 run
+concurrency:
+    group: lint-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+jobs:
+    lint:
+        name: ESLint
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install pnpm 11
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 11
+
+            - name: Setup Node.js 22
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '22'
+                  cache: 'pnpm'
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Lint all apps
+              run: pnpm -r lint
+
+    typecheck:
+        name: TypeScript Typecheck
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install pnpm 11
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 11
+
+            - name: Setup Node.js 22
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '22'
+                  cache: 'pnpm'
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: TypeCheck all apps
+              run: pnpm -r typecheck
+
+    security:
+        name: Gitleaks Secret Scan
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Run gitleaks secret scan
+              uses: gitleaks/gitleaks-action@v2
+              with:
+                  fail-on-secret: true

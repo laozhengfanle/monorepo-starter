@@ -1,0 +1,16 @@
+diff --git a/dist/plugin/index.js b/dist/plugin/index.js
+index 0000000..0000001 100644
+--- a/dist/plugin/index.js
++++ b/dist/plugin/index.js
+@@ -52,6 +52,11 @@ export default function vitePluginBundlesize(options) {
+                 if (resolvedOptions.entryPointOnly && !chunk.isEntry) {
+                     continue;
+                 }
++                // PATCH: vite 8 + rolldown 生成的内部运行时 chunk（如 rolldown-runtime-*.js）
++                // 不带 .map，跳过它（不属于业务代码，无需纳入 bundle size 计算）
++                if (chunkID.includes("rolldown-runtime")) {
++                    continue;
++                }
+                 if (!chunk.map) {
+                     console.error(`
+ ${FG_RED_197}✘ vite-plugin-bundlesize: needs "build.sourcemap" enabled.${RESET}

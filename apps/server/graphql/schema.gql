@@ -1,0 +1,713 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+input AccountMenuOverrideInput {
+  menuId: ID!
+
+  """grant 或 deny"""
+  type: String!
+}
+
+"""批量保存结果"""
+type AccountMenuOverrideResult {
+  """操作是否成功"""
+  success: Boolean!
+}
+
+"""账户菜单特例授权记录"""
+type AccountMenuRow {
+  """账户 ID"""
+  accountId: ID!
+  id: ID!
+
+  """菜单 ID"""
+  menuId: ID!
+
+  """菜单名称"""
+  menuName: String!
+
+  """授权类型：grant 授权 / deny 禁止"""
+  type: String!
+}
+
+"""管理端账户"""
+type AdminAccount {
+  """头像 URL（空时前端用首字母占位）"""
+  avatar: String
+
+  """创建时间"""
+  createdAt: DateTime!
+
+  """软删除时间（null=活跃行；非空=已软删；仅在 includeDeleted=true 时可能非空）"""
+  deletedAt: DateTime
+
+  """邮箱"""
+  email: String
+
+  """账号是否启用"""
+  enabled: Boolean!
+  id: ID!
+
+  """昵称"""
+  nickname: String!
+
+  """手机号"""
+  phone: String
+
+  """角色 ID 列表"""
+  roleIds: [String!]
+
+  """角色码列表（如 super_admin）"""
+  roles: [String!]!
+
+  """更新时间"""
+  updatedAt: DateTime!
+
+  """用户名（登录标识）"""
+  username: String!
+}
+
+"""管理端配置（完整字段 + JSON 值）"""
+type AdminConfig {
+  """创建时间"""
+  createdAt: DateTime!
+
+  """配置 ID"""
+  id: String!
+
+  """配置 key（业务主键）"""
+  key: String!
+
+  """备注"""
+  remark: String
+
+  """更新时间"""
+  updatedAt: DateTime!
+
+  """最后更新人 accountId"""
+  updatedBy: String
+
+  """配置值（JSON 对象）"""
+  value: JSON!
+}
+
+type AdminMe {
+  accountId: ID!
+
+  """头像 URL（来自 admin_profile）"""
+  avatar: String
+  menus: [MenuTreeNode!]!
+  nickname: String!
+  permissions: [String!]!
+  roles: [String!]!
+  username: String!
+}
+
+"""管理端菜单"""
+type AdminMenu {
+  """详情页高亮目标菜单 ID"""
+  activeMenuId: String
+  component: String
+
+  """创建时间"""
+  createdAt: DateTime!
+  enabled: Boolean!
+  icon: String
+  id: ID!
+  keepAlive: Boolean!
+  name: String!
+
+  """父菜单 ID"""
+  parentId: ID
+  path: String
+  permissionCode: String
+  routeName: String
+  sort: Int!
+  type: String!
+
+  """更新时间"""
+  updatedAt: DateTime!
+  visible: Boolean!
+}
+
+"""管理端菜单树节点"""
+type AdminMenuNode {
+  """详情页高亮目标菜单 ID"""
+  activeMenuId: String
+  children: [AdminMenuNode!]!
+  component: String
+
+  """创建时间"""
+  createdAt: DateTime!
+  enabled: Boolean!
+  icon: String
+  id: ID!
+  keepAlive: Boolean!
+  name: String!
+
+  """父菜单 ID"""
+  parentId: ID
+  path: String
+  permissionCode: String
+  routeName: String
+  sort: Int!
+  type: String!
+
+  """更新时间"""
+  updatedAt: DateTime!
+  visible: Boolean!
+}
+
+"""管理端角色"""
+type AdminRole {
+  """角色编码（机器可读，全局唯一）"""
+  code: String!
+
+  """创建时间"""
+  createdAt: DateTime!
+
+  """角色描述"""
+  description: String
+
+  """是否启用"""
+  enabled: Boolean!
+  id: ID!
+
+  """关联菜单数量"""
+  menuCount: Int!
+
+  """关联菜单 ID 列表（仅详情接口返回）"""
+  menuIds: [ID!]
+
+  """角色名称（人类可读）"""
+  name: String!
+
+  """更新时间"""
+  updatedAt: DateTime!
+
+  """关联用户数"""
+  userCount: Int!
+}
+
+input AssignAdminAccountRolesInput {
+  accountId: ID!
+  roleIds: [ID!]!
+}
+
+input AssignRoleMenusInput {
+  menuIds: [ID!]!
+  roleId: ID!
+}
+
+"""审计日志"""
+type AuditLog {
+  """操作者账户 ID"""
+  accountId: String
+
+  """操作者用户名（来自 account_identity 表 identityType=username 的 identifier）"""
+  accountUsername: String
+
+  """操作类型"""
+  action: String!
+
+  """操作时间"""
+  createdAt: DateTime!
+
+  """操作详情（JSON 字符串）"""
+  detail: String
+  id: ID!
+
+  """操作者 IP"""
+  ip: String
+
+  """资源 ID"""
+  resourceId: String
+
+  """资源类型"""
+  resourceType: String
+
+  """User-Agent"""
+  userAgent: String
+}
+
+"""批量配置更新输入"""
+input BatchUpdateConfigsInputType {
+  """更新项列表（至少 1 条）"""
+  updates: [ConfigUpdateItemInput!]!
+}
+
+input BindPhoneInput {
+  """手机验证码（6 位数字）"""
+  code: String!
+
+  """要绑定的手机号（中国大陆 11 位）"""
+  phone: String!
+}
+
+input ChangePasswordInput {
+  """新密码（8-32 字符，含大小写 + 数字）"""
+  newPassword: String!
+
+  """旧密码"""
+  oldPassword: String!
+}
+
+"""清空审计日志结果"""
+type ClearAuditLogsResult {
+  """被删除的记录数"""
+  deletedCount: Int!
+}
+
+"""单条配置更新输入"""
+input ConfigUpdateItemInput {
+  """配置 key"""
+  key: String!
+
+  """配置值（JSON 对象）"""
+  value: JSON!
+}
+
+input CreateAdminAccountInput {
+  """头像 URL，建议先调用上传接口获取服务端 URL"""
+  avatar: String
+  email: String
+  nickname: String!
+
+  """初始密码（可选，8-64 位 + 字母 + 数字）"""
+  password: String
+  phone: String
+
+  """初始分配的角色 ID 列表"""
+  roleIds: [ID!]
+  username: String!
+}
+
+input CreateAdminMenuInput {
+  """前端组件名称"""
+  component: String
+  enabled: Boolean
+  icon: String
+  keepAlive: Boolean
+  name: String!
+
+  """父菜单 ID（根菜单不传）"""
+  parentId: ID
+  path: String
+  permissionCode: String
+  routeName: String
+  sort: Int
+  type: String!
+  visible: Boolean
+}
+
+input CreateAdminRoleInput {
+  code: String!
+  description: String
+  enabled: Boolean
+  name: String!
+}
+
+input CreateSystemConfigInput {
+  key: String!
+  value: String!
+}
+
+"""当前账户的菜单树 + 权限码"""
+type CurrentAdminMenus {
+  """当前账户可见的菜单树"""
+  menus: [AdminMenuNode!]!
+
+  """当前账户聚合后的权限码列表"""
+  permissions: [String!]!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+"""分布数据项"""
+type DistItem {
+  """颜色值"""
+  color: String!
+
+  """类别标签"""
+  label: String!
+
+  """百分比（0-100）"""
+  percent: Int!
+}
+
+"""任意 JSON 值（对象 / 数组 / 字符串 / 数字 / 布尔 / null）"""
+scalar JSON
+
+"""当前登录用户信息（管理端或 C 端，按 userType 区分）"""
+union Me = AdminMe | MemberMe
+
+type MemberMe {
+  accountId: ID!
+  avatar: String
+  nickname: String
+  roles: [String!]!
+}
+
+type MenuTreeNode {
+  activeMenuId: String
+  children: [MenuTreeNode!]!
+  component: String
+  enabled: Boolean!
+  icon: String
+  id: ID!
+  keepAlive: Boolean!
+  name: String!
+  parentId: String
+  path: String
+  permissionCode: String
+  routeName: String
+  sort: Int!
+  type: String!
+  visible: Boolean!
+}
+
+type Mutation {
+  """重新分配账户的角色（删旧 + 插新）"""
+  assignAdminAccountRoles(input: AssignAdminAccountRolesInput!): AdminAccount!
+
+  """分配角色菜单（先删后插）"""
+  assignRoleMenus(input: AssignRoleMenusInput!): Boolean!
+
+  """批量更新配置（事务式：全部成功或全部回滚提示）"""
+  batchUpdateConfigs(input: BatchUpdateConfigsInputType!): [AdminConfig!]!
+
+  """绑定手机号到当前账户（需短信验证码）"""
+  bindPhone(input: BindPhoneInput!): Boolean!
+
+  """修改当前登录用户密码（修改后所有设备需重新登录）"""
+  changePassword(input: ChangePasswordInput!): Boolean!
+
+  """清空所有审计日志"""
+  clearAuditLogs: ClearAuditLogsResult!
+
+  """创建管理员账户"""
+  createAdminAccount(input: CreateAdminAccountInput!): AdminAccount!
+
+  """创建菜单"""
+  createAdminMenu(input: CreateAdminMenuInput!): AdminMenu!
+
+  """创建角色"""
+  createAdminRole(input: CreateAdminRoleInput!): AdminRole!
+
+  """创建系统配置"""
+  createSystemConfig(input: CreateSystemConfigInput!): SystemConfig!
+
+  """软删除管理员账户（最后一个超管不能删）"""
+  deleteAdminAccount(id: ID!): Boolean!
+
+  """删除菜单（有子节点不能删）"""
+  deleteAdminMenu(id: ID!): Boolean!
+
+  """删除角色（super_admin 不可删）"""
+  deleteAdminRole(id: ID!): Boolean!
+
+  """删除单条审计日志"""
+  deleteAuditLog(id: ID!): Boolean!
+
+  """软删除系统配置"""
+  deleteSystemConfig(key: String!): Boolean!
+
+  """彻底删除已软删除的管理员账户（物理删除）"""
+  hardDeleteAdminAccount(id: ID!): Boolean!
+
+  """重置管理员密码（强制改密，不要求旧密码）"""
+  resetAdminAccountPassword(id: ID!, input: ResetAdminAccountPasswordInput!): Boolean!
+
+  """恢复已软删除的管理员账户"""
+  restoreAdminAccount(id: ID!): Boolean!
+
+  """全量替换账户特例授权"""
+  saveAccountMenus(accountId: ID!, overrides: [AccountMenuOverrideInput!]!): AccountMenuOverrideResult!
+
+  """解绑当前账户的手机号（至少保留一种登录方式）"""
+  unbindPhone(input: UnbindPhoneInput!): Boolean!
+
+  """更新管理员账户（支持角色重分配）"""
+  updateAdminAccount(id: ID!, input: UpdateAdminAccountInput!): AdminAccount!
+
+  """更新菜单"""
+  updateAdminMenu(id: ID!, input: UpdateAdminMenuInput!): AdminMenu!
+
+  """更新角色基本信息"""
+  updateAdminRole(id: ID!, input: UpdateAdminRoleInput!): AdminRole!
+
+  """单条更新配置（JSON 对象值）"""
+  updateConfig(input: UpdateConfigInputType!): AdminConfig!
+
+  """更新系统配置"""
+  updateSystemConfig(input: UpdateSystemConfigInput!, key: String!): SystemConfig!
+}
+
+"""系统公告"""
+type Notice {
+  """ID"""
+  id: String!
+
+  """标签"""
+  tag: String!
+
+  """时间（YYYY-MM-DD HH:mm:ss）"""
+  time: String!
+
+  """标题"""
+  title: String!
+
+  """类型"""
+  type: String!
+}
+
+"""操作记录"""
+type OperationLog {
+  """头像（DiceBear SVG data URI）"""
+  avatar: String!
+
+  """操作内容"""
+  content: String!
+
+  """ID"""
+  id: String!
+
+  """IP 地址"""
+  ip: String!
+
+  """业务模块"""
+  module: String!
+
+  """操作时间（YYYY-MM-DD HH:mm:ss）"""
+  time: String!
+
+  """用户头衔"""
+  title: String!
+
+  """头衔标签颜色"""
+  titleColor: String!
+
+  """操作类型"""
+  type: String!
+
+  """操作用户名"""
+  user: String!
+}
+
+type PaginatedAdminAccount {
+  items: [AdminAccount!]!
+  page: Int!
+  pageSize: Int!
+  total: Int!
+}
+
+type PaginatedAuditLog {
+  items: [AuditLog!]!
+  page: Int!
+  pageSize: Int!
+  total: Int!
+}
+
+"""分页操作日志"""
+type PaginatedOperationLog {
+  list: [OperationLog!]!
+  page: Int!
+  pageSize: Int!
+  total: Int!
+}
+
+type Query {
+  """查询账户特例授权列表"""
+  accountMenus(accountId: ID!): [AccountMenuRow!]!
+
+  """查询单个管理员账户（含角色码）"""
+  adminAccount(id: ID!): AdminAccount!
+
+  """分页查询管理员账户（includeDeleted=true 时含已软删）"""
+  adminAccounts(input: QueryAdminAccountInput): PaginatedAdminAccount!
+
+  """管理端配置列表（完整字段 + JSON 对象值）"""
+  adminConfigs: [AdminConfig!]!
+
+  """分页查询审计日志"""
+  adminLogs(action: String, endDate: DateTime, page: Int! = 1, pageSize: Int! = 20, resourceType: String, startDate: DateTime): PaginatedAuditLog!
+
+  """查询单个菜单"""
+  adminMenu(id: ID!): AdminMenu!
+
+  """菜单选项列表（角色分配弹窗）"""
+  adminMenuOptions: [AdminMenu!]!
+
+  """查询菜单树（前端动态路由用）"""
+  adminMenuTree: [AdminMenuNode!]!
+
+  """查询扁平菜单列表"""
+  adminMenus: [AdminMenu!]!
+
+  """查询单个角色（含 menuIds）"""
+  adminRole(id: ID!): AdminRole!
+
+  """查询所有角色（含 menuCount + menuIds）"""
+  adminRoles(enabled: Boolean = null): [AdminRole!]!
+
+  """当前账户的菜单树 + 权限码"""
+  currentAdminMenus: CurrentAdminMenus!
+  dashboardDistribution: [DistItem!]!
+  dashboardNotices: [Notice!]!
+  dashboardOperationLogs(page: Int! = 1, pageSize: Int! = 10): PaginatedOperationLog!
+  dashboardQuickEntries: [QuickEntry!]!
+  dashboardStats: [StatCard!]!
+  dashboardTrend(range: String! = "week"): [TrendItem!]!
+
+  """导出审计日志（全量，上限 10000 条）"""
+  exportAuditLogs(action: String, endDate: DateTime, resourceType: String, startDate: DateTime): [AuditLog!]!
+
+  """当前登录用户信息（管理端或 C 端），按 JWT 中的 userType 字段自动判别"""
+  me: Me!
+
+  """当前管理员偏好设置（仅需登录）"""
+  myPreferences: AdminConfig
+
+  """私有配置（需要登录 + config:admin:list 权限，含敏感凭据）"""
+  privateConfigs: [AdminConfig!]!
+
+  """公开配置（仅白名单 key，供未登录场景使用）"""
+  publicConfigs: [AdminConfig!]!
+
+  """查询单个系统配置"""
+  systemConfig(key: String!): SystemConfig!
+
+  """查询所有系统配置（按 key 升序）"""
+  systemConfigs: [SystemConfig!]!
+}
+
+input QueryAdminAccountInput {
+  enabled: Boolean
+  includeDeleted: Boolean = false
+  keyword: String
+  page: Int! = 1
+  pageSize: Int! = 20
+}
+
+"""快捷入口"""
+type QuickEntry {
+  """背景类名"""
+  bgClass: String!
+
+  """描述"""
+  desc: String!
+
+  """图标颜色"""
+  iconColor: String!
+
+  """路由路径"""
+  route: String!
+
+  """标题"""
+  title: String!
+}
+
+"""重置管理员密码的入参（前端必须做"再次输入"校验）"""
+input ResetAdminAccountPasswordInput {
+  """确认密码，必须与 newPassword 严格相等"""
+  confirmPassword: String!
+
+  """新密码，至少 8 位且必须同时包含字母和数字"""
+  newPassword: String!
+}
+
+"""统计卡片"""
+type StatCard {
+  """标签名"""
+  label: String!
+
+  """趋势（正数上升，负数下降）"""
+  trend: Int!
+
+  """数值"""
+  value: Int!
+}
+
+"""系统配置"""
+type SystemConfig {
+  key: String!
+
+  """更新时间"""
+  updatedAt: DateTime!
+
+  """配置值（前端按需 parse：string / number / boolean / json）"""
+  value: String!
+}
+
+"""趋势数据点"""
+type TrendItem {
+  """高危操作次数"""
+  highRisk: Int!
+
+  """时间段标签"""
+  label: String!
+
+  """低危操作次数"""
+  lowRisk: Int!
+
+  """中危操作次数"""
+  midRisk: Int!
+}
+
+input UnbindPhoneInput {
+  """手机验证码（验证本人操作，6 位数字）"""
+  code: String!
+
+  """要解绑的手机号"""
+  phone: String!
+}
+
+input UpdateAdminAccountInput {
+  """头像 URL，传空字符串表示清空，不传表示保留"""
+  avatar: String
+  email: String
+  enabled: Boolean
+  nickname: String
+  phone: String
+
+  """重新分配的角色 ID 列表（不传则不修改）"""
+  roleIds: [ID!]
+}
+
+input UpdateAdminMenuInput {
+  component: String
+  enabled: Boolean
+  icon: String
+  keepAlive: Boolean
+  name: String
+  parentId: ID
+  path: String
+  permissionCode: String
+  routeName: String
+  sort: Int
+  type: String
+  visible: Boolean
+}
+
+input UpdateAdminRoleInput {
+  description: String
+  enabled: Boolean
+  name: String
+}
+
+"""updateConfig 的入参"""
+input UpdateConfigInputType {
+  """配置 key"""
+  key: String!
+
+  """配置值（JSON 对象）"""
+  value: JSON!
+}
+
+input UpdateSystemConfigInput {
+  value: String!
+}
