@@ -317,8 +317,8 @@ function onMarkdownClick(e: MouseEvent) {
         } catch {
             /* keep raw */
         }
-        // 防止路径穿越（与后端 isValidSlug 保持一致）
-        if (!slug || slug.includes('..') || slug.includes('/') || slug.includes('\\')) return;
+        // 防止路径穿越，允许子目录分隔符 "/"
+        if (!slug || slug.includes('..') || slug.includes('\\')) return;
         const hash = hashPart ? decodeURIComponent(hashPart) : '';
         router.push({ name: 'DocPage', params: { slug }, hash: hash ? '#' + hash : undefined });
     }

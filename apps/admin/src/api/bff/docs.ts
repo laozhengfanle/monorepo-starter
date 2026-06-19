@@ -12,12 +12,14 @@ import { get } from '@/shared/request/request';
 
 /** 单条文档元信息 */
 export interface DocMeta {
-    /** URL 友好的标识符（文件名去掉 .md 后缀） */
+    /** URL 友好的标识符（含子目录路径，如 "用户指南/01-快速上手"） */
     slug: string;
     /** 原始文件名（含 .md 后缀） */
     name: string;
     /** 展示标题（文件名去掉 .md 后缀） */
     title: string;
+    /** 所属分组（子目录名，如 "用户指南" / "开发文档"） */
+    group: string;
 }
 
 /** 文档内容 */

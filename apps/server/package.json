@@ -12,7 +12,7 @@
         "build": "pnpm exec prisma generate && nest build && node scripts/compile-prisma-client.mjs",
         "format": "prettier --write \"src/**/*.ts\"",
         "start": "node dist/main",
-        "start:dev": "node --import ./scripts/swc-register.mjs src/main.ts",
+        "start:dev": "node --import ./scripts/swc-register.mjs --watch src/main.ts",
         "start:debug": "node --import ./scripts/swc-register.mjs --inspect src/main.ts",
         "start:prod": "NODE_ENV=${NODE_ENV:-production} node dist/main",
         "lint": "eslint \"{src,apps,libs}/**/*.ts\" --fix",

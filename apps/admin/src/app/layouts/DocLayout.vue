@@ -96,13 +96,42 @@ const transitionName = computed(() => {
     return `page-${animationType.value}`;
 });
 
-const docMenuOptions = computed<MenuOption[]>(() =>
-    docsList.value.map((doc) => ({
-        label: doc.title,
-        key: doc.slug,
-        icon: renderIcon(File),
-    })),
-);
+const docMenuOptions = computed<MenuOption[]>(() => {
+    // 按 group 分组
+    const groups = new Map<string, DocMeta[]>();
+    for (const doc of docsList.value) {
+        const g = doc.group || '';
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g)!.push(doc);
+    }
+
+    const options: MenuOption[] = [];
+    const sortedGroups = [...groups.keys()].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+
+    for (const group of sortedGroups) {
+        const docs = groups.get(group)!;
+        const children: MenuOption[] = docs.map((doc) => ({
+            label: doc.title,
+            key: doc.slug,
+            icon: renderIcon(File),
+        }));
+
+        if (group) {
+            // 有分组 → 用 group type 展示
+            options.push({
+                type: 'group',
+                label: group,
+                key: `group-${group}`,
+                children,
+            });
+        } else {
+            // 无分组（根目录文件如 README）→ 直接追加
+            options.push(...children);
+        }
+    }
+
+    return options;
+});
 
 const activeDocMenuKey = computed(() => {
     const slug = route.params.slug as string | undefined;
