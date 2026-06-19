@@ -134,3 +134,16 @@ pnpm workspace monorepo：
 - `packages/` — 共享配置和工具
 - `docs/` — 消费者技术文档（fork 后阅读）
 - `开发文档/` — 内部开发文档（设计决策依据，详见 [开发文档/项目总览.md](./开发文档/项目总览.md)）
+
+## 版本号自动递增
+
+**每次 commit 之前，AI 必须自动将 `package.json` 的 patch 版本号 +1（`x.y.Z`），无需用户提醒。**
+
+- 项目采用 SemVer，日常开发只动 patch 位（Z）
+- minor / major 由人在发版时手动决定
+- 不要在 commit message 里写"改版本号"——这是自动化行为，不是本次改动的内容
+- 如果当前 commit 已经包含了 minor/major 级的变更说明，仍然只自动 +patch，minor/major 由人后续手动调整
+
+**理由**（用户原话，2026-06-19）：
+
+> "每次还得我手动改版本号，每次提交的时候，让 AI 自己改版本号。"

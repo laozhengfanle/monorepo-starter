@@ -5,10 +5,12 @@ generator client {
 
 // ER 图生成器：从当前 schema 自动生成实体关系图到 docs/erd.svg
 // 安装方式：pnpm add -D prisma-erd-generator @mermaid-js/mermaid-cli
-// 使用方式：pnpm prisma generate
+// 使用方式：pnpm db:generate
+// 路径说明：prisma 会把 output 路径转成相对 schema 文件目录（apps/server/prisma/）
+//          再传给 prisma-erd-generator。所以这里的三级 ../ = 仓库根 + docs/erd.svg
 generator erd {
   provider = "prisma-erd-generator"
-  output   = "../../docs/erd.svg"
+  output   = "../../../docs/erd.svg"
   theme    = "default"
 }
 
