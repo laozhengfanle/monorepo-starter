@@ -185,7 +185,7 @@ export async function getAccountById(id: string): Promise<AccountRow> {
  *
  * avatar：
  * - undefined / ''：不设置头像（DB 默认 ''，前端显示 User icon 占位）
- * - URL 字符串：来自 /api/admin/uploads/avatar 接口返回值
+ * - URL 字符串：来自 /api/upload/avatar 接口返回值
  */
 export async function createAdmin(input: {
     username: string;

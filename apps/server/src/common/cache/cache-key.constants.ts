@@ -188,7 +188,7 @@ export const RATE_LIMIT = 'mono:rate';
  *   - SYSTEM_CONFIG 系：含系统运行时配置（如短信/邮件密钥占位、限流阈值），泄露可被攻击者针对性绕过
  * - 前缀匹配规则：startsWith（精确匹配 AUTH_RESULT 不会误伤 AUTH_RESULT_PUB 之类的不存在 key）
  *
- * 使用：在 admin/cache.controller.ts 的 stats 接口过滤
+ * 使用：缓存管理功能中过滤敏感 key（后续 GraphQL 端点复用）
  */
 export const SENSITIVE_KEY_PREFIXES: readonly string[] = Object.freeze([
     AUTH_RESULT,

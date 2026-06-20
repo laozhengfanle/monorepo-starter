@@ -808,33 +808,8 @@ async function main() {
                 enabled: true,
             });
 
-            // 缓存管理（独立菜单，不在后台设置下）
-            const cache = await createSysMenu({
-                name: '缓存管理',
-                type: 'menu',
-                path: 'cache',
-                routeName: 'ConfigCache',
-                component: 'config/cache',
-                icon: '',
-                permissionCode: 'config:cache:view',
-                sort: 6,
-                visible: true,
-                keepAlive: true,
-                enabled: true,
-            });
-            const cacheClearBtn = await tx.adminMenu.create({
-                data: {
-                    id: newId(),
-                    parentId: cache.id,
-                    name: '清除缓存',
-                    type: 'button',
-                    permissionCode: 'config:cache:delete',
-                    sort: 1,
-                    visible: true,
-                    keepAlive: false,
-                    enabled: true,
-                },
-            });
+            // 缓存管理 → GraphQL（后续在 modules/ 下建 resolver）
+            // 种子不再预置缓存管理菜单，权限码 config:cache:view / config:cache:delete 保留以备将来 GraphQL 端点使用
 
             // OAuth 配置
             const oauth = await createSysMenu({
@@ -1093,8 +1068,6 @@ async function main() {
                 storageViewBtn.id,
                 storageUploadBtn.id,
                 storageDeleteBtn.id,
-                cache.id,
-                cacheClearBtn.id,
                 oauth.id,
                 oauthViewBtn.id,
                 oauthUpdateBtn.id,

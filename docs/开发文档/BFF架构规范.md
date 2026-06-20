@@ -20,10 +20,7 @@ src/
   bff/                    ← REST 胶水层（前端专属 HTTP 端点）
     admin/                → 管理后台专用
       auth/               → POST /admin/auth/login
-      menus/              → REST CRUD /admin/menus/*
-      roles/              → REST CRUD /admin/roles/*
-      cache/              → /admin/cache/*
-      uploads/            → /admin/uploads/*
+      uploads/            → /upload/*
     public/               → 公开端点（无需认证）
       docs/               → GET /project-docs/*
     # 将来：

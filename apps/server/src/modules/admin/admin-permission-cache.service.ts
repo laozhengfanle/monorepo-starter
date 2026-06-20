@@ -209,7 +209,7 @@ export class AdminPermissionCacheService {
             let cachedFlatMenus = cachedMenus[i];
 
             // 角色缓存未命中，从 DB 数据构建并写入缓存
-            if (cachedPermissions === null || cachedFlatMenus === null) {
+            if (cachedPermissions == null || cachedFlatMenus == null) {
                 const dbPermissions: string[] = [];
                 const dbFlatMenus: FlatMenu[] = [];
 

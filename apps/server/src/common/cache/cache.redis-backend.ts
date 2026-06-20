@@ -307,7 +307,6 @@ export class RedisCacheBackend implements CacheBackend {
 
     /**
      * 字节数 → 人类可读字符串（如 "1.23 MB"）
-     * - 与 CacheController.formatBytes 保持同样的语义
      * - used_memory 是字节数，转 KB/MB/GB 展示更直观
      */
     private formatBytes(bytes: number): string {

@@ -91,7 +91,7 @@ export class RedisDegradationService {
 
     /**
      * 获取降级指标快照
-     * - 供 /api/admin/cache/stats 之类的端点消费
+     * - 供外部监控端点消费（后续 GraphQL 端点对接）
      */
     getMetrics(): Readonly<DegradationMetrics> {
         return { ...this.metrics };

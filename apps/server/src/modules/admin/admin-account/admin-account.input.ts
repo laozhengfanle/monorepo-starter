@@ -26,7 +26,7 @@ export class CreateAdminAccountInput {
 
     /**
      * 头像 URL（选填）
-     * - 约定：上传走 POST /api/admin/uploads/avatar，拿回 { url: "/uploads/avatars/xxx.webp" } 后塞这里
+     * - 约定：上传走 POST /api/upload/avatar，拿回 { url: "/uploads/avatars/xxx.webp" } 后塞这里
      * - 也允许外部 CDN / 相对路径，但服务端不做格式校验（基座原则：字符串透传）
      */
     @Field(() => String, { nullable: true, description: '头像 URL，建议先调用上传接口获取服务端 URL' })
@@ -65,7 +65,7 @@ export class UpdateAdminAccountInput {
      * 头像 URL（选填，传 '' 表示清空头像，传 URL 字符串表示替换头像）
      * - 不传：保留原头像
      * - 传 ''：清空头像（回退到 User icon 占位）
-     * - 传 URL：替换为新头像（建议先调 /api/admin/uploads/avatar 拿到服务端 URL）
+     * - 传 URL：替换为新头像（建议先调 /api/upload/avatar 拿到服务端 URL）
      */
     @Field(() => String, { nullable: true, description: '头像 URL，传空字符串表示清空，不传表示保留' })
     avatar?: string;

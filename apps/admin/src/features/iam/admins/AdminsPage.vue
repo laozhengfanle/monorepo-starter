@@ -118,7 +118,7 @@
              密码由后端 Create 时生成随机密码（mustChangePassword=true 强提示用户改），
              不在表单中收集，避免和后端策略冲突
 
-             头像：走 /api/admin/uploads/avatar 上传到服务端，再把返回的 URL 存到 adminProfile.avatar
+             头像：走 /api/upload/avatar 上传到服务端，再把返回的 URL 存到 adminProfile.avatar
              - NUpload 自定义 action 改写：用 beforeUpload + customRequest 拦截，转发到 uploadAvatar()
              - 上传成功 → 把后端返回的 url 写入 formData.avatar（提交时随 GraphQL 一起落库）
              - "清空" 按钮：显式回写 formData.avatar = ''（与后端 Update partial 语义区分） -->

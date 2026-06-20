@@ -121,7 +121,7 @@ vi.mock('@/api', () => {
             { id: 'role-2', name: '运营', desc: '运营', status: '启用', userCount: 0 },
         ]),
         getRoleById: vi.fn().mockResolvedValue({ menuIds: [] }),
-        /** 头像上传 mock — 真实实现走 /api/admin/uploads/avatar + CSRF，测试里直接返回固定 URL */
+        /** 头像上传 mock — 真实实现走 /api/upload/avatar + CSRF，测试里直接返回固定 URL */
         uploadAvatar: vi.fn().mockResolvedValue('/uploads/avatars/test-avatar.webp'),
     };
     apiRef.current = mod;

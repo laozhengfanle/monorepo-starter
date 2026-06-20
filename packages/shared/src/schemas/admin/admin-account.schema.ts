@@ -22,7 +22,7 @@ const AdminPasswordBaseSchema = z
  * - phone: 可选，中国大陆手机号
  * - email: 可选，邮箱格式
  * - roleIds: 可选，UUID 数组
- * - avatar: 可选，头像 URL（先调 /api/admin/uploads/avatar 拿服务端 URL 再传这里），最长 255 字符
+ * - avatar: 可选，头像 URL（先调 /api/upload/avatar 拿服务端 URL 再传这里），最长 255 字符
  * - password: 可选，自定义初始密码
  *   - 不传 → 后端走 generateInitialPassword() 生成随机密码（前端通过 dialog 告知管理员）
  *   - 传了 → 校验通过后用此密码哈希入 accountIdentity.credential

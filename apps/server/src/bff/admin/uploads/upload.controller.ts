@@ -2,12 +2,12 @@
  * 上传 HTTP Controller
  *
  * 路由：
- * - POST   /admin/uploads/avatar: 上传头像（folder: avatars）
- * - POST   /admin/uploads/file: 上传通用文件（folder: files）
- * - GET    /admin/uploads: 分页查询（?includeDeleted=true 时含已软删）
- * - DELETE /admin/uploads/:id: 软删除
- * - DELETE /admin/uploads/:id/hard: 彻底删除（已软删才能删）
- * - POST   /admin/uploads/:id/restore: 恢复已软删的文件
+ * - POST   /upload/avatar: 上传头像（folder: avatars）
+ * - POST   /upload/file: 上传通用文件（folder: files）
+ * - GET    /upload: 分页查询（?includeDeleted=true 时含已软删）
+ * - DELETE /upload/:id: 软删除
+ * - DELETE /upload/:id/hard: 彻底删除（已软删才能删）
+ * - POST   /upload/:id/restore: 恢复已软删的文件
  *
  * 上传约束：
  * - 头像：≤ 2MB，仅允许 image/jpeg | image/png | image/webp
@@ -167,7 +167,7 @@ class MagicBytesValidator implements PipeTransform {
     }
 }
 
-@Controller('admin/uploads')
+@Controller('upload')
 @RequireAuth()
 export class UploadController {
     constructor(private readonly uploadService: UploadService) {}
@@ -257,7 +257,7 @@ export class UploadController {
 
     /**
      * 彻底删除文件（物理删除已软删的文件行）
-     * - 路径：admin/uploads/:id/hard
+     * - 路径：upload/:id/hard
      * - 权限码：config:file:hard_delete
      */
     @Permission('config:file:hard_delete')
@@ -272,7 +272,7 @@ export class UploadController {
 
     /**
      * 恢复已软删除的文件（把 deletedAt 置为 NULL）
-     * - 路径：admin/uploads/:id/restore
+     * - 路径：upload/:id/restore
      * - 权限码：config:file:restore
      */
     @Permission('config:file:restore')

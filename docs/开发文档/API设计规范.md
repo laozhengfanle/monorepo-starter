@@ -25,18 +25,18 @@
 ```
 # 管理端
 POST   /admin/auth/login
-POST   /admin/auth/logout
 
-# 共享（token 刷新不区分端）
+# 共享（不区分端）
 POST   /auth/refresh
+POST   /auth/logout
 
 # C端
 POST   /member/auth/sms/send
 POST   /member/auth/sms/login
 
 # 文件上传（通用）
-POST   /api/upload/avatar
-POST   /api/upload/file
+POST   /upload/avatar
+POST   /upload/file
 
 # 健康检查
 GET    /health
@@ -433,7 +433,7 @@ Multer 已内置于 `@nestjs/platform-express`，无需额外安装。
 ### 基础用法：头像上传
 
 ```ts
-// apps/server/src/upload/upload.controller.ts
+// apps/server/src/bff/admin/uploads/upload.controller.ts
 import {
     Controller,
     Post,
@@ -448,7 +448,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { IStorageService } from '../storage/storage.interface';
 
-@Controller('api/upload')
+@Controller('upload')
 export class UploadController {
     constructor(@Inject('STORAGE_SERVICE') private readonly storage: IStorageService) {}
 
@@ -496,7 +496,7 @@ export class UploadController {
 头像/文件经 NestJS 服务器中转 → 占用带宽 + 内存。更好的方案：服务端生成一次性上传 URL，客户端直接上传到云存储（S3/MinIO/OSS），零服务器带宽。
 
 ```ts
-// apps/server/src/upload/upload.controller.ts
+// apps/server/src/bff/admin/uploads/upload.controller.ts
 @Post('presigned-url')
 async getPresignedUrl(@Body() dto: { filename: string; contentType: string }) {
   const result = await this.storage.getPresignedUrl(dto.filename, 'uploads', dto.contentType);
