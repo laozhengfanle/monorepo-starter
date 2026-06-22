@@ -36,6 +36,7 @@ export {
     hardDeleteAccount,
     restoreAccount,
     resetAdminPassword,
+    unlockAdminAccount,
     type AccountRow,
 } from './accounts';
 
@@ -92,6 +93,20 @@ export {
     type ConfigUpdateInput,
     type ConfigUpdateResult,
 } from './configs';
+
+// 缓存管理（GraphQL Query + Mutation）
+export {
+    listCacheKeys,
+    getCacheKeyTotal,
+    getCacheKey,
+    getCacheStats,
+    deleteCacheKey,
+    deleteCacheKeys,
+    clearCacheByPattern,
+    type CacheKeyRow,
+    type CacheStatsRow,
+    type DeleteCacheKeysResult,
+} from './cache';
 
 // 上传（RESTful — BFF 层，multipart/form-data）
 export { uploadAvatar, type UploadResult } from './bff/uploads';

@@ -258,7 +258,96 @@ export class AdminPermissionCacheService {
             menu: { permissionCode: am.menu.permissionCode ?? '' },
             type: am.type as 'grant' | 'deny',
         }));
-        const permissions = aggregatePermissions(allRoleMenus, overrides);
+        let permissions = aggregatePermissions(allRoleMenus, overrides);
+
+        /**
+         * grant 进去的「可见菜单节点」+ 子树 + 祖先链
+         *
+         * 业务背景：
+         * - 只把 grant 当权限码合并 → 菜单树没这个 menu → 侧边栏看不到 → 用户进不去
+         * - 早期 bug：grant button 只合入权限码，不加入菜单树 → 个人中心/侧边栏看不到 button
+         *
+         * 修复逻辑：
+         * 1. 收集 grant 的 menu/directory 节点，加入扁平菜单 + BFS 拉子树
+         * 2. 收集 grant 的 button 节点，加入扁平菜单（button 无子树，只加自己）
+         * 3. BFS 拉祖先链（menu/directory/button 的父链都要拉，否则 buildMenuTree 找不到 parent 变孤儿）
+         */
+        const grantMenuNodes = accountMenus.filter(
+            (am) => am.type === 'grant' && (am.menu.type === 'menu' || am.menu.type === 'directory') && am.menu.enabled,
+        );
+        // grant button 节点：只加自己进菜单树，不拉子树（button 没子节点）
+        const grantButtonNodes = accountMenus.filter(
+            (am) => am.type === 'grant' && am.menu.type === 'button' && am.menu.enabled,
+        );
+        if (grantMenuNodes.length > 0 || grantButtonNodes.length > 0) {
+            const seenMenuIds = new Set<string>(allFlatMenus.map((m) => m.id));
+
+            // 1. grant menu/directory 节点 + BFS 拉子树
+            const queue: string[] = [];
+            for (const am of grantMenuNodes) {
+                if (!seenMenuIds.has(am.menu.id)) {
+                    allFlatMenus.push(toFlatMenu(am.menu));
+                    seenMenuIds.add(am.menu.id);
+                }
+                queue.push(am.menu.id);
+            }
+            while (queue.length > 0) {
+                const parentIds = queue.splice(0, queue.length);
+                // 只拉 menu/directory 子节点，不拉 button
+                // - button 权限码只通过显式 grant 生效，不因 grant 父 menu 自动获得
+                // - 避免"grant 管理员管理 menu → 自动获得删除管理员 button 权限"的问题
+                const children = await this.prisma.client.adminMenu.findMany({
+                    where: { parentId: { in: parentIds }, type: { in: ['menu', 'directory'] } },
+                });
+                for (const child of children) {
+                    if (!seenMenuIds.has(child.id)) {
+                        seenMenuIds.add(child.id);
+                        if (child.enabled) {
+                            allFlatMenus.push(toFlatMenu(child));
+                        }
+                        queue.push(child.id);
+                    }
+                }
+            }
+
+            // 2. grant button 节点：加入扁平菜单（button 无子树，只加自己）
+            //    - 业务：grant 的 button 需要在个人中心/权限列表展示
+            //    - 不拉 button 子树：button 没子节点
+            for (const am of grantButtonNodes) {
+                if (!seenMenuIds.has(am.menu.id)) {
+                    allFlatMenus.push(toFlatMenu(am.menu));
+                    seenMenuIds.add(am.menu.id);
+                }
+            }
+
+            // 3. BFS 拉祖先链（grant menu/directory/button 的父链都要拉）
+            //    - 否则 buildMenuTree 找不到 parent，节点变孤儿被丢弃
+            //    - 例如 grant 了 button，必须把父 menu 拉出来，button 才能挂到 menu 下
+            const ancestorQueue: string[] = [
+                ...grantMenuNodes.map((am) => am.menu.parentId),
+                ...grantButtonNodes.map((am) => am.menu.parentId),
+            ].filter((pid): pid is string => pid !== null && pid !== undefined);
+            while (ancestorQueue.length > 0) {
+                const parentIds = ancestorQueue.splice(0, ancestorQueue.length);
+                const newIds = parentIds.filter((id) => !seenMenuIds.has(id));
+                if (newIds.length === 0) continue;
+                const parents = await this.prisma.client.adminMenu.findMany({
+                    where: { id: { in: newIds } },
+                });
+                for (const p of parents) {
+                    seenMenuIds.add(p.id);
+                    if (p.enabled) {
+                        allFlatMenus.push(toFlatMenu(p));
+                    }
+                    if (p.parentId) {
+                        ancestorQueue.push(p.parentId);
+                    }
+                }
+            }
+
+            // 重新聚合 permissions（overrides 追加了子树 button 权限码）
+            permissions = aggregatePermissions(allRoleMenus, overrides);
+        }
 
         // 扁平菜单去重（按 id）
         const uniqueFlatMenus = [...new Map(allFlatMenus.map((m) => [m.id, m])).values()];
@@ -419,4 +508,42 @@ export class AdminPermissionCacheService {
             },
         );
     }
+}
+
+/**
+ * 将 Prisma adminMenu 记录转为 FlatMenu（与 builder.ts 保持一致）
+ * - 提取为模块级函数，避免重复
+ */
+function toFlatMenu(m: {
+    id: string;
+    parentId: string | null;
+    name: string;
+    type: string;
+    path: string | null;
+    routeName: string | null;
+    component: string | null;
+    icon: string | null;
+    permissionCode: string | null;
+    sort: number;
+    visible: boolean;
+    keepAlive: boolean;
+    enabled: boolean;
+    activeMenuId: string | null;
+}): FlatMenu {
+    return {
+        id: m.id,
+        parentId: m.parentId,
+        name: m.name,
+        type: m.type,
+        path: m.path ?? undefined,
+        routeName: m.routeName ?? undefined,
+        component: m.component ?? undefined,
+        icon: m.icon ?? undefined,
+        permissionCode: m.permissionCode ?? undefined,
+        sort: m.sort,
+        visible: m.visible,
+        keepAlive: m.keepAlive,
+        enabled: m.enabled,
+        activeMenuId: m.activeMenuId ?? undefined,
+    };
 }

@@ -26,6 +26,18 @@ function createMockCacheService() {
     };
 }
 
+/**
+ * LoginLockIntegration mock（admin-account.service 依赖，用于 resetPassword / unlockAccount）
+ * - clear: 清账号级失败计数（resetPassword / unlockAccount 用）
+ * - isLocked: 查账号级是否被锁（当前 AdminAccountResolver.isLocked 字段用，service 不直接调）
+ */
+function createMockLoginLock() {
+    return {
+        clear: vi.fn().mockResolvedValue(undefined),
+        isLocked: vi.fn().mockResolvedValue(false),
+    };
+}
+
 function createMockAuditService() {
     return {
         record: vi.fn().mockResolvedValue(undefined),
@@ -162,6 +174,7 @@ describe('AdminAccountService', () => {
             mockAudit as any,
             {} as any, // systemConfigService（resetPassword 校验密码强度时才用）
             mockTokenBlacklist as any,
+            createMockLoginLock() as any, // loginLockIntegration（resetPassword / unlockAccount 用）
         );
     });
 
@@ -474,6 +487,7 @@ describe('AdminAccountService', () => {
                 mockAudit as any,
                 {} as any,
                 mockTokenBlacklist as any,
+                createMockLoginLock() as any,
             );
             mockPrisma.rawClient.adminProfile.findUnique.mockResolvedValue(
                 makeProfile({ accountId: 'a1', roles: ['editor'] }),

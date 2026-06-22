@@ -3,8 +3,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service.js';
-import { LoginLockService } from './login-lock.service.js';
-import { LoginLockIntegration } from './login-lock-integration.js';
 import { TokenIssuanceService } from './token-issuance.service.js';
 import { JwtStrategy } from './jwt.strategy.js';
 import { MeService } from './me.service.js';
@@ -74,15 +72,7 @@ import { ServicesModule } from '../../common/services/services.module.js';
         ServicesModule,
     ],
     controllers: [AdminAuthController, MemberAuthController, AuthController],
-    providers: [
-        AuthService,
-        LoginLockService,
-        LoginLockIntegration,
-        TokenIssuanceService,
-        JwtStrategy,
-        MeService,
-        AuthResolver,
-    ],
+    providers: [AuthService, TokenIssuanceService, JwtStrategy, MeService, AuthResolver],
     exports: [AuthService, TokenIssuanceService, JwtModule, MeService],
 })
 export class AuthModule {}

@@ -6,39 +6,39 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: postgres-deny-all
-  namespace: monorepo
+    name: postgres-deny-all
+    namespace: monorepo
 spec:
-  podSelector:
-    matchLabels:
-      app: postgres
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app: server
-      ports:
-        - port: 5432
-          protocol: TCP
+    podSelector:
+        matchLabels:
+            app: postgres
+    policyTypes:
+        - Ingress
+    ingress:
+        - from:
+              - podSelector:
+                    matchLabels:
+                        app: server
+          ports:
+              - port: 5432
+                protocol: TCP
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: redis-deny-all
-  namespace: monorepo
+    name: redis-deny-all
+    namespace: monorepo
 spec:
-  podSelector:
-    matchLabels:
-      app: redis
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app: server
-      ports:
-        - port: 6379
-          protocol: TCP
+    podSelector:
+        matchLabels:
+            app: redis
+    policyTypes:
+        - Ingress
+    ingress:
+        - from:
+              - podSelector:
+                    matchLabels:
+                        app: server
+          ports:
+              - port: 6379
+                protocol: TCP

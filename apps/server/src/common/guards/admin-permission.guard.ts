@@ -15,21 +15,7 @@ import { CACHE_KEYS } from '../cache/cache-key.constants.js';
 // 元数据读取统一走 ReflectorExt 工具类（已封装 getHandler + getClass 两层反射）
 import { ReflectorExt } from './reflector-ext.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { aggregatePermissions } from '../utils/aggregate-permissions.js';
-import { buildMenuTree, type FlatMenu } from '../utils/build-menu-tree.js';
-
-/** Redis 中缓存的认证数据结构 */
-interface AuthCacheData {
-    /** 用户角色列表 */
-    roles: string[];
-    /** 用户权限码列表 */
-    permissions: string[];
-    /** 用户菜单列表 */
-    menus: unknown[];
-}
-
-/** 账户级缓存 TTL：30 分钟 */
-const ACCOUNT_TTL = 1800;
+import { buildAccountAuth, type AuthCacheData } from '../cache/account-auth.builder.js';
 
 /**
  * 管理端权限守卫
@@ -37,6 +23,8 @@ const ACCOUNT_TTL = 1800;
  * - 校验流程：@Public() 放行 → 未标 @RequireAuth() 放行 → @LoginOnly() 放行 → 校验权限码
  * - super_admin 角色短路放行；缓存未命中时通过 PrismaService + ICacheService 直接重建
  *   （不依赖 AdminPermissionCacheService，避免 AppModule 循环依赖）
+ * - 重建逻辑调 buildAccountAuth 纯函数：保证 Guard 路径与 CacheService 路径合并逻辑一致
+ *   （早期 Guard 漏查 adminAccountMenu 表，导致 grant/deny 特例授权失效，详见 account-auth.builder.ts 注释）
  */
 @Injectable()
 export class AdminPermissionGuard implements CanActivate {
@@ -124,96 +112,22 @@ export class AdminPermissionGuard implements CanActivate {
 
     /**
      * 缓存未命中时重建账户认证数据
-     * - 从数据库查角色/权限/菜单，聚合后写 Redis
+     * - 委托给 buildAccountAuth 纯函数（与 AdminPermissionCacheService 同源）
+     * - 纯函数已查 adminAccountMenu 合并 grant/deny 覆盖；本处不重复实现以免脱节
      * - 失败抛 500（fail-closed：拒绝访问 + 明确错误信息）
      */
     private async _buildAccountAuth(accountId: string): Promise<AuthCacheData | null> {
-        try {
-            /** Prisma 查询的角色-菜单关联结构（紧凑写法，避免深层嵌套） */
-            const accountRoles = await this.prisma.client.adminAccountRole.findMany({
-                where: { accountId },
-                include: {
-                    role: {
-                        select: {
-                            code: true,
-                            enabled: true,
-                            roleMenus: {
-                                where: { menu: { enabled: true } },
-                                select: {
-                                    menu: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            path: true,
-                                            icon: true,
-                                            type: true,
-                                            permissionCode: true,
-                                            sort: true,
-                                            visible: true,
-                                            parentId: true,
-                                            enabled: true,
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            });
-
-            /** 提取启用的角色码 */
-            const roles = accountRoles.filter((ar) => ar.role?.enabled).map((ar) => ar.role.code);
-
-            /** 聚合权限：角色权限 + 账户级 grant/deny 覆盖 */
-            const flatMenus: FlatMenu[] = [];
-            const rolesForAgg: Array<{ roleMenus: Array<{ menu: { permissionCode: string } }> }> = [];
-            const overrides: Array<{ menu: { permissionCode: string }; type: 'grant' | 'deny' }> = [];
-            for (const ar of accountRoles) {
-                if (!ar.role?.enabled) continue;
-                rolesForAgg.push({
-                    roleMenus: ar.role.roleMenus.map((rm) => ({
-                        menu: { permissionCode: rm.menu.permissionCode },
-                    })),
-                });
-                for (const rm of ar.role.roleMenus) {
-                    const rmType = (rm as { type?: string }).type;
-                    // overrideType 字段不在 FlatMenu 类型里，运行时需带这个标记给前端做 grant/deny 区分
-                    flatMenus.push({
-                        ...rm.menu,
-                        keepAlive: true,
-                        routeName: '',
-                        component: '',
-                        overrideType: rmType,
-                    } as FlatMenu & { overrideType?: string });
-                    if (rmType === 'grant' || rmType === 'deny') {
-                        overrides.push({
-                            menu: { permissionCode: rm.menu.permissionCode },
-                            type: rmType,
-                        });
-                    }
-                }
-            }
-            const permissions = aggregatePermissions(rolesForAgg, overrides);
-            const menus = buildMenuTree(flatMenus);
-            const authData: AuthCacheData = { roles, permissions, menus };
-
-            /** 写缓存（降级：Redis 故障不阻塞请求，DB 已有数据下次还能查） */
-            const cacheKey = `${CACHE_KEYS.AUTH_RESULT}:${accountId}`;
-            try {
-                await this.cacheService.setex(cacheKey, ACCOUNT_TTL, authData);
-            } catch (err) {
-                this.logger.warn(
-                    `[AdminPermissionGuard] Redis 写入降级（缓存未更新，下次从 DB 重建）: accountId=${accountId} err=${(err as Error).message}`,
-                );
-            }
-            return authData;
-        } catch (err) {
-            // fail-closed：抛 500 而不是返回 null，避免合法用户被误判为"无权访问"（403）
-            this.logger.error(
-                `重建账户缓存失败（抛 500 避免误判为权限不足）: accountId=${accountId} err=${(err as Error).message}`,
-                (err as Error).stack,
-            );
+        const result = await buildAccountAuth({
+            prisma: this.prisma,
+            cacheService: this.cacheService,
+            accountId,
+            userType: 'admin',
+            logContext: 'AdminPermissionGuard',
+        });
+        if (!result.authData) {
+            // 纯函数遇到异常已 logger.error 并返回 null；此处转 500 走 fail-closed
             throw new InternalServerErrorException('系统繁忙，请稍后重试');
         }
+        return result.authData;
     }
 }

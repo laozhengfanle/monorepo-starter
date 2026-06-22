@@ -31,6 +31,7 @@ import { AuditService, AUDIT_ACTIONS } from '../../audit/audit.service.js';
 import { AdminPermissionCacheService } from '../admin-permission-cache.service.js';
 import { SystemConfigService } from '../system-config/system-config.service.js';
 import { TokenBlacklistService } from '../../../common/services/token-blacklist.service.js';
+import { LoginLockIntegration } from '../../auth/login-lock-integration.js';
 import type { AdminAccount } from './admin-account.type.js';
 import type { PaginatedType } from '../../graphql/common/pagination.type.js';
 import type { DataLoaders } from '../../../common/dataloader/index.js';
@@ -91,6 +92,7 @@ export class AdminAccountService {
         private readonly auditService: AuditService,
         private readonly systemConfigService: SystemConfigService,
         private readonly tokenBlacklist: TokenBlacklistService,
+        private readonly loginLock: LoginLockIntegration,
     ) {}
 
     /**
@@ -848,6 +850,14 @@ export class AdminAccountService {
         });
 
         /**
+         * 清空失败计数（解锁登录）
+         * - 不清的话，被 5 次失败锁定的账号重置密码后还要再等 lockDuration 分钟才能登
+         * - 走 LoginLockIntegration → LoginLockService.clear，单账号级
+         * - IP 维度计数不重置（防攻击者通过重置密码绕过 IP 限制）
+         */
+        await this.loginLock.clear(id);
+
+        /**
          * 5. 写审计日志
          * - action: 'reset_password'（不是 PASSWORD_CHANGED，PASSWORD_CHANGED 是用户自己改自己）
          * - detail 不写明文密码！只记"由谁重置了谁的密码"
@@ -866,6 +876,44 @@ export class AdminAccountService {
         });
 
         return { id, reset: true };
+    }
+
+    /**
+     * 主动解锁指定账号（清空登录失败计数）
+     * - 场景：用户忘记密码 / 锁定 30 分钟内要立即恢复访问
+     * - 不动账号密码、不撤销 token：纯"清锁"
+     * - 区别于 resetPassword：resetPassword 会强制改密 + 撤销 token + 清锁；
+     *   unlockAccount 仅清锁，密码保持原样
+     * - 仅账号级清空，IP 维度不重置（防攻击者通过清锁绕过 IP 限制）
+     *
+     * 权限：iam:admin:update
+     *
+     * @param id          目标账户 ID
+     * @param operatorId  操作者账户 ID（用于审计）
+     */
+    async unlockAccount(id: string, operatorId?: string): Promise<{ id: string; unlocked: true }> {
+        // 1. 校验账户存在（rawClient 软删除扩展按 deletedAt=null 过滤，避开）
+        const account = await this.prisma.rawClient.account.findUnique({ where: { id } });
+        if (!account || account.deletedAt !== null) {
+            throw new NotFoundException('账户不存在');
+        }
+
+        // 2. 清空失败计数（单账号级）
+        await this.loginLock.clear(id);
+
+        // 3. 写审计日志 — 区别于 reset_password，单独记 unlock_account
+        await this.auditService.record({
+            accountId: operatorId || '',
+            action: AUDIT_ACTIONS.ACCOUNT_UNLOCKED,
+            resourceType: 'admin_account',
+            resourceId: id,
+            detail: {
+                by: operatorId || 'system',
+            },
+        });
+
+        this.logger.log(`账号已解锁: targetId=${id}, operatorId=${operatorId || 'system'}`);
+        return { id, unlocked: true };
     }
 
     /**

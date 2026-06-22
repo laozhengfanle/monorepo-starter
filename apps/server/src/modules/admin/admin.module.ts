@@ -9,6 +9,7 @@ import { AdminPermissionCacheService } from './admin-permission-cache.service.js
 import { AuditLogResolver } from './audit-log/audit-log.resolver.js';
 import { AccountMenuResolver } from './account-menu/account-menu.resolver.js';
 import { SystemConfigModule } from './system-config/system-config.module.js';
+import { CacheAdminModule } from './cache-admin/cache-admin.module.js';
 import { ServicesModule } from '../../common/services/services.module.js';
 
 /**
@@ -18,6 +19,7 @@ import { ServicesModule } from '../../common/services/services.module.js';
  * - AdminMenuService / AdminMenuResolver：菜单增删改查、按角色查询
  * - AdminPermissionCacheService：权限缓存管理
  * - SystemConfigModule：系统配置
+ * - CacheAdminModule：缓存管理（运维：list/clear cache keys）
  *
  * 注意：REST 端点的 controller 源文件在 bff/ 下（由 modules/ 下对应 module 注册），
  * 本模块只放 GraphQL resolver + service。
@@ -25,6 +27,12 @@ import { ServicesModule } from '../../common/services/services.module.js';
 @Module({
     imports: [
         SystemConfigModule,
+        /**
+         * 缓存管理模块
+         * - 依赖全局 CacheModule（@Global），不需重复导入
+         * - 注入 ICacheService 做 listKeys / clearCache / getStats 等管理操作
+         */
+        CacheAdminModule,
         /**
          * 导入 ServicesModule（@Global）以使用 TokenBlacklistService
          * - admin-account.service.ts 软删 / 改密时调 revokeAccountTokens

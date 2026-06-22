@@ -67,4 +67,14 @@ export class AdminAccount {
 
     @Field({ description: '更新时间' })
     updatedAt!: Date;
+
+    /**
+     * 账号是否处于登录失败锁定状态
+     * - true: 5 次失败被锁，30 分钟内不能登录
+     * - false: 正常或未触发锁定
+     * - 通过 @ResolveField 实时查 Redis，列表场景下会 N+1（后续可用 DataLoader 优化）
+     * - 前端表格用此字段决定是否展示「解锁」按钮
+     */
+    @Field({ description: '账号是否被登录失败计数锁定（true=被锁，30 分钟内不可登录）' })
+    isLocked?: boolean;
 }

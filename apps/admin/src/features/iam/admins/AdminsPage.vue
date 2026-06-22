@@ -75,7 +75,7 @@
                             </template>
 
                             <n-space align="center">
-                                <n-button @click="onSearch"> 查询 </n-button>
+                                <n-button type="primary" @click="onSearch"> 查询 </n-button>
                                 <n-button @click="onReset"> 重置 </n-button>
                                 <n-button
                                     v-if="overflow || !isCollapsed"
@@ -363,6 +363,7 @@ import {
     hardDeleteAccount,
     restoreAccount,
     resetAdminPassword,
+    unlockAdminAccount,
     getRoles,
     getRoleById,
     uploadAvatar,
@@ -404,6 +405,8 @@ function formatDeletedAt(value: string | null | undefined): string {
 const canCreate = computed(() => permissionStore.hasAnyPermission(['iam:admin:create']));
 const canEdit = computed(() => permissionStore.hasAnyPermission(['iam:admin:update']));
 const canDelete = computed(() => permissionStore.hasAnyPermission(['iam:admin:delete']));
+/** 特例授权：独立权限码，与 iam:admin:update 解耦（被 grant update 的人不一定能给别人设特例） */
+const canAccountPerm = computed(() => permissionStore.hasAnyPermission(['iam:admin:grant']));
 /** 全局回收站权限（三个独立维度，对应后端 seed 的 global:trash:* 权限码） */
 // 列表权限：控制能否看到「软删除」筛选 + 进入软删视图（看到已删除行 + 「已删除」红 tag）
 const canViewTrash = computed(() => permissionStore.hasAnyPermission(['global:trash:view']));
@@ -495,6 +498,8 @@ async function loadData() {
 
 /** 加载角色列表（角色数据量小，一次取完） */
 async function loadRoles() {
+    // 没有 iam:role:view 权限就不调接口，避免后端返回 403 "无权访问" 弹 warning
+    if (!permissionStore.hasAnyPermission(['iam:role:view'])) return;
     try {
         // 后端 adminRoles() 不分页，直接拿全量
         const rolesList = await getRoles();
@@ -670,8 +675,8 @@ const columns = [
                           { default: () => '删除' },
                       )
                     : null,
-                // 特例授权：仅未删除记录可操作
-                !isDeleted
+                // 特例授权：仅未删除记录 + 有 iam:admin:permission 权限（独立权限码）
+                !isDeleted && canAccountPerm.value
                     ? h(
                           NTooltip,
                           { trigger: 'hover' },
@@ -715,6 +720,22 @@ const columns = [
                               onClick: () => onHardDelete(row),
                           },
                           { default: () => '彻底删除' },
+                      )
+                    : null,
+                // 解锁按钮：仅未删除 + 账号当前被锁（isLocked=true）+ 有 iam:admin:update 权限
+                // - 操作列最后一个（最右）
+                // - 没被锁就不显示，避免无意义按钮
+                // - 解锁后会自动 reload 当前列表（isLocked 会变 false，按钮自动消失）
+                !isDeleted && row.isLocked && canEdit.value
+                    ? h(
+                          NButton,
+                          {
+                              quaternary: true,
+                              size: 'small',
+                              type: 'info',
+                              onClick: () => onUnlock(row),
+                          },
+                          { default: () => '解锁' },
                       )
                     : null,
             ]);
@@ -1234,6 +1255,32 @@ function onDelete(row: AccountRow) {
             try {
                 await deleteAdmin(row.id);
                 message.success('管理员已删除');
+                await loadData();
+            } catch (e) {
+                message.error(String(e));
+            }
+        },
+    });
+}
+
+/**
+ * 解锁管理员账号（清空登录失败计数）
+ * - 场景：用户 5 次失败被锁 30 分钟，超级管理员要立即恢复其访问（不改密）
+ * - 与「编辑弹窗里改密」区别：这里只清锁，不动密码
+ * - 与「重置密码」区别：重置密码会强制改密 + 撤销 token + 清锁；解锁只清锁
+ * - 写审计：后端 action=account_unlocked
+ * - 成功后 reload：让 isLocked 变 false，按钮自动消失
+ */
+function onUnlock(row: AccountRow) {
+    dialog.warning({
+        title: '确认解锁',
+        content: `确定要解锁「${row.username}」吗？\n该账号将立即恢复登录能力（清空失败计数）。`,
+        positiveText: '确认解锁',
+        negativeText: '取消',
+        onPositiveClick: async () => {
+            try {
+                await unlockAdminAccount(row.id);
+                message.success(`已解锁「${row.username}」`);
                 await loadData();
             } catch (e) {
                 message.error(String(e));

@@ -11,7 +11,7 @@
  * - Service 负责数据组装（多表 JOIN、字段映射等）
  * - 方便未来加单元测试（mock 掉 Prisma 和 CacheService 即可）
  */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AdminPermissionCacheService } from '../admin/admin-permission-cache.service.js';
 import { MenuTreeNode, type AdminMe, type MemberMe } from './auth.type.js';
@@ -63,6 +63,8 @@ function toMenuTreeNode(node: InternalMenuNode): MenuTreeNode {
 
 @Injectable()
 export class MeService {
+    private readonly logger = new Logger(MeService.name);
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly adminPermissionCache: AdminPermissionCacheService,
@@ -142,8 +144,8 @@ export class MeService {
          * - 菜单树来自缓存的 buildMenuTree 结果，需要转换为 GraphQL 类型
          *   （parentId 由 null 转 undefined，对齐 GraphQL nullable 约定）
          */
-        return {
-            userType: 'admin',
+        const result = {
+            userType: 'admin' as const,
             accountId,
             username: usernameIdentity.identifier,
             nickname: account.adminProfile?.nickname || usernameIdentity.identifier,
@@ -152,13 +154,15 @@ export class MeService {
             permissions,
             menus,
         };
+
+        return result;
     }
 
     /**
      * 获取 C 端「我」数据
      * @param accountId 账户 ID（来自 JWT payload.sub）
      * @returns MemberMe 对象（含 userType 判别字段）
-     * @throws NotFoundException 账户不存在或已被删除
+     * @throws NotFoundException 账户不存在或被删除
      */
     async getMemberMe(accountId: string): Promise<MemberMe> {
         /** 1-2. 并行查询：账户+profile 和 成员角色（两次查询无依赖，可并行） */

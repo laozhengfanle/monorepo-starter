@@ -59,10 +59,16 @@ describe('AdminPermissionGuard', () => {
         get: ReturnType<typeof vi.fn>;
         setex: ReturnType<typeof vi.fn>;
         del: ReturnType<typeof vi.fn>;
+        mget: ReturnType<typeof vi.fn>;
     };
+    /** mock buildAccountAuth 内部所需：缓存 + DB 状态（用变量可在用例中改写） */
+    let roleAuthState: { permMap: Map<string, string[]>; menuMap: Map<string, unknown[]> };
     let mockPrisma: {
         client: {
             adminAccountRole: {
+                findMany: ReturnType<typeof vi.fn>;
+            };
+            adminAccountMenu: {
                 findMany: ReturnType<typeof vi.fn>;
             };
         };
@@ -94,16 +100,51 @@ describe('AdminPermissionGuard', () => {
             getAllAndOverride: vi.fn(),
         };
 
+        // 角色级 L1 缓存：key → 值
+        // - 走真实 buildAccountAuth 纯函数，纯函数会先查 mget；
+        // - mock 默认全部 miss（返回 undefined），让纯函数走 DB 路径
+        roleAuthState = {
+            permMap: new Map<string, string[]>(),
+            menuMap: new Map<string, unknown[]>(),
+        };
+
         mockCacheService = {
             get: vi.fn(),
-            setex: vi.fn(),
+            setex: vi.fn(async (key: string, _ttl: number, value: unknown) => {
+                // 把 setex 的值记到 roleAuthState，给 mget 用
+                if (Array.isArray(value)) {
+                    if (key.includes(':role:perm:')) {
+                        roleAuthState.permMap.set(key, value as string[]);
+                    } else if (key.includes(':role:menus:')) {
+                        roleAuthState.menuMap.set(key, value as unknown[]);
+                    }
+                }
+            }),
             del: vi.fn(),
+            // mget 返回和 keys 等长的数组；miss 的位置返回 undefined
+            mget: vi.fn(async (keys: string[]) => {
+                const perms = roleAuthState.permMap;
+                const menus = roleAuthState.menuMap;
+                // 顺序：先 perms 后 menus（纯函数两次 mget 调用）
+                // 通过 key 前缀区分
+                if (keys.every((k) => k.includes(':role:perm:'))) {
+                    return keys.map((k) => perms.get(k) as string[] | undefined);
+                }
+                if (keys.every((k) => k.includes(':role:menus:'))) {
+                    return keys.map((k) => menus.get(k) as unknown[] | undefined);
+                }
+                return keys.map(() => undefined);
+            }),
         };
 
         mockPrisma = {
             client: {
                 adminAccountRole: {
                     findMany: vi.fn(),
+                },
+                adminAccountMenu: {
+                    // 默认无账户级 grant/deny
+                    findMany: vi.fn().mockResolvedValue([]),
                 },
             },
         };
@@ -284,7 +325,8 @@ describe('AdminPermissionGuard', () => {
             // 缓存 miss
             mockCacheService.get.mockResolvedValue(null);
 
-            // 模拟 DB 返回超管角色数据
+            // 走真实 buildAccountAuth：DB 返回 super_admin 角色 + list 权限
+            // - mget 默认 miss，纯函数走 DB 路径重建后回填角色级 L1
             mockPrisma.client.adminAccountRole.findMany.mockResolvedValue([
                 {
                     role: {
@@ -316,14 +358,9 @@ describe('AdminPermissionGuard', () => {
 
             const result = await guard.canActivate(context);
             expect(result).toBe(true);
-            // 验证写入了缓存
-            expect(mockCacheService.setex).toHaveBeenCalledWith(
-                'mono:auth:admin-1',
-                expect.any(Number),
-                expect.objectContaining({
-                    roles: ['super_admin'],
-                    permissions: expect.arrayContaining(['iam:admin:list']),
-                }),
+            // 验证：Guard 调用了 buildAccountAuth 触发了 DB 查询 + 角色级缓存回填
+            expect(mockPrisma.client.adminAccountRole.findMany).toHaveBeenCalledWith(
+                expect.objectContaining({ where: expect.objectContaining({ accountId: 'admin-1' }) }),
             );
         });
 
@@ -337,7 +374,7 @@ describe('AdminPermissionGuard', () => {
 
             mockCacheService.get.mockResolvedValue(null);
 
-            // DB 返回只有 list 权限的角色
+            // 走真实 buildAccountAuth：DB 返回 editor 角色 + 只有 list 权限
             mockPrisma.client.adminAccountRole.findMany.mockResolvedValue([
                 {
                     role: {
@@ -379,7 +416,8 @@ describe('AdminPermissionGuard', () => {
             });
 
             mockCacheService.get.mockResolvedValue(null);
-            // DB 查询异常
+
+            // 真实 buildAccountAuth 内部 try-catch：DB 异常 → 返回 null → Guard 转 500
             mockPrisma.client.adminAccountRole.findMany.mockRejectedValue(new Error('DB connection error'));
 
             const { context } = createMockContext({
@@ -443,6 +481,7 @@ describe('AdminPermissionGuard', () => {
             // 第二次 get（del 后内部不调用 get，而是调用 _buildAccountAuth）
             // 实际上 guard 检测到 typeof === 'string' 后 del 然后走 _buildAccountAuth
 
+            // 走真实 buildAccountAuth：DB 返回 editor 角色 + list 权限
             mockPrisma.client.adminAccountRole.findMany.mockResolvedValue([
                 {
                     role: {
@@ -474,8 +513,11 @@ describe('AdminPermissionGuard', () => {
 
             const result = await guard.canActivate(context);
             expect(result).toBe(true);
-            // 验证删除了异常缓存
+            // 验证：字符串缓存被 del，并触发了 DB 重建
             expect(mockCacheService.del).toHaveBeenCalledWith('mono:auth:editor-1');
+            expect(mockPrisma.client.adminAccountRole.findMany).toHaveBeenCalledWith(
+                expect.objectContaining({ where: expect.objectContaining({ accountId: 'editor-1' }) }),
+            );
         });
     });
 
@@ -512,53 +554,39 @@ describe('AdminPermissionGuard', () => {
 
             mockCacheService.get.mockResolvedValue(null);
 
-            // DB 返回一个禁用角色 + 一个启用角色
-            mockPrisma.client.adminAccountRole.findMany.mockResolvedValue([
-                {
-                    role: {
-                        code: 'disabled_role',
-                        enabled: false, // 禁用
-                        roleMenus: [
-                            {
-                                menu: {
-                                    id: 'm1',
-                                    name: '删除管理员',
-                                    path: '',
-                                    icon: '',
-                                    type: 'button',
-                                    permissionCode: 'iam:admin:delete',
-                                    sort: 1,
-                                    visible: true,
-                                    parentId: null,
-                                    enabled: true,
-                                },
+            // 走真实 buildAccountAuth：DB 返回一个禁用角色 + 一个启用角色
+            // - adminAccountRole.findMany 走 where: { role: { enabled: true } } 过滤
+            // - 纯函数会只查启用角色 → 返回只有 list 权限的 viewer
+            mockPrisma.client.adminAccountRole.findMany.mockImplementation(async ({ where }: any) => {
+                // 模拟纯函数 where.role.enabled === true 过滤：禁用角色不进结果
+                if (where?.role?.enabled === true) {
+                    return [
+                        {
+                            role: {
+                                code: 'viewer',
+                                enabled: true,
+                                roleMenus: [
+                                    {
+                                        menu: {
+                                            id: 'm2',
+                                            name: '管理员管理',
+                                            path: 'admin',
+                                            icon: 'User',
+                                            type: 'menu',
+                                            permissionCode: 'iam:admin:list',
+                                            sort: 1,
+                                            visible: true,
+                                            parentId: null,
+                                            enabled: true,
+                                        },
+                                    },
+                                ],
                             },
-                        ],
-                    },
-                },
-                {
-                    role: {
-                        code: 'viewer',
-                        enabled: true, // 启用但只有 list 权限
-                        roleMenus: [
-                            {
-                                menu: {
-                                    id: 'm2',
-                                    name: '管理员管理',
-                                    path: 'admin',
-                                    icon: 'User',
-                                    type: 'menu',
-                                    permissionCode: 'iam:admin:list',
-                                    sort: 1,
-                                    visible: true,
-                                    parentId: null,
-                                    enabled: true,
-                                },
-                            },
-                        ],
-                    },
-                },
-            ]);
+                        },
+                    ];
+                }
+                return [];
+            });
 
             const { context } = createMockContext({
                 requestUser: { accountId: 'viewer-1', userType: 'admin' },

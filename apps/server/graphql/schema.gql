@@ -49,6 +49,9 @@ type AdminAccount {
   enabled: Boolean!
   id: ID!
 
+  """账号是否被登录失败计数锁定（true=被锁，30 分钟内不可登录）"""
+  isLocked: Boolean!
+
   """昵称"""
   nickname: String!
 
@@ -245,6 +248,42 @@ input BindPhoneInput {
   phone: String!
 }
 
+"""缓存 key 详情"""
+type CacheKey {
+  """缓存 key 字符串"""
+  key: ID!
+
+  """值字节长度（字符串 length；仅作 UI 展示，非精确字节数）"""
+  size: Int!
+
+  """剩余 TTL（秒）；-1 = 永不过期；-2 = 已过期/不存在"""
+  ttl: Int!
+
+  """数据类型（Redis TYPE 返回值）"""
+  type: String!
+
+  """缓存值（JSON 字符串形式）；null = 空值/不可序列化"""
+  value: String
+}
+
+"""缓存服务运行统计"""
+type CacheStats {
+  """
+  命中率（百分比字符串，如 "87.50%"）；无命中样本时返回 "-"
+  """
+  hitRate: String!
+
+  """
+  运行时长（人类可读，如 "3 天 5 小时"）；无 Redis 时返回 "-"
+  """
+  uptime: String!
+
+  """
+  已用内存（人类可读，如 "1.23 MB"）；无 Redis 时返回 "-"
+  """
+  usedMemory: String!
+}
+
 input ChangePasswordInput {
   """新密码（8-32 字符，含大小写 + 数字）"""
   newPassword: String!
@@ -327,6 +366,15 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+"""批量删除缓存 key 的结果"""
+type DeleteCacheKeysResult {
+  """实际删除的 key 数量"""
+  deletedCount: Int!
+
+  """被成功删除的 key 列表"""
+  keys: [String!]!
+}
+
 """分布数据项"""
 type DistItem {
   """颜色值"""
@@ -389,6 +437,9 @@ type Mutation {
   """清空所有审计日志"""
   clearAuditLogs: ClearAuditLogsResult!
 
+  """按 pattern 批量删除缓存 key，返回删除数量"""
+  clearCacheByPattern(pattern: String!): Int!
+
   """创建管理员账户"""
   createAdminAccount(input: CreateAdminAccountInput!): AdminAccount!
 
@@ -413,6 +464,12 @@ type Mutation {
   """删除单条审计日志"""
   deleteAuditLog(id: ID!): Boolean!
 
+  """删除单个缓存 key"""
+  deleteCacheKey(key: String!): Boolean!
+
+  """批量删除缓存 key"""
+  deleteCacheKeys(keys: [String!]!): DeleteCacheKeysResult!
+
   """软删除系统配置"""
   deleteSystemConfig(key: String!): Boolean!
 
@@ -430,6 +487,9 @@ type Mutation {
 
   """解绑当前账户的手机号（至少保留一种登录方式）"""
   unbindPhone(input: UnbindPhoneInput!): Boolean!
+
+  """解锁管理员账户（清空登录失败计数）"""
+  unlockAdminAccount(id: ID!): Boolean!
 
   """更新管理员账户（支持角色重分配）"""
   updateAdminAccount(id: ID!, input: UpdateAdminAccountInput!): AdminAccount!
@@ -553,6 +613,18 @@ type Query {
 
   """查询所有角色（含 menuCount + menuIds）"""
   adminRoles(enabled: Boolean = null): [AdminRole!]!
+
+  """查询单个 key 的完整信息"""
+  cacheKey(key: String!): CacheKey!
+
+  """按 pattern 分页时的 total 数量"""
+  cacheKeyTotal(pattern: String = "*"): Int!
+
+  """按 pattern 分页列出缓存 key"""
+  cacheKeys(limit: Int = 50, offset: Int = 0, pattern: String = "*"): [CacheKey!]!
+
+  """缓存服务运行统计"""
+  cacheStats: CacheStats!
 
   """当前账户的菜单树 + 权限码"""
   currentAdminMenus: CurrentAdminMenus!

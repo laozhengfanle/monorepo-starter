@@ -41,6 +41,9 @@ function createMockPrisma() {
             adminAccountMenu: {
                 findMany: vi.fn(),
             },
+            adminMenu: {
+                findMany: vi.fn(),
+            },
         },
     };
 }
@@ -325,6 +328,109 @@ describe('AdminPermissionCacheService', () => {
             // grant 追加了 iam:admin:create
             expect(result.permissions).toContain('iam:admin:list');
             expect(result.permissions).toContain('iam:admin:create');
+        });
+
+        it('grant button 节点应加入菜单树（修复：早期 bug 只合入权限码不加入菜单树）', async () => {
+            // 场景：zhangsan 只有 guest 角色（无任何菜单），grant 了 1 个 menu + 2 个 button
+            mockPrisma.client.adminAccountRole.findMany.mockResolvedValue([]);
+            mockPrisma.client.adminAccountMenu.findMany.mockResolvedValue([
+                {
+                    // grant menu 节点：管理员管理
+                    menu: makeRoleMenu({
+                        id: 'menu-admin',
+                        name: '管理员管理',
+                        type: 'menu',
+                        permissionCode: 'iam:admin:view',
+                        parentId: 'dir-iam',
+                    }).menu,
+                    type: 'grant',
+                },
+                {
+                    // grant button 节点：新增管理员
+                    menu: makeRoleMenu({
+                        id: 'btn-admin-create',
+                        name: '新增管理员',
+                        type: 'button',
+                        permissionCode: 'iam:admin:create',
+                        parentId: 'menu-admin',
+                    }).menu,
+                    type: 'grant',
+                },
+                {
+                    // grant button 节点：编辑管理员
+                    menu: makeRoleMenu({
+                        id: 'btn-admin-update',
+                        name: '编辑管理员',
+                        type: 'button',
+                        permissionCode: 'iam:admin:update',
+                        parentId: 'menu-admin',
+                    }).menu,
+                    type: 'grant',
+                },
+            ]);
+            mockCache.mget.mockImplementation((keys: string[]) => keys.map(() => null));
+
+            // 拉祖先链时返回 directory 父节点
+            mockPrisma.client.adminMenu.findMany.mockImplementation(({ where }: any) => {
+                // 拉祖先链：parentId = 'dir-iam'
+                if (where?.id?.in?.includes('dir-iam')) {
+                    return Promise.resolve([
+                        {
+                            id: 'dir-iam',
+                            name: '权限管理 IAM',
+                            type: 'directory',
+                            permissionCode: '',
+                            parentId: null,
+                            sort: 1,
+                            path: '/iam',
+                            routeName: '',
+                            icon: '',
+                            visible: true,
+                            keepAlive: true,
+                            enabled: true,
+                        },
+                    ]);
+                }
+                return Promise.resolve([]);
+            });
+
+            const result = await service.buildAccountAuth('zhangsan-account');
+
+            // 1. 权限码：3 个 grant 都应合入
+            expect(result.permissions).toContain('iam:admin:view');
+            expect(result.permissions).toContain('iam:admin:create');
+            expect(result.permissions).toContain('iam:admin:update');
+
+            // 2. 菜单树：应包含所有 4 个节点（1 directory + 1 menu + 2 button）
+            const flatMenuIds: string[] = [];
+            const collect = (nodes: any[]) => {
+                for (const n of nodes) {
+                    flatMenuIds.push(n.id);
+                    if (n.children?.length) collect(n.children);
+                }
+            };
+            collect(result.menus);
+            expect(flatMenuIds).toContain('dir-iam');
+            expect(flatMenuIds).toContain('menu-admin');
+            expect(flatMenuIds).toContain('btn-admin-create');
+            expect(flatMenuIds).toContain('btn-admin-update');
+
+            // 3. 关键断言：button 应作为 menu 的子节点出现（修复前 button 不在树里）
+            const findNode = (nodes: any[], id: string): any | null => {
+                for (const n of nodes) {
+                    if (n.id === id) return n;
+                    if (n.children?.length) {
+                        const found = findNode(n.children, id);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            const menuAdmin = findNode(result.menus, 'menu-admin');
+            expect(menuAdmin).not.toBeNull();
+            expect(menuAdmin.children.map((c: any) => c.id)).toEqual(
+                expect.arrayContaining(['btn-admin-create', 'btn-admin-update']),
+            );
         });
 
         it('应处理 deny 覆盖（账户级禁止权限）', async () => {

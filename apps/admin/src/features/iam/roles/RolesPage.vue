@@ -41,13 +41,9 @@
                 </n-gi>
 
                 <n-gi suffix #="{ overflow }">
-                    <n-form-item>
-                        <template #label>
-                            <span class="sr-only">操作</span>
-                        </template>
-
+                    <n-form-item label=" ">
                         <n-space align="center">
-                            <n-button @click="onSearch"> 查询 </n-button>
+                            <n-button type="primary" @click="onSearch"> 查询 </n-button>
                             <n-button @click="onReset"> 重置 </n-button>
                             <n-button
                                 v-if="overflow || !isCollapsed"

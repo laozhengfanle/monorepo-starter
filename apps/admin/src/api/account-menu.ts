@@ -62,16 +62,22 @@ export async function getAccountMenus(accountId: string): Promise<AccountMenuRow
 // ============================================================
 
 /**
- * 批量保存账户特例权限（全量替换）
- *
- * 语义：传入的 overrides 列表是「全量」，后端会先清空该账户所有现存记录，再插入新列表。
- * 传空数组 = 清除该账户所有特例授权（回到完全走角色基线）。
+ * 批量保存账户特例授权（全量替换：先删后插）
+ * - 语义：传入的 overrides 列表是「全量」，后端会先清空该账户所有现存记录，再插入新列表
+ * - 传空数组 = 清除该账户所有特例授权（回到完全走角色基线）
+ * - 后端返回 AccountMenuOverrideResult { success: boolean }（非空对象）
+ * - query 必须 selection 字段，否则 GraphQL 报 "must have a selection of subfields"
  */
-export async function saveAccountMenus(accountId: string, overrides: AccountMenuOverride[]): Promise<boolean> {
-    const data = await gqlQuery<{ saveAccountMenus: boolean }>(
+export async function saveAccountMenus(
+    accountId: string,
+    overrides: AccountMenuOverride[],
+): Promise<{ success: boolean }> {
+    const data = await gqlQuery<{ saveAccountMenus: { success: boolean } }>(
         `
       mutation SaveAccountMenus($accountId: ID!, $overrides: [AccountMenuOverrideInput!]!) {
-        saveAccountMenus(accountId: $accountId, overrides: $overrides)
+        saveAccountMenus(accountId: $accountId, overrides: $overrides) {
+          success
+        }
       }
     `,
         {

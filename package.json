@@ -1,6 +1,6 @@
 {
     "name": "monorepo-starter",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "description": "MonoKit — 开源企业级全栈基座（NestJS 11 + Vue 3 + Prisma 7 + GraphQL + RBAC）",
     "private": true,
     "scripts": {

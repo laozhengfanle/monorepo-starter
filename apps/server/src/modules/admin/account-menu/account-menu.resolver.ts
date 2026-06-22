@@ -7,7 +7,7 @@
  * Mutation:
  * - saveAccountMenus(accountId, overrides): 全量替换特例授权（先删后插）
  *
- * 权限码：iam:admin:update
+ * 权限码：iam:admin:grant（独立权限码，与 iam:admin:update 解耦）
  */
 import { UseGuards } from '@nestjs/common';
 import { Args, Field, ID, InputType, Mutation, Query, Resolver } from '@nestjs/graphql';
@@ -45,7 +45,7 @@ export class AccountMenuResolver {
      * @example await resolver.accountMenus('account-uuid')
      */
     @Query(() => [AccountMenuRow], { description: '查询账户特例授权列表' })
-    @Permission('iam:admin:update')
+    @Permission('iam:admin:grant')
     async accountMenus(@Args('accountId', { type: () => ID }) accountId: string): Promise<AccountMenuRow[]> {
         const rows = await this.prisma.client.adminAccountMenu.findMany({
             where: { accountId },
@@ -68,7 +68,7 @@ export class AccountMenuResolver {
      * @example await resolver.saveAccountMenus('account-uuid', [{ menuId: 'm1', type: 'grant' }])
      */
     @Mutation(() => AccountMenuOverrideResult, { description: '全量替换账户特例授权' })
-    @Permission('iam:admin:update')
+    @Permission('iam:admin:grant')
     async saveAccountMenus(
         @Args('accountId', { type: () => ID }) accountId: string,
         @Args('overrides', { type: () => [AccountMenuOverrideInput] })

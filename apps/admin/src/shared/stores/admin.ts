@@ -97,6 +97,21 @@ export const useAdminStore = defineStore('admin', () => {
         isLoggedIn.value = false;
     }
 
+    /**
+     * 更新管理员信息（前端态）
+     *
+     * 用途：账号设置页面编辑昵称/邮箱/手机号时调用，立即反映到导航栏和 ProfilePage。
+     *
+     * 注意：当前仅更新前端内存态，不持久化到后端（修改接口尚未接入）。
+     * 后端 API 接入后，应在此处追加 PATCH /admin/me 调用并刷新 adminInfo。
+     *
+     * @param patch 要更新的字段（Partial<AdminInfo>）
+     */
+    function updateAdminInfo(patch: Partial<AdminInfo>) {
+        if (!adminInfo.value) return;
+        adminInfo.value = { ...adminInfo.value, ...patch };
+    }
+
     return {
         isLoggedIn,
         adminInfo,
@@ -106,5 +121,6 @@ export const useAdminStore = defineStore('admin', () => {
         getMe,
         logout,
         markLoggedOut,
+        updateAdminInfo,
     };
 });

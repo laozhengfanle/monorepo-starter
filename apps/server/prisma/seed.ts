@@ -261,6 +261,21 @@ async function main() {
                 },
             });
 
+            /** 按钮：特例授权（独立权限码，与 iam:admin:update 解耦） */
+            const userPermBtn = await tx.adminMenu.create({
+                data: {
+                    id: newId(),
+                    parentId: userMenu.id,
+                    name: '特例授权',
+                    type: 'button',
+                    permissionCode: 'iam:admin:grant',
+                    sort: 4,
+                    visible: true,
+                    keepAlive: true,
+                    enabled: true,
+                },
+            });
+
             /** 菜单：角色管理 */
             const roleMenu = await tx.adminMenu.create({
                 data: {
@@ -808,8 +823,35 @@ async function main() {
                 enabled: true,
             });
 
-            // 缓存管理 → GraphQL（后续在 modules/ 下建 resolver）
-            // 种子不再预置缓存管理菜单，权限码 config:cache:view / config:cache:delete 保留以备将来 GraphQL 端点使用
+            // 缓存管理 → GraphQL（modules/admin/cache-admin/）
+            // - 路径：config/cache，对应前端 src/features/config/cache/CachePage.vue
+            // - 权限码：config:cache:view（查看）/ config:cache:delete（删除/批量删除/按 pattern 清空）
+            const cache = await createSysMenu({
+                name: '缓存管理',
+                type: 'menu',
+                path: 'cache',
+                routeName: 'ConfigCache',
+                component: 'config/cache',
+                icon: '',
+                permissionCode: 'config:cache:view',
+                sort: 6,
+                visible: true,
+                keepAlive: true,
+                enabled: true,
+            });
+            const cacheDeleteBtn = await tx.adminMenu.create({
+                data: {
+                    id: newId(),
+                    parentId: cache.id,
+                    name: '清理缓存',
+                    type: 'button',
+                    permissionCode: 'config:cache:delete',
+                    sort: 1,
+                    visible: true,
+                    keepAlive: false,
+                    enabled: true,
+                },
+            });
 
             // OAuth 配置
             const oauth = await createSysMenu({
@@ -1068,6 +1110,8 @@ async function main() {
                 storageViewBtn.id,
                 storageUploadBtn.id,
                 storageDeleteBtn.id,
+                cache.id,
+                cacheDeleteBtn.id,
                 oauth.id,
                 oauthViewBtn.id,
                 oauthUpdateBtn.id,
@@ -1123,6 +1167,59 @@ async function main() {
                 });
                 logger.info('✅ 增量创建「删除审计日志」按钮');
             }
+        }
+
+        /**
+         * 增量创建「缓存管理」菜单（幂等）
+         * 背景：早期版本 seed 不再预置缓存管理菜单，但前端路由表 componentMap 注册了
+         *      `config/cache` 组件，菜单缺失时前端 console.warn「组件 config/cache 未注册」。
+         * 现在后端已实现 modules/admin/cache-admin/ GraphQL，重新启用此菜单。
+         * - 若已存在「缓存管理」菜单：跳过（不动现有数据，避免影响用户自定义）
+         * - 若不存在：创建菜单 + 「清理缓存」按钮 + 绑定超管角色
+         */
+        const existingCacheMenu = await prisma.adminMenu.findFirst({
+            where: { name: '缓存管理', type: 'menu', parentId: existingSysDir.id },
+        });
+        if (!existingCacheMenu) {
+            const newCacheMenu = await prisma.adminMenu.create({
+                data: {
+                    id: newId(),
+                    parentId: existingSysDir.id,
+                    name: '缓存管理',
+                    type: 'menu',
+                    path: 'cache',
+                    routeName: 'ConfigCache',
+                    component: 'config/cache',
+                    icon: '',
+                    permissionCode: 'config:cache:view',
+                    sort: 6,
+                    visible: true,
+                    keepAlive: true,
+                    enabled: true,
+                },
+            });
+            const newCacheDeleteBtn = await prisma.adminMenu.create({
+                data: {
+                    id: newId(),
+                    parentId: newCacheMenu.id,
+                    name: '清理缓存',
+                    type: 'button',
+                    permissionCode: 'config:cache:delete',
+                    sort: 1,
+                    visible: true,
+                    keepAlive: false,
+                    enabled: true,
+                },
+            });
+            // 立即绑定超管角色（用 createMany + skipDuplicates，幂等）
+            await prisma.adminRoleMenu.createMany({
+                data: [
+                    { id: newId(), roleId: superAdminRole.id, menuId: newCacheMenu.id },
+                    { id: newId(), roleId: superAdminRole.id, menuId: newCacheDeleteBtn.id },
+                ],
+                skipDuplicates: true,
+            });
+            logger.info('✅ 增量创建「缓存管理」菜单 + 「清理缓存」按钮');
         }
     }
 

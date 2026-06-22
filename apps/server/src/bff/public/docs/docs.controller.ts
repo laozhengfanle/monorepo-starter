@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Query, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Public } from '../../../common/decorators/public.decorator.js';
 import { readdir, readFile } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
@@ -24,10 +24,10 @@ interface DocMeta {
  *   monorepo/                          ← ROOT_DIR（目标）
  *     apps/server/src/bff/public/docs/docs.controller.ts  ← CURRENT_FILE
  *
- *   从文件所在目录到 monorepo 根：docs → public → bff → src → server → apps → monorepo（6 层）
+ *   从文件所在目录到 monorepo 根：docs → public → bff → src → server → apps → monorepo（7 层）
  */
 const CURRENT_FILE = fileURLToPath(import.meta.url);
-const ROOT_DIR = resolve(CURRENT_FILE, '../../../../../../');
+const ROOT_DIR = resolve(CURRENT_FILE, '../../../../../../../');
 const DOCS_DIR = resolve(ROOT_DIR, 'docs');
 /** 根目录 README.md */
 const ROOT_README = resolve(ROOT_DIR, 'README.md');
@@ -42,17 +42,14 @@ function isValidSlug(slug: string): boolean {
 
 /** 文档分组友好名称 */
 const GROUP_LABELS: Record<string, string> = {
-    '用户指南': '用户指南',
-    '开发文档': '开发文档',
+    用户指南: '用户指南',
+    开发文档: '开发文档',
 };
 
 /**
  * 递归扫描 docs/ 目录，返回所有 .md 文件
  */
-async function scanDocsDir(
-    dir: string,
-    group: string,
-): Promise<{ name: string; slug: string; group: string }[]> {
+async function scanDocsDir(dir: string, group: string): Promise<{ name: string; slug: string; group: string }[]> {
     const result: { name: string; slug: string; group: string }[] = [];
     let entries: Dirent[];
     try {
@@ -77,8 +74,11 @@ async function scanDocsDir(
 
 /**
  * 文档控制器
- * - GET /api/project-docs         — 所有 .md 文件列表（按分组排列）
- * - GET /api/project-docs/:slug   — 指定文件的 raw markdown 内容（slug 含子目录路径）
+ * - GET /api/project-docs                  — 所有 .md 文件列表（按分组排列）
+ * - GET /api/project-docs/content?slug=... — 指定文件的 raw markdown 内容
+ *
+ * 说明：slug 通过 query 而非 path 传，因为 Express 5 + path-to-regexp v8
+ *     下 `*slug` 通配符会把多段路径解析为数组，无法直接 .split('/')。
  *
  * 文档目录结构：
  *   docs/
@@ -130,13 +130,21 @@ export class DocsController {
 
     /**
      * 获取指定文件的 markdown 内容
-     * @param slug URL 中的 slug 参数（支持子目录：用户指南/01-快速上手）
+     *
+     * 通过 query 传 slug（而非 path）的原因：slug 含 "/"（如 "用户指南/01-快速上手"），
+     * Express 5 + path-to-regexp v8 的 `*slug` 通配符会把多段路径解析为数组。
+     *
+     * @param slug query 中的 slug（支持子目录：用户指南/01-快速上手）
      * @returns 文件 raw content
-     * @throws BadRequestException — slug 包含非法字符（路径穿越防护）
+     * @throws BadRequestException — slug 缺失或包含非法字符
      * @throws NotFoundException — 文件不存在
      */
-    @Get('*slug')
-    async content(@Param('slug') slug: string): Promise<{ slug: string; content: string }> {
+    @Get('content')
+    async content(@Query('slug') slug: string): Promise<{ slug: string; content: string }> {
+        if (!slug) {
+            throw new BadRequestException('缺少 slug 参数');
+        }
+
         // slug 可能包含 "/"（子目录），逐段校验
         const segments = slug.split('/');
         if (!segments.every((s) => isValidSlug(s))) {

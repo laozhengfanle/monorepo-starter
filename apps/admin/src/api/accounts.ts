@@ -80,6 +80,13 @@ export interface AccountRow {
      * - 配合 ListDisplayFilter 的 displayMode 控制列表里是否展示已删除记录
      */
     deletedAt: string | null;
+    /**
+     * 账号是否被登录失败计数锁定
+     * - true: 5 次失败被锁，30 分钟内不能登录（表格显示「解锁」按钮）
+     * - false: 正常状态（不显示「解锁」按钮）
+     * - 来自后端 AdminAccount.isLocked 字段（@ResolveField 实时查 Redis）
+     */
+    isLocked?: boolean;
 }
 
 // ============================================================
@@ -106,7 +113,7 @@ export async function getAccounts(params: PaginatedParams & UserFilterParams): P
         `
       query AdminAccounts($input: QueryAdminAccountInput) {
         adminAccounts(input: $input) {
-          items { id username nickname phone email enabled roleIds roles avatar createdAt deletedAt }
+          items { id username nickname phone email enabled roleIds roles avatar createdAt deletedAt isLocked }
           total
         }
       }
@@ -149,7 +156,7 @@ export async function getAllAccounts(includeDeleted = false): Promise<AccountRow
         `
       query AllAdminAccounts($input: QueryAdminAccountInput) {
         adminAccounts(input: $input) {
-          items { id username nickname phone email enabled roleIds roles avatar createdAt deletedAt }
+          items { id username nickname phone email enabled roleIds roles avatar createdAt deletedAt isLocked }
         }
       }
     `,
@@ -163,7 +170,7 @@ export async function getAccountById(id: string): Promise<AccountRow> {
     const data = await gqlQuery<{ adminAccount: AccountRow }>(
         `
       query AdminAccount($id: ID!) {
-        adminAccount(id: $id) { id username nickname phone email enabled roleIds roles avatar createdAt deletedAt }
+        adminAccount(id: $id) { id username nickname phone email enabled roleIds roles avatar createdAt deletedAt isLocked }
       }
     `,
         { variables: { id } },
@@ -354,6 +361,28 @@ export async function resetAdminPassword(id: string, newPassword: string, confir
     return data.resetAdminAccountPassword;
 }
 
+/**
+ * 解锁管理员账户（清空登录失败计数）
+ * - 后端 unlockAdminAccount mutation
+ * - 区别于 resetAdminPassword：只清锁，不改密
+ * - 场景：用户 5 次失败被锁 30 分钟，超级管理员要立即恢复其登录
+ * - 权限码：iam:admin:update
+ * - 成功后该账号的失败计数清零，可立即重新登录
+ */
+export async function unlockAdminAccount(id: string): Promise<boolean> {
+    const data = await gqlQuery<{ unlockAdminAccount: boolean }>(
+        `
+      mutation UnlockAdminAccount($id: ID!) {
+        unlockAdminAccount(id: $id)
+      }
+    `,
+        {
+            variables: { id },
+        },
+    );
+    return data.unlockAdminAccount;
+}
+
 // ============================================================
 // 内部工具
 // ============================================================
@@ -378,6 +407,7 @@ interface AccountRaw {
     roles?: string[];
     createdAt?: string | Date;
     deletedAt?: string | Date | null;
+    isLocked?: boolean;
 }
 
 /**
@@ -405,5 +435,6 @@ function toAccountRow(raw: AccountRaw): AccountRow {
         avatar: raw.avatar ?? '',
         createAt: raw.createdAt instanceof Date ? raw.createdAt.toISOString() : String(raw.createdAt ?? ''),
         deletedAt: raw.deletedAt instanceof Date ? raw.deletedAt.toISOString() : (raw.deletedAt ?? null),
+        isLocked: raw.isLocked ?? false,
     };
 }

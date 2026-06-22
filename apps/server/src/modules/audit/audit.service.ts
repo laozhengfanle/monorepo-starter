@@ -43,6 +43,7 @@ export const AUDIT_ACTIONS = {
     LOGIN_LOCKED: 'login_locked',
     PASSWORD_CHANGED: 'password_changed',
     RESET_PASSWORD: 'reset_password',
+    ACCOUNT_UNLOCKED: 'account_unlocked',
     TOKEN_REFRESHED: 'token_refreshed',
     TOKEN_REUSED: 'token_reused',
     PHONE_BIND: 'phone_bind',

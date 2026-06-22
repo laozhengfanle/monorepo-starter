@@ -43,6 +43,7 @@ const componentMap: Record<string, () => Promise<unknown>> = {
     'config/mail-credential': () => import('@/features/config/mail-service/MailCredentialPage.vue'),
     'config/oauth': () => import('@/features/config/oauth/OauthPage.vue'),
     'config/turnstile': () => import('@/features/config/turnstile/TurnstilePage.vue'),
+    'config/cache': () => import('@/features/config/cache/CachePage.vue'),
     // 仪表盘 — 由后端菜单表 permissionCode 驱动权限（dashboard:welcome / dashboard:analytics）
     'dashboard/welcome': () => import('@/features/dashboard/WelcomePage.vue'),
     'dashboard/analysis': () => import('@/features/dashboard/AnalysisPage.vue'),

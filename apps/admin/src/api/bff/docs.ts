@@ -2,11 +2,14 @@
  * 文档 API
  *
  * 对应后端端点：
- *   - GET /api/project-docs         → 所有 .md 文件列表
- *   - GET /api/project-docs/:slug   → 指定文件的 raw markdown 内容
+ *   - GET /api/project-docs                     → 所有 .md 文件列表
+ *   - GET /api/project-docs/content?slug=...    → 指定文件的 raw markdown 内容
  *
  * 均为 @Public() 端点，无需认证。
  * Vite dev proxy 将 /api/* 转发到 http://localhost:3000。
+ *
+ * 内容接口用 query 而非 path 传 slug，是因为 slug 可能含 "/"（如 "用户指南/01-快速上手"），
+ * 走 path 会被 Express 5 + path-to-regexp v8 的通配符解析成数组。
  */
 import { get } from '@/shared/request/request';
 
@@ -44,5 +47,5 @@ export async function getDocsList(): Promise<DocMeta[]> {
  * @returns 包含 slug 和 raw content 的对象
  */
 export async function getDocContent(slug: string): Promise<DocContent> {
-    return get<DocContent>(`/project-docs/${encodeURIComponent(slug)}`);
+    return get<DocContent>(`/project-docs/content?slug=${encodeURIComponent(slug)}`);
 }

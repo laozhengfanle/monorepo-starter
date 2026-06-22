@@ -26,7 +26,7 @@
  * - 内部用 ClassGuard 检查；GraphQL 入口依赖 APP_GUARD
  */
 import { UseGuards } from '@nestjs/common';
-import { Args, Context, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Context, ID, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { RequireAuth } from '../../../common/decorators/require-auth.decorator.js';
 import {
     CreateAdminAccountSchema,
@@ -45,6 +45,7 @@ import { AdminPermissionGuard } from '../../../common/guards/admin-permission.gu
 import { Permission } from '../../../common/decorators/permission.decorator.js';
 import { ZodArgsPipe } from '../../../common/pipes/zod-args.pipe.js';
 import { Paginated, type PaginatedType } from '../../graphql/common/pagination.type.js';
+import { LoginLockIntegration } from '../../auth/login-lock-integration.js';
 import { AdminAccount } from './admin-account.type.js';
 import { CreateAdminAccountInput as CreateAdminAccountInputType } from './admin-account.input.js';
 import { UpdateAdminAccountInput as UpdateAdminAccountInputType } from './admin-account.input.js';
@@ -65,7 +66,10 @@ interface GraphQLContext {
 @RequireAuth()
 @UseGuards(JwtAuthGuard, AdminPermissionGuard)
 export class AdminAccountResolver {
-    constructor(private readonly accountService: AdminAccountService) {}
+    constructor(
+        private readonly accountService: AdminAccountService,
+        private readonly loginLock: LoginLockIntegration,
+    ) {}
 
     /**
      * 分页查询管理员账户
@@ -105,6 +109,21 @@ export class AdminAccountResolver {
         id: string,
     ): Promise<AdminAccount> {
         return this.accountService.findById(id);
+    }
+
+    /**
+     * 字段级 resolver：账号是否被登录失败计数锁定
+     * - 走 LoginLockIntegration.isLocked（账号级检查）
+     * - 传空 IP 字符串：只查账号级，不被 IP 维度污染
+     * - 列表场景 N+1：每行一次 Redis 读，后续可用 DataLoader 批量优化
+     * - 权限：复用 AdminAccount 自身的 iam:admin:view（与父对象一致）
+     */
+    @ResolveField('isLocked', () => Boolean, {
+        description: '账号是否被登录失败计数锁定（true=被锁）',
+    })
+    async isLocked(@Parent() account: AdminAccount): Promise<boolean> {
+        // 传空 ip 字符串：只查账号级（不查 IP 维度）
+        return this.loginLock.isLocked(account.id, '');
     }
 
     /**
@@ -233,6 +252,23 @@ export class AdminAccountResolver {
         @Context() ctx: GraphQLContext,
     ): Promise<boolean> {
         await this.accountService.resetPassword(id, input.newPassword, ctx.req.user.accountId);
+        return true;
+    }
+
+    /**
+     * 解锁管理员账户（清空登录失败计数）
+     * - 区别于 resetAdminAccountPassword：只清锁，不改密、不撤销 token
+     * - 场景：用户被 5 次失败锁定 30 分钟，超级管理员要立即恢复其登录（不改密）
+     * - 写审计日志：action = account_unlocked
+     * - 权限：iam:admin:update（与 resetPassword 同级，因为都是"管理员对账号的强制操作"）
+     */
+    @Mutation(() => Boolean, { description: '解锁管理员账户（清空登录失败计数）' })
+    @Permission('iam:admin:update')
+    async unlockAdminAccount(
+        @Args('id', { type: () => ID, nullable: false }, new ZodArgsPipe(UuidSchema)) id: string,
+        @Context() ctx: GraphQLContext,
+    ): Promise<boolean> {
+        await this.accountService.unlockAccount(id, ctx.req.user.accountId);
         return true;
     }
 }

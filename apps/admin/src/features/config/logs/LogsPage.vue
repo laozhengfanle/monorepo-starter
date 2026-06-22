@@ -64,12 +64,7 @@
                             <span class="sr-only">操作</span>
                         </template>
                         <n-space align="center">
-                            <n-button type="primary" @click="onSearch">
-                                <template #icon>
-                                    <n-icon><Search /></n-icon>
-                                </template>
-                                查询
-                            </n-button>
+                            <n-button type="primary" @click="onSearch">查询</n-button>
                             <n-button @click="onReset">重置</n-button>
                             <n-button
                                 v-if="overflow || !isCollapsed"
@@ -143,7 +138,8 @@
                 <div>
                     <div class="text-xs text-gray-500 mb-1">详情</div>
                     <pre
-                        class="m-0 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-xs whitespace-pre-wrap break-all max-h-72 overflow-auto font-mono leading-relaxed border border-gray-200 dark:border-gray-700"
+                        tabindex="0"
+                        class="m-0 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-xs whitespace-pre-wrap break-all max-h-72 overflow-auto font-mono leading-relaxed border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         >{{ formatDetail(detailRow.detail) }}</pre
                     >
                 </div>
@@ -173,13 +169,14 @@
 defineOptions({ name: 'ConfigLogs' });
 import { computed, h, reactive, ref, watch, onMounted } from 'vue';
 import { NTag, NIcon, NButton, NSpace, NModal, NCard, useDialog, useMessage } from 'naive-ui';
-import { Search, ChevronDown, ChevronUp, Trash, Download } from '@vicons/tabler';
+import { ChevronDown, ChevronUp, Trash, Download } from '@vicons/tabler';
 import { type LogRow, getLogs, deleteLog, clearLogs, exportLogs } from '@/api';
 import SearchGrid from '@/shared/components/SearchGrid.vue';
 import { usePermissionStore } from '@/shared/stores/permission';
 
 // ---- 筛选项静态选项 ----
 // action 列表与后端 AuditService.AUDIT_ACTIONS 一一对应（保持同步）
+// 硬删/恢复类的 action（xxx_hard_deleted / xxx_restored）后端都支持，前端下拉必须给齐
 const actionOptions = [
     // 认证
     { label: '登录成功', value: 'login_success' },
@@ -187,6 +184,12 @@ const actionOptions = [
     { label: '登录锁定', value: 'login_locked' },
     { label: '密码修改', value: 'password_changed' },
     { label: '重置密码', value: 'reset_password' },
+    { label: 'Token 刷新', value: 'token_refreshed' },
+    { label: 'Token 重用（异常）', value: 'token_reused' },
+    { label: '绑定手机', value: 'phone_bind' },
+    { label: '解绑手机', value: 'phone_unbind' },
+    { label: '绑定 OAuth', value: 'oauth_bind' },
+    { label: '解绑 OAuth', value: 'oauth_unbind' },
     // 账号
     { label: '创建账号', value: 'account_created' },
     { label: '更新账号', value: 'account_updated' },
@@ -199,34 +202,44 @@ const actionOptions = [
     { label: '创建角色', value: 'role_created' },
     { label: '更新角色', value: 'role_updated' },
     { label: '删除角色', value: 'role_deleted' },
+    { label: '硬删角色', value: 'role_hard_deleted' },
+    { label: '恢复角色', value: 'role_restored' },
     { label: '分配角色', value: 'role_assigned' },
     { label: '撤销角色', value: 'role_revoked' },
     // 菜单
     { label: '创建菜单', value: 'menu_created' },
     { label: '更新菜单', value: 'menu_updated' },
     { label: '删除菜单', value: 'menu_deleted' },
+    { label: '硬删菜单', value: 'menu_hard_deleted' },
+    { label: '恢复菜单', value: 'menu_restored' },
     { label: '权限变更', value: 'permission_changed' },
     { label: '账号权限变更', value: 'account_permission_changed' },
     // 文件
     { label: '文件上传', value: 'file_uploaded' },
     { label: '文件删除', value: 'file_deleted' },
+    { label: '硬删文件', value: 'file_hard_deleted' },
+    { label: '恢复文件', value: 'file_restored' },
     // 配置
     { label: '配置更新', value: 'config_updated' },
     // 审计
     { label: '清空审计日志', value: 'audit_cleared' },
 ];
 
-// resourceType 与后端 record() 时传入的 resourceType 字符串对应
-// （业务上常见：admin_user / admin_role / admin_menu / system_config / upload_file 等）
+// resourceType 与后端 record() 时写入的 resourceType 字符串对应
+// （与 apps/server/src 下所有 auditService.record() 调用点对齐）
 const resourceTypeOptions = [
-    { label: '管理员账号 (admin_user)', value: 'admin_user' },
+    { label: '管理员账号 (admin_account)', value: 'admin_account' },
     { label: '角色 (admin_role)', value: 'admin_role' },
     { label: '菜单 (admin_menu)', value: 'admin_menu' },
-    { label: '账号-角色关联 (admin_account_role)', value: 'admin_account_role' },
     { label: '系统配置 (system_config)', value: 'system_config' },
     { label: '文件 (upload_file)', value: 'upload_file' },
-    { label: '账号 (account)', value: 'account' },
     { label: '账号身份 (account_identity)', value: 'account_identity' },
+    { label: '认证 (auth)', value: 'auth' },
+    { label: 'OAuth (oauth)', value: 'oauth' },
+    { label: '审计日志 (audit_log)', value: 'audit_log' },
+    { label: '成员角色 (member_role)', value: 'member_role' },
+    { label: '成员账号 (member_user)', value: 'member_user' },
+    { label: '成员菜单 (member_menu)', value: 'member_menu' },
 ];
 
 // 值 → 中文标签 查找表
