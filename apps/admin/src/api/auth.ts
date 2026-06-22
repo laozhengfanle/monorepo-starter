@@ -57,6 +57,7 @@ const ME_QUERY = `
         username
         nickname
         avatar
+        createAt
         roles
         permissions
         menus {
@@ -126,6 +127,7 @@ export async function getMe(): Promise<MeResponse> {
             name: adminMe.nickname || adminMe.username,
             avatar: adminMe.avatar,
             role: adminMe.roles?.[0],
+            createAt: adminMe.createAt,
         },
         permissions: adminMe.permissions,
         menus: adminMe.menus,
@@ -139,6 +141,7 @@ interface AdminMeResponse {
     username: string;
     nickname: string;
     avatar: string;
+    createAt?: string;
     roles: string[];
     permissions: string[];
     menus: MenuNode[];

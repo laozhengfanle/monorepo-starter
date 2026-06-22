@@ -114,6 +114,14 @@ export class AdminMe {
     menus!: MenuTreeNode[];
 
     /**
+     * 账号创建时间（ISO 字符串，UTC）
+     * - 来自 account.createdAt
+     * - 用于前端"个人中心"展示
+     */
+    @Field({ nullable: true, description: '账号创建时间（ISO 8601）' })
+    createAt?: string;
+
+    /**
      * 运行时判别字段（不导出到 GraphQL schema）
      * - 仅用于 MeUnion.resolveType 决定返回 AdminMe 还是 MemberMe
      * - 避免依赖字段特征（permissions 存在与否），更健壮

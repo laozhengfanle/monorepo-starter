@@ -100,6 +100,9 @@ type AdminMe {
 
   """头像 URL（来自 admin_profile）"""
   avatar: String
+
+  """账号创建时间（ISO 8601）"""
+  createAt: String
   menus: [MenuTreeNode!]!
   nickname: String!
   permissions: [String!]!

@@ -49,8 +49,8 @@
                     <n-card title="账号信息">
                         <n-descriptions bordered :column="2" label-placement="left" :label-style="{ width: '120px' }">
                             <n-descriptions-item label="账号 ID">{{ userId }}</n-descriptions-item>
-                            <n-descriptions-item label="创建时间">{{ createAt || '—' }}</n-descriptions-item>
-                            <n-descriptions-item label="角色标识" :span="2">{{ rawRole || '—' }}</n-descriptions-item>
+                            <n-descriptions-item label="创建时间">{{ displayCreateAt }}</n-descriptions-item>
+                            <n-descriptions-item label="角色名称" :span="2">{{ displayRole }}</n-descriptions-item>
                         </n-descriptions>
                     </n-card>
                 </n-space>
@@ -128,6 +128,21 @@ const adminAvatar = computed(() => adminStore.adminAvatar);
 const userEmail = computed(() => (adminStore.adminInfo?.email as string) || '');
 const userId = computed(() => adminStore.adminInfo?.id || '-');
 const createAt = computed(() => (adminStore.adminInfo?.createAt as string) || '');
+
+/**
+ * 简单日期格式化（项目里没装 dayjs，避免新增依赖）
+ * - 入参：ISO 字符串 | undefined | null
+ * - 出参：YYYY-MM-DD HH:mm；非法输入返回 "—"
+ * - 个人中心"创建时间"展示用，不需要时区/语言切换
+ */
+function formatCreateAt(value: string | null | undefined): string {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '—';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+const displayCreateAt = computed(() => formatCreateAt(createAt.value));
 
 // ---- 角色展示（中文标签 + tag 颜色） ----
 const ROLE_LABEL_MAP: Record<string, string> = {

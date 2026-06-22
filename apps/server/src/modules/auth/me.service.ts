@@ -153,6 +153,8 @@ export class MeService {
             roles,
             permissions,
             menus,
+            // 账号创建时间 → 个人中心展示；ISO 字符串由前端按需格式化
+            createAt: account.createdAt?.toISOString(),
         };
 
         return result;
