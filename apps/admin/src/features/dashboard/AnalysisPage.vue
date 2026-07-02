@@ -588,25 +588,16 @@ const typeStyle: Record<string, { label: string; tagType: 'success' | 'warning' 
 
 const logColumns = [
     {
-        title: '时间',
-        key: 'time',
-        width: 160,
-        render(row: OpLog) {
-            return h('span', { class: 'text-xs text-gray-500' }, row.time || '—');
-        },
-    },
-    {
         title: '操作人',
         key: 'user',
         width: 120,
         render(row: OpLog) {
-            return h('div', { class: 'flex flex-col leading-tight' }, [
+            return h('div', { class: 'flex flex-col leading-tight items-start' }, [
                 h('span', { class: 'text-sm font-medium' }, row.user),
                 row.title
                     ? h(
                           NTag,
                           {
-                              type: row.titleColor,
                               size: 'small',
                               round: true,
                               bordered: false,
@@ -616,6 +607,14 @@ const logColumns = [
                       )
                     : null,
             ]);
+        },
+    },
+    {
+        title: '时间',
+        key: 'time',
+        width: 160,
+        render(row: OpLog) {
+            return h('span', { class: 'text-xs text-gray-500' }, row.time || '—');
         },
     },
     {

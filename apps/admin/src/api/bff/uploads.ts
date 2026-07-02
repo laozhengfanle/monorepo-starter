@@ -4,13 +4,13 @@
  * 与 GraphQL 的区别：
  * - 上传走 RESTful，因为 GraphQL 的 multipart/form-data 走 Apollo Upload 较重，
  *   后端基座已经用 NestJS 的 FileInterceptor + Multer 实现了标准 multipart 端点
- * - 端点：POST /api/upload/avatar（需登录 + config:file:create 权限 + CSRF）
+ * - 端点：
+ *   - POST /api/upload/avatar（需登录 + config:file:create 权限 + CSRF）— 头像专用
+ *   - POST /api/upload/file  （需登录 + config:file:create 权限 + CSRF）— 通用文件（含富文本图片）
  *
  * 返回结构：{ code: 0, message: 'ok', data: { id, url, ... } }
  * - 业务码 0 = 成功，非 0 = 错误
- * - data.url 是服务端最终可访问的相对路径（如 /uploads/avatars/xxx.webp）
- *
- * 后续如果需要上传通用文件（POST /api/upload/file），复用 uploadFile() 即可
+ * - data.url 是服务端最终可访问的相对路径（如 /uploads/files/xxx.webp）
  */
 import { ApiError } from '@/shared/request/request';
 import { BASE_URL } from '@/shared/request/request-config';
@@ -87,6 +87,66 @@ export async function uploadAvatar(file: File): Promise<string> {
     const envelope = (await response.json()) as ApiEnvelope<UploadResult>;
     if (envelope.code !== 0) {
         // 业务错误码：bubble 业务消息，状态码用 422 提示调用方是业务失败而非 HTTP 失败
+        throw new ApiError(422, envelope.message || '上传失败', envelope);
+    }
+
+    return envelope.data.url;
+}
+
+/**
+ * 上传通用文件（含富文本编辑器中的图片、附件等）
+ *
+ * 与 uploadAvatar 的差异：
+ * - 端点：/api/upload/file（不是 /upload/avatar）
+ * - 后端限制：≤ 10MB，MIME 白名单含 jpg/png/webp/gif/pdf/zip/csv/text/plain
+ *   - 注意：SVG 不在白名单中（image/svg+xml 可嵌入 JS，存在存储型 XSS 风险）
+ *   - 富文本图片只能传 4 种 image 类型，富文本组件应在前端先做类型校验做双重防护
+ * - 用途：富文本编辑器、附件表单、消息图片等非头像场景
+ *
+ * 流程同 uploadAvatar：
+ * 1. 拿 CSRF token
+ * 2. FormData 构造 multipart（field 名固定为 'file'，与后端 FileInterceptor 一致）
+ * 3. fetch + credentials，浏览器自动生成 boundary
+ * 4. 解析 { code, message, data } 信封，失败抛 ApiError
+ *
+ * 错误：
+ * - 401 → request.ts 401 重试机制不覆盖此函数（不走 request 工具），调用方自行处理
+ * - 403 → CSRF 缺失或无效
+ * - 413/422 → 文件大小 / 类型 / 内容不符
+ *
+ * @param file 用户选中的文件
+ * @returns 服务端可访问的 URL 相对路径
+ */
+export async function uploadFile(file: File): Promise<string> {
+    // 1. CSRF token 写请求必带
+    const csrfToken = await getCsrfToken();
+
+    // 2. 构造 FormData
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // 3. 发请求：multipart/form-data 不能用 request() 工具
+    const response = await fetch(`${BASE_URL}/upload/file`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        headers: csrfToken ? { 'x-csrf-token': csrfToken } : {},
+        signal: AbortSignal.timeout(30_000),
+    });
+
+    // 4. 解析失败响应
+    if (!response.ok) {
+        let body: unknown = undefined;
+        try {
+            body = await response.json();
+        } catch {
+            // 响应体不是 JSON
+        }
+        throw new ApiError(response.status, (body as { message?: string })?.message || response.statusText, body);
+    }
+
+    const envelope = (await response.json()) as ApiEnvelope<UploadResult>;
+    if (envelope.code !== 0) {
         throw new ApiError(422, envelope.message || '上传失败', envelope);
     }
 

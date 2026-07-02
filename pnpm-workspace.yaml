@@ -1,59 +1,60 @@
 packages:
-    - 'apps/*'
-    - 'packages/*'
+  - 'apps/*'
+  - 'packages/*'
 
 # pnpm catalog：统一工作区共享依赖版本
 # 所有 workspace 包使用 catalog: 协议引用这些依赖，确保版本一致
 catalog:
-    zod: ^3.25.76
-    vue: ^3.5.0
-    typescript: ^6.0.3
-    prisma: ^7.0.0
-    '@prisma/client': ^7.0.0
-    '@nestjs/common': ^11.0.0
-    '@nestjs/core': ^11.0.0
-    '@nestjs/config': ^4.0.0
-    '@nestjs/jwt': ^11.0.0
-    '@nestjs/throttler': ^6.0.0
-    '@nestjs/apollo': ^13.0.0
-    '@apollo/server': ^5.5.1
-    graphql: ^16.14.0
-    vitest: ^4.1.7
-    '@playwright/test': ^1.60.0
+  zod: ^3.25.76
+  vue: ^3.5.0
+  typescript: ^6.0.3
+  prisma: ^7.0.0
+  '@prisma/client': ^7.0.0
+  '@nestjs/common': ^11.0.0
+  '@nestjs/core': ^11.0.0
+  '@nestjs/config': ^4.0.0
+  '@nestjs/jwt': ^11.0.0
+  '@nestjs/throttler': ^6.0.0
+  '@nestjs/apollo': ^13.0.0
+  '@apollo/server': ^5.5.1
+  graphql: ^16.14.0
+  vitest: ^4.1.7
+  '@playwright/test': ^1.60.0
 
-    # ESLint 生态（packages/config 使用）
-    '@eslint/js': ^10.0.1
-    eslint: ^10.5.0
-    eslint-config-prettier: ^10.1.8
-    eslint-plugin-vue: ^10.9.2
-    globals: ^17.6.0
-    typescript-eslint: ^8.61.1
+  # ESLint 生态（packages/config 使用）
+  '@eslint/js': ^10.0.1
+  eslint: ^10.5.0
+  eslint-config-prettier: ^10.1.8
+  eslint-plugin-vue: ^10.9.2
+  globals: ^17.6.0
+  typescript-eslint: ^8.61.1
 
 # 强制锁定 graphql 单一版本，修复 @nestjs/apollo 双依赖路径导致 Apollo Server v5 报 "Duplicate graphql modules" 报错
 overrides:
-    graphql: 16.14.0
-    ws: 8.21.0
-    ini: 1.3.6
-    hono: 4.12.25
-    esbuild: 0.28.1
-    '@hono/node-server': 1.19.13
-    js-yaml: 4.2.0
+  graphql: 16.14.0
+  ws: 8.21.0
+  ini: 1.3.6
+  hono: 4.12.25
+  esbuild: 0.28.1
+  '@hono/node-server': 1.19.13
+  js-yaml: 4.2.0
 # 第三方包补丁
 # - vite-plugin-bundlesize@0.3.0 与 vite 8 + rolldown 的 sourcemap 格式不兼容
 #   （rolldown-runtime-*.js 内部 chunk 不带 .map，触发插件的 chunk.map 检查失败）
 #   补丁跳过这些内部运行时 chunk
 patchedDependencies:
-    'vite-plugin-bundlesize@0.3.0': patches/vite-plugin-bundlesize@0.3.0.patch
+  'vite-plugin-bundlesize@0.3.0': patches/vite-plugin-bundlesize@0.3.0.patch
 allowBuilds:
-    '@alicloud/openapi-core': false
-    '@apollo/protobufjs': true
-    '@nestjs/core': true
-    '@prisma/engines': true
-    '@scarf/scarf': false
-    puppeteer: false
-    bcrypt: true
-    esbuild: true
-    prisma: true
-    unrs-resolver: true
-    vue-demi: true
-    '@swc/core': true
+  '@alicloud/openapi-core': false
+  '@apollo/protobufjs': true
+  '@nestjs/core': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  puppeteer: false
+  bcrypt: true
+  esbuild: true
+  prisma: true
+  unrs-resolver: true
+  vue-demi: true
+  '@swc/core': true
+  es5-ext: set this to true or false

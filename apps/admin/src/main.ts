@@ -9,6 +9,8 @@ import { sanitizeHtml } from '@/shared/utils/security';
 import { useConfigStore } from '@/shared/stores/config';
 import { useSettingsStore } from '@/shared/stores/settings';
 import { getPublicConfigs } from '@/api/configs';
+// wangEditor v5 基础样式（工具栏/编辑器/弹窗），必须在 style.css 之前
+import '@wangeditor/editor/dist/css/style.css';
 import './style.css';
 
 /**

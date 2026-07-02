@@ -405,6 +405,46 @@ async function main() {
             });
 
             /**
+             * 功能演示目录（顶级目录，与「权限控制」「配置中心」「全局权限」同级）
+             * - 用于展示基座中的可复用组件（当前包含富文本编辑器 Demo）
+             * - 默认 visible=true，默认绑定 super_admin
+             * - sort=4 排在所有业务目录之后
+             */
+            const playgroundDir = await tx.adminMenu.create({
+                data: {
+                    id: newId(),
+                    parentId: null,
+                    name: '功能演示',
+                    type: 'directory',
+                    path: '/playground',
+                    icon: 'tabler:LayoutGrid',
+                    sort: 4,
+                    visible: true,
+                    keepAlive: true,
+                    enabled: true,
+                },
+            });
+
+            /** 菜单：编辑器（挂在「功能演示」下） */
+            const editorMenu = await tx.adminMenu.create({
+                data: {
+                    id: newId(),
+                    parentId: playgroundDir.id,
+                    name: '编辑器',
+                    type: 'menu',
+                    path: 'editor',
+                    routeName: 'PlaygroundEditor',
+                    component: 'playground/editor',
+                    icon: 'tabler:Pencil',
+                    permissionCode: 'playground:editor:view',
+                    sort: 1,
+                    visible: true,
+                    keepAlive: true,
+                    enabled: true,
+                },
+            });
+
+            /**
              * 全局权限目录（顶级目录，与「权限控制」「配置中心」同级）
              * - 不对应具体页面，仅作为权限分组容器
              * - 后续其他全局权限（如全局导出、全局审计等）也挂在这里
@@ -490,6 +530,9 @@ async function main() {
                 menuCreateBtn.id,
                 menuUpdateBtn.id,
                 menuDeleteBtn.id,
+                // 功能演示（基座组件 Demo 目录）
+                playgroundDir.id,
+                editorMenu.id,
             ];
 
             await tx.adminRoleMenu.createMany({
@@ -598,6 +641,84 @@ async function main() {
                 },
             });
             logger.info('✅ 增量创建「恢复已删除」按钮');
+        }
+
+        /**
+         * 增量创建「功能演示」顶级目录 + 「编辑器」菜单（幂等）
+         * - 用于基座组件 Demo（富文本编辑器示例）
+         * - 默认绑定 super_admin，超级管理员可见
+         */
+        let playgroundDir = await prisma.adminMenu.findFirst({
+            where: { name: '功能演示', type: 'directory', parentId: null },
+        });
+        if (!playgroundDir) {
+            playgroundDir = await prisma.adminMenu.create({
+                data: {
+                    id: newId(),
+                    parentId: null,
+                    name: '功能演示',
+                    type: 'directory',
+                    path: '/playground',
+                    icon: 'tabler:LayoutGrid',
+                    sort: 4,
+                    visible: true,
+                    keepAlive: true,
+                    enabled: true,
+                },
+            });
+            logger.info('✅ 增量创建「功能演示」顶级目录');
+        } else if (!playgroundDir.icon) {
+            await prisma.adminMenu.update({
+                where: { id: playgroundDir.id },
+                data: { icon: 'tabler:LayoutGrid' },
+            });
+            logger.info('✅ 回填「功能演示」icon');
+        }
+
+        let editorMenu = await prisma.adminMenu.findFirst({
+            where: { parentId: playgroundDir.id, name: '编辑器', type: 'menu' },
+        });
+        if (!editorMenu) {
+            editorMenu = await prisma.adminMenu.create({
+                data: {
+                    id: newId(),
+                    parentId: playgroundDir.id,
+                    name: '编辑器',
+                    type: 'menu',
+                    path: 'editor',
+                    routeName: 'PlaygroundEditor',
+                    component: 'playground/editor',
+                    icon: 'tabler:Pencil',
+                    permissionCode: 'playground:editor:view',
+                    sort: 1,
+                    visible: true,
+                    keepAlive: true,
+                    enabled: true,
+                },
+            });
+            logger.info('✅ 增量创建「编辑器」菜单');
+        } else if (!editorMenu.icon) {
+            await prisma.adminMenu.update({
+                where: { id: editorMenu.id },
+                data: { icon: 'tabler:Pencil' },
+            });
+            logger.info('✅ 回填「编辑器」icon');
+        }
+
+        /**
+         * 确保「功能演示」「编辑器」绑定到 super_admin（幂等）
+         * - admin_role_menu 联合主键是 (roleId, menuId)，重复插入会被 SQLite/PG 拒绝
+         * - 先用 findFirst 查是否已绑定，没绑定再 create
+         */
+        for (const menuId of [playgroundDir.id, editorMenu.id]) {
+            const existing = await prisma.adminRoleMenu.findFirst({
+                where: { roleId: superAdminRole.id, menuId },
+            });
+            if (!existing) {
+                await prisma.adminRoleMenu.create({
+                    data: { id: newId(), roleId: superAdminRole.id, menuId },
+                });
+            }
         }
 
         const iamMenus = await prisma.adminMenu.findMany({

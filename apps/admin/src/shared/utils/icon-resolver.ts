@@ -41,6 +41,8 @@ import {
     Database,
     BrandApple,
     Trash,
+    LayoutGrid,
+    Pencil,
 } from '@vicons/tabler';
 import { Server24Regular } from '@vicons/fluent';
 import { SafetyOutlined } from '@vicons/antd';
@@ -65,6 +67,8 @@ const ICON_LIBRARIES: Record<string, Record<string, Component>> = {
         Database,
         BrandApple,
         Trash,
+        LayoutGrid,
+        Pencil,
     },
     fluent: { Server24Regular },
     antd: { SafetyOutlined },

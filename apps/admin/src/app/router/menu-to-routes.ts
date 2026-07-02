@@ -47,6 +47,8 @@ const componentMap: Record<string, () => Promise<unknown>> = {
     // 仪表盘 — 由后端菜单表 permissionCode 驱动权限（dashboard:welcome / dashboard:analytics）
     'dashboard/welcome': () => import('@/features/dashboard/WelcomePage.vue'),
     'dashboard/analysis': () => import('@/features/dashboard/AnalysisPage.vue'),
+    // 功能演示 — 基座组件展示用
+    'playground/editor': () => import('@/features/playground/EditorPlaygroundPage.vue'),
 };
 
 function resolveComponent(key: string): (() => Promise<unknown>) | undefined {

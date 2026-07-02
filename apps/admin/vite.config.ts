@@ -91,6 +91,14 @@ export default defineConfig({
      */
     optimizeDeps: {
         exclude: ['@vueuse/motion'],
+        /**
+         * 主动预打包以下依赖：
+         * - 首次 import 触发自动 optimize 时浏览器会等待 vite 完成 bundling，
+         *   在网络或首次扫描时容易出现 "Failed to fetch dynamically imported module"
+         * - 显式 include 让 vite 启动时直接 prebundle，避免运行时阻塞
+         * - 体积大 / 依赖复杂（slate / wangEditor / DOMPurify / 上传相关）一律进 include
+         */
+        include: ['@wangeditor/editor', '@wangeditor/editor-for-vue', 'dompurify'],
     },
     server: {
         /**

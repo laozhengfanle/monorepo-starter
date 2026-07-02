@@ -2,7 +2,7 @@
  * DashboardService 单元测试
  *
  * 覆盖场景：
- * - getStats：正常返回 / 空数据兜底（count 全 0 时降级为 value=0 的卡片）
+ * - getStats：正常返回 / 空数据兜底（count 全 0 时降级为 value=0 的卡片）/ 趋势计算
  * - getDistribution：正常返回百分比 / 空数据时 percent=0
  * - getQuickEntries：system_config 缺失或 JSON 解析失败时降级为空数组
  *
@@ -93,6 +93,24 @@ describe('DashboardService', () => {
                 expect(typeof card.label).toBe('string');
             });
         });
+
+        it('应根据本周与上周的差值正确计算趋势百分比', async () => {
+            // 当前值 > 上周值 → 正趋势（上升）
+            mockPrisma.client.account.count.mockResolvedValueOnce(15).mockResolvedValueOnce(10); // (15-10)/10*100 = 50
+            // 当前值 < 上周值 → 负趋势（下降）
+            mockPrisma.client.adminRole.count.mockResolvedValueOnce(3).mockResolvedValueOnce(5); // (3-5)/5*100 = -40
+            // 当前值 == 上周值 → 零趋势
+            mockPrisma.client.adminMenu.count.mockResolvedValueOnce(20).mockResolvedValueOnce(20); // 0
+            // 上周为 0，当前 > 0 → 从无到有，视为 100%
+            mockPrisma.client.auditLog.count.mockResolvedValueOnce(50).mockResolvedValueOnce(0); // 100
+
+            const result = await service.getStats();
+
+            expect(result[0].trend).toBe(50);
+            expect(result[1].trend).toBe(-40);
+            expect(result[2].trend).toBe(0);
+            expect(result[3].trend).toBe(100);
+        });
     });
 
     // ── getDistribution ──
@@ -101,17 +119,17 @@ describe('DashboardService', () => {
         it('应按 action 聚合并计算百分比', async () => {
             // 模拟 3 种 action 的计数（已按 desc 排序）
             mockPrisma.client.auditLog.groupBy.mockResolvedValue([
-                { action: 'login', _count: { action: 60 } },
-                { action: 'create', _count: { action: 30 } },
-                { action: 'update', _count: { action: 10 } },
+                { action: 'login_success', _count: { action: 60 } },
+                { action: 'account_created', _count: { action: 30 } },
+                { action: 'account_updated', _count: { action: 10 } },
             ]);
 
             const result = await service.getDistribution();
 
             expect(result).toHaveLength(3);
-            expect(result[0]).toMatchObject({ label: 'login', percent: 60 });
-            expect(result[1]).toMatchObject({ label: 'create', percent: 30 });
-            expect(result[2]).toMatchObject({ label: 'update', percent: 10 });
+            expect(result[0]).toMatchObject({ label: '登录成功', percent: 60 });
+            expect(result[1]).toMatchObject({ label: '账户创建', percent: 30 });
+            expect(result[2]).toMatchObject({ label: '账户更新', percent: 10 });
             // 关键断言：颜色按索引循环分配
             expect(result[0].color).toBe('#1890ff');
             expect(result[1].color).toBe('#52c41a');
