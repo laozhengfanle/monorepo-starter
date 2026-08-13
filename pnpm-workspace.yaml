@@ -1,0 +1,116 @@
+packages:
+  - 'apps/*'
+  - 'packages/**'
+
+# pnpm 11: 构建脚本白名单（替代已移除的 onlyBuiltDependencies）
+allowBuilds:
+  nx: true
+  '@swc/core': true
+  '@nestjs/core': true
+  prisma: true
+  '@prisma/client': true
+  unrs-resolver: true
+  '@parcel/watcher': true
+  less: true
+  esbuild: true
+
+# 依赖版本统一由 catalog 管理；pnpm add 只允许 catalog 中已存在的包
+catalogMode: strict
+
+catalog:
+  # ---- 工作区工具链（模板锁定版本） ----
+  nx: 23.1.1
+  '@nx/devkit': 23.1.1
+  '@nx/eslint': 23.1.1
+  '@nx/eslint-plugin': 23.1.1
+  '@nx/js': 23.1.1
+  '@nx/jest': 23.1.1
+  '@nx/nest': 23.1.1
+  '@nestjs/schematics': ^11.0.0
+  '@nx/node': 23.1.1
+  '@nx/playwright': 23.1.1
+  '@nx/react': 23.1.1
+  '@nx/vite': 23.1.1
+  '@nx/vitest': 23.1.1
+  '@nx/web': 23.1.1
+  '@nx/webpack': 23.1.1
+  '@nx/workspace': 23.1.1
+  typescript: ^6.0.3
+  typescript-eslint: ^8.67.0
+  vite: ^8.2.1
+  vitest: ~4.1.10
+  '@vitest/coverage-v8': ~4.1.10
+  '@vitest/ui': ~4.1.10
+  jsdom: ^30.0.1
+  '@vitejs/plugin-react': ^6.0.5
+  '@swc-node/register': ^1.12.1
+  '@swc/cli': 0.8.1
+  '@swc/core': ^1.15.47
+  '@swc/helpers': ^0.5.23
+  esbuild: ^0.27.7
+  jiti: ^2.7.0
+  ts-node: ^10.9.2
+  tslib: ^2.8.1
+  '@babel/core': ^7.29.7
+  '@babel/preset-react': ^7.29.7
+
+  # ---- Lint / 格式化 ----
+  # oxlint 承担全部代码规则；ESLint 仅保留 Nx 边界规则（lint:boundaries）
+  oxlint: 1.78.0
+  eslint: ^9.39.5
+  '@eslint/js': ^9.39.5
+  eslint-config-prettier: ^10.1.8
+  jsonc-eslint-parser: ^2.1.0
+  prettier: ^3.9.6
+
+  # ---- 前端运行时 ----
+  react: ^19.2.8
+  react-dom: ^19.2.8
+  react-router-dom: ^7.18.2
+  '@types/react': ^19.2.18
+  '@types/react-dom': ^19.2.4
+  antd: ^6.6.0
+  '@ant-design/icons': ^6.1.0
+  '@tanstack/react-query': ^5.0.0
+  axios: ^1.7.0
+  orval: ^8.24.0
+
+  # ---- 后端构建（webpack）与 Jest 测试 ----
+  webpack: ^5.109.2
+  webpack-cli: ^7.2.2
+  webpack-dev-server: ^5.2.6
+  swc-loader: ^0.2.7
+  jest: ~30.4.0
+  jest-environment-node: ~30.4.0
+  jest-util: ~30.4.0
+  ts-jest: ^29.4.12
+  '@swc/jest': ^0.2.39
+  '@types/jest': ^30.0.0
+  supertest: ^7.1.4
+  '@types/supertest': ^6.0.3
+
+  # ---- 测试 ----
+  '@playwright/test': ^1.62.1
+  '@testing-library/dom': ^10.4.1
+  '@testing-library/jest-dom': ^7.0.1
+  '@testing-library/react': ^16.3.2
+  '@types/node': ^24.13.3
+
+  # ---- 后端（NestJS + Fastify，Phase 6 起使用） ----
+  '@nestjs/common': ^11.0.0
+  '@nestjs/core': ^11.0.0
+  '@nestjs/platform-fastify': ^11.0.0
+  '@nestjs/config': ^4.0.0
+  '@nestjs/swagger': ^11.0.0
+  '@nestjs/testing': ^11.0.0
+  fastify: ^5.0.0
+  '@fastify/cors': ^11.0.0
+  '@fastify/static': ^8.0.0
+  reflect-metadata: ^0.2.2
+  rxjs: ^7.8.1
+  zod: ^4.0.0
+  nestjs-zod: ^5.0.0
+
+  # ---- 数据层（Phase 10 起使用） ----
+  prisma: ^7.9.1
+  '@prisma/client': ^7.9.1

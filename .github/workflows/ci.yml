@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # 计算 affected 所需的 base/head（必须在 install 前设置，供 nx-set-shas 使用）
+      - uses: nrwl/nx-set-shas@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # lint = oxlint 全仓快速代码规则；边界规则由 ESLint 单独检查
+      - run: pnpm lint
+
+      - run: pnpm lint:boundaries
+
+      - run: pnpm exec nx affected -t test build typecheck --base=origin/main --head=HEAD
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm exec nx affected -t e2e --base=origin/main --head=HEAD

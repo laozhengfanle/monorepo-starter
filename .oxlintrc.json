@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc", "react", "jsx-a11y", "import", "vitest"],
+  "settings": {
+    "react": {
+      // React 17+ 新 JSX 转换，无需显式 import React
+      "jsxRuntime": "automatic"
+    }
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "rules": {
+    // 允许样式文件、测试 setup 等副作用导入
+    "import/no-unassigned-import": [
+      "error",
+      { "allow": ["**/*.css", "**/*.scss", "**/*.less", "@testing-library/jest-dom", "reflect-metadata"] }
+    ],
+    // React 17+ 新 JSX 转换无需 React 在作用域内（与 ESLint react 插件现代配置一致）
+    "react/react-in-jsx-scope": "off",
+    // NestJS 模块等空类由装饰器赋予语义
+    "typescript/no-extraneous-class": ["error", { "allowWithDecorator": true }]
+  },
+  "ignorePatterns": [
+    "**/dist",
+    "**/generated",
+    "**/test-output",
+    "**/out-tsc",
+    "**/.nx",
+    "**/vite.config.*.timestamp*",
+    "**/vitest.config.*.timestamp*"
+  ]
+}

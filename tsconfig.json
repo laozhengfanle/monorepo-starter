@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/shared/test-utils"
+    },
+    {
+      "path": "./packages/shared/contracts"
+    },
+    {
+      "path": "./apps/web-e2e"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./apps/server"
+    },
+    {
+      "path": "./packages/shared/server-core"
+    },
+    {
+      "path": "./packages/shared/api-client"
+    }
+  ]
+}
