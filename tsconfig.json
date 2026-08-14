@@ -10,12 +10,6 @@
       "path": "./packages/shared/contracts"
     },
     {
-      "path": "./apps/web-e2e"
-    },
-    {
-      "path": "./apps/web"
-    },
-    {
       "path": "./apps/server"
     },
     {
@@ -23,6 +17,15 @@
     },
     {
       "path": "./packages/shared/api-client"
+    },
+    {
+      "path": "./packages/shared/ui"
+    },
+    {
+      "path": "./apps/admin-e2e"
+    },
+    {
+      "path": "./apps/admin"
     }
   ]
 }

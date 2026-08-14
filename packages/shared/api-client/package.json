@@ -15,7 +15,7 @@
   },
   "nx": {
     "tags": [
-      "scope:web",
+      "scope:shared",
       "type:data"
     ],
     "targets": {
@@ -27,6 +27,7 @@
         },
         "inputs": [
           "{workspaceRoot}/openapi/openapi.json",
+          "{workspaceRoot}/pnpm-lock.yaml",
           "{projectRoot}/orval.config.ts",
           "{projectRoot}/src/axios-instance.ts"
         ],

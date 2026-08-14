@@ -13,16 +13,11 @@ describe('HealthController', () => {
     controller = moduleRef.get(HealthController);
   });
 
-  it('返回 success envelope 与健康状态', () => {
-    const envelope = controller.check();
+  it('返回裸健康状态数据', () => {
+    const health = controller.check();
 
-    expect(envelope.success).toBe(true);
-    expect(envelope.error).toBeNull();
-    if (!envelope.success) {
-      throw new Error('期望 success envelope');
-    }
-    expect(envelope.data.status).toBe('ok');
-    expect(envelope.data.service).toBeTruthy();
-    expect(envelope.data.version).toBeTruthy();
+    expect(health.status).toBe('ok');
+    expect(health.service).toBeTruthy();
+    expect(health.version).toBeTruthy();
   });
 });

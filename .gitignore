@@ -38,6 +38,9 @@ yarn-error.log
 testem.log
 /typings
 
+# pnpm store（曾配置为项目内 store，防止误提交 57MB 缓存）
+/.pnpm-store
+
 # System Files
 .DS_Store
 Thumbs.db

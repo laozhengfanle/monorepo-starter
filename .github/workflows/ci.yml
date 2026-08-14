@@ -36,6 +36,11 @@ jobs:
 
       - run: pnpm lint:boundaries
 
+      # 先显式生成 API client（缓存命中时秒回），保证后续 typecheck/build 使用确定的产物；
+      # admin:typecheck 的缓存 inputs 已包含 api-client 源码，避免 orval 重写文件引发的
+      # tsc 增量竞态（此前用 --skip-nx-cache 重试兜底，属掩盖根因）。
+      - run: pnpm exec nx run @starter/api-client:generate-api
+
       - run: pnpm exec nx affected -t test build typecheck --base=origin/main --head=HEAD
 
       - run: pnpm exec playwright install --with-deps chromium

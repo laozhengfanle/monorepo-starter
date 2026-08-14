@@ -34,3 +34,7 @@ export const UserVoSchema = z.object({
   status: userStatusSchema,
   createdAt: z.iso.datetime(),
 });
+
+export type UserVo = z.infer<typeof UserVoSchema>;
+export type CreateUserInput = z.input<typeof CreateUserSchema>;
+export type UpdateUserInput = z.input<typeof UpdateUserSchema>;

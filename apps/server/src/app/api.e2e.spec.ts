@@ -18,14 +18,13 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
     await app.close();
   });
 
-  it('GET /health → 200 envelope', async () => {
+  it('GET /health → 200 裸数据', async () => {
     const res = await request(app.getHttpServer()).get('/health');
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
-      success: true,
-      error: null,
-      data: { status: 'ok', service: 'monorepo-starter-api' },
+      status: 'ok',
+      service: 'monorepo-starter-api',
     });
   });
 
@@ -41,10 +40,10 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
     expect(res.body.error.details.email).toBeDefined();
   });
 
-  it('users CRUD 全流程（envelope + 分页 meta）', async () => {
+  it('users CRUD 全流程（成功=裸数据，失败=envelope）', async () => {
     const server = app.getHttpServer();
 
-    // create
+    // create（成功响应直接为数据本身，无 envelope 包裹）
     const created = await request(server)
       .post('/users')
       .send({ username: 'alice', email: 'alice@example.com' });
@@ -56,12 +55,11 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
     });
     const id = created.body.id as string;
 
-    // list（分页 meta）
+    // list（分页字段直接在内层）
     const list = await request(server).get('/users?page=1&pageSize=10');
     expect(list.status).toBe(200);
-    expect(list.body.success).toBe(true);
-    expect(list.body.data.items.length).toBeGreaterThanOrEqual(1);
-    expect(list.body.meta.total).toBeGreaterThanOrEqual(1);
+    expect(list.body.items.length).toBeGreaterThanOrEqual(1);
+    expect(list.body.total).toBeGreaterThanOrEqual(1);
 
     // update
     const updated = await request(server)
@@ -78,8 +76,9 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
     // delete
     const removed = await request(server).delete(`/users/${id}`);
     expect(removed.status).toBe(200);
+    expect(removed.body.id).toBe(id);
 
-    // 已删除 → 业务异常 400
+    // 已删除 → 业务异常（失败路径统一 envelope）
     const missing = await request(server).get(`/users/${id}`);
     expect(missing.status).toBe(400);
     expect(missing.body.error.code).toBe('USER_NOT_FOUND');

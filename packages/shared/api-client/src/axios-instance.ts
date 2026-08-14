@@ -15,20 +15,35 @@ export class ApiClientError extends Error {
   }
 }
 
-// 相对路径 '/api'：开发环境由 Vite 代理转发（见 apps/web/vite.config.mts），
+// 请求路径统一为相对路径 '/api/...'（见 orval.config.ts 的 baseUrl）：
+// 开发环境由 Vite 代理转发到后端（见 apps/admin/vite.config.mts），
 // 生产环境由网关/Nginx 重写，客户端不硬编码服务端地址。
 const http = create({ baseURL: '' });
 
 /**
- * Orval 自定义 mutator：请求走共享 axios 实例，响应解包 envelope，
- * 让生成的 hooks 直接返回领域类型。HTTP 4xx/5xx 时 axios 抛出 AxiosError，
- * 响应体（envelope 错误负载）可从 error.response.data 读取。
+ * Orval 自定义 mutator：响应约定——
+ * - 成功响应：直接返回领域数据（后端与 OpenAPI spec 一致，不做包裹）；
+ * - 失败响应：后端统一返回 `{ success: false, error: { code, message, details } }` envelope，
+ *   此处解包并抛出携带业务码的 ApiClientError。
+ *
+ * 兼容性：若响应带 success 字段且为 true（旧的 envelope 成功格式），自动解包 data。
  */
 export const customInstance = async <T>(config: AxiosRequestConfig): Promise<T> => {
-  const response = await http.request<ApiEnvelope<T>>(config);
+  const response = await http.request<ApiEnvelope<T> | T>(config);
   const body = response.data;
-  if (!body.success) {
-    throw new ApiClientError(body.error.code, body.error.message, body.error.details);
+
+  if (body !== null && typeof body === 'object' && 'success' in body) {
+    const envelope = body as ApiEnvelope<T>;
+    if (!envelope.success) {
+      throw new ApiClientError(
+        envelope.error.code,
+        envelope.error.message,
+        envelope.error.details,
+      );
+    }
+    // 兼容旧格式：success: true 的 envelope 成功响应解包 data
+    return envelope.data;
   }
-  return body.data;
+
+  return body as T;
 };

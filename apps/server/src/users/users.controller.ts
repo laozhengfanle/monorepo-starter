@@ -6,8 +6,8 @@ import {
   QueryUsersDto,
   UpdateUserDto,
   UserVo,
-} from '@starter/contracts';
-import type { ApiEnvelope, PaginatedData } from '@starter/contracts';
+} from '@starter/server-core';
+import type { PaginatedData } from '@starter/contracts';
 import { UsersService } from './users.service.js';
 
 @ApiTags('users')
@@ -17,7 +17,7 @@ export class UsersController {
 
   @Get()
   @ApiOkResponse({ type: PaginatedUsersResponseDto })
-  list(@Query() query: QueryUsersDto): Promise<ApiEnvelope<PaginatedData<UserVo>>> {
+  list(@Query() query: QueryUsersDto): Promise<PaginatedData<UserVo>> {
     return this.usersService.list(query);
   }
 

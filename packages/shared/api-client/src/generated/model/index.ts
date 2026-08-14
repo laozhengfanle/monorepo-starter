@@ -3,7 +3,7 @@
  * Do not edit manually.
  * monorepo-starter API
  * 企业级 monorepo starter 的 NestJS + Fastify API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.0.1
  */
 
 export * from './createUserDto';

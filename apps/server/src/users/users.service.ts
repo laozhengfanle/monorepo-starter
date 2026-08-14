@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BizException } from '@starter/server-core';
 import type {
-  ApiEnvelope,
   CreateUserInput,
   PaginatedData,
   UpdateUserInput,
@@ -11,18 +10,18 @@ import { UserRepository, type PageQuery } from './user.repository.js';
 
 const USER_NOT_FOUND = 'USER_NOT_FOUND';
 
+/**
+ * 用户业务逻辑。
+ * 响应约定：成功路径直接返回领域数据（与 OpenAPI spec 的 200 schema 一致，
+ * 前端 SDK 无需解包）；失败路径抛 BizException → 全局过滤器统一映射为
+ * `{ success: false, error }` envelope。
+ */
 @Injectable()
 export class UsersService {
   constructor(private readonly repository: UserRepository) {}
 
-  async list(query: PageQuery): Promise<ApiEnvelope<PaginatedData<UserVo>>> {
-    const data = await this.repository.findAll(query);
-    return {
-      success: true,
-      data,
-      error: null,
-      meta: { total: data.total, page: data.page, pageSize: data.pageSize },
-    };
+  async list(query: PageQuery): Promise<PaginatedData<UserVo>> {
+    return this.repository.findAll(query);
   }
 
   async findById(id: string): Promise<UserVo> {

@@ -1,6 +1,6 @@
 {
   "name": "@starter/source",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "license": "MIT",
   "packageManager": "pnpm@11.21.0",
   "engines": {
@@ -12,7 +12,8 @@
     "lint": "oxlint .",
     "lint:boundaries": "eslint .",
     "typecheck": "nx run-many -t typecheck",
-    "e2e": "nx run-many -t e2e"
+    "e2e": "nx run-many -t e2e",
+    "generate:api": "nx run @starter/api-client:generate-api"
   },
   "private": true,
   "dependencies": {
@@ -23,7 +24,9 @@
     "@nestjs/core": "catalog:",
     "@nestjs/platform-fastify": "catalog:",
     "@nestjs/swagger": "catalog:",
+    "@ant-design/icons": "catalog:",
     "@tanstack/react-query": "catalog:",
+    "antd": "catalog:",
     "axios": "catalog:",
     "fastify": "catalog:",
     "nestjs-zod": "catalog:",
@@ -63,6 +66,7 @@
     "@testing-library/dom": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

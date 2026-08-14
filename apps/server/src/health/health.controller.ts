@@ -1,7 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { HealthVo } from '@starter/contracts';
-import type { ApiEnvelope } from '@starter/contracts';
+import { HealthVo } from '@starter/server-core';
 import { HealthService } from './health.service.js';
 
 @ApiTags('health')
@@ -11,7 +10,7 @@ export class HealthController {
 
   @Get()
   @ApiOkResponse({ type: HealthVo })
-  check(): ApiEnvelope<HealthVo> {
-    return { success: true, data: this.healthService.check(), error: null };
+  check(): HealthVo {
+    return this.healthService.check();
   }
 }

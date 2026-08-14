@@ -16,6 +16,7 @@
   "exclude": [
     "out-tsc",
     "dist",
+    "src/test-setup.ts",
     "src/**/*.spec.ts",
     "src/**/*.test.ts",
     "src/**/*.spec.tsx",
@@ -33,5 +34,12 @@
     "eslint.config.mjs"
   ],
   "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"],
-  "references": []
+  "references": [
+    {
+      "path": "../../packages/shared/ui/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/shared/api-client/tsconfig.lib.json"
+    }
+  ]
 }

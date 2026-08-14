@@ -29,8 +29,10 @@ export default [
           depConstraints: [
             // 共享层只允许依赖共享层，禁止反向依赖应用
             { sourceTag: 'scope:shared', onlyDependOnLibsWithTags: ['scope:shared'] },
-            // web 端只能依赖 web 端与共享层
-            { sourceTag: 'scope:web', onlyDependOnLibsWithTags: ['scope:web', 'scope:shared'] },
+            // 管理端只能依赖管理端与共享层
+            { sourceTag: 'scope:admin', onlyDependOnLibsWithTags: ['scope:admin', 'scope:shared'] },
+            // C 端只能依赖 C 端与共享层（预留，创建 member 应用时生效）
+            { sourceTag: 'scope:member', onlyDependOnLibsWithTags: ['scope:member', 'scope:shared'] },
             // server 端只能依赖 server 端与共享层
             { sourceTag: 'scope:server', onlyDependOnLibsWithTags: ['scope:server', 'scope:shared'] },
           ],

@@ -40,7 +40,6 @@
     }
   },
   "dependencies": {
-    "nestjs-zod": "catalog:",
     "zod": "catalog:"
   }
 }

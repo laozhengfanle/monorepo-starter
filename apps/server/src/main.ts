@@ -1,5 +1,15 @@
+import { loadEnvFile } from 'node:process';
 import { Logger } from '@nestjs/common';
 import { createApp, DEFAULT_PORT, emitOpenApi } from './app-setup.js';
+
+// 预载 .env，使 createApp 内（ConfigModule 初始化前）即可读取 LOG_LEVEL/CORS_ORIGINS
+for (const envFile of ['.env', 'apps/server/.env']) {
+  try {
+    loadEnvFile(envFile);
+  } catch {
+    // 文件不存在时忽略（变量取默认值）
+  }
+}
 
 /**
  * 应用入口（仅作为构建产物执行；测试请导入 app-setup.ts 的 createApp）。

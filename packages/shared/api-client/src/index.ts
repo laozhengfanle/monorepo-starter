@@ -2,3 +2,13 @@ export * from './generated/health/health';
 export * from './generated/users/users';
 export * from './generated/model';
 export { customInstance, ApiClientError } from './axios-instance';
+
+// 契约出口收敛：前端只从 @starter/api-client 获取领域模型与校验 schema，
+// 不再直接依赖 @starter/contracts（注：UserVo 等模型名与 generated 重名，
+// 故这里选择性 re-export，避免 export * 的命名歧义）。
+export {
+  CreateUserSchema,
+  UpdateUserSchema,
+  userRoleSchema,
+  userStatusSchema,
+} from '@starter/contracts';

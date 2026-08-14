@@ -29,19 +29,16 @@ describe('UsersService', () => {
     await expect(service.findById(randomUUID())).rejects.toMatchObject({ code: 'USER_NOT_FOUND' });
   });
 
-  it('列表分页返回 envelope 与 meta', async () => {
+  it('列表分页返回 PaginatedData', async () => {
     await service.create({ username: 'alice', email: 'alice@example.com' });
     await service.create({ username: 'bob', email: 'bob@example.com' });
     await service.create({ username: 'carol', email: 'carol@example.com' });
 
     const result = await service.list({ page: 1, pageSize: 2 });
 
-    if (!result.success) {
-      throw new Error(`期望成功响应，实际: ${JSON.stringify(result)}`);
-    }
-    expect(result.data.items).toHaveLength(2);
-    expect(result.data.total).toBe(3);
-    expect(result.meta).toEqual({ total: 3, page: 1, pageSize: 2 });
+    expect(result.items).toHaveLength(2);
+    expect(result.total).toBe(3);
+    expect(result).toMatchObject({ page: 1, pageSize: 2 });
   });
 
   it('更新保持不可变：原记录不被修改', async () => {

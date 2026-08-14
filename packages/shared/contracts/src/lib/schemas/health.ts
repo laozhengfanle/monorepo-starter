@@ -6,3 +6,5 @@ export const HealthSchema = z.object({
   service: z.string().min(1),
   version: z.string().min(1),
 });
+
+export type HealthVo = z.infer<typeof HealthSchema>;

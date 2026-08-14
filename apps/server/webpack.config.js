@@ -1,5 +1,10 @@
 const { NxAppWebpackPlugin } = require('@nx/webpack/app-plugin');
+const webpack = require('webpack');
 const { join } = require('path');
+
+// API 版本单一来源：@starter/server-core 的 package.json（构建期读取并注入，
+// 运行时 swagger.setup.ts 通过 process.env.API_VERSION 消费，dev/test 走兜底值）
+const { version: apiVersion } = require('@starter/server-core/package.json');
 
 module.exports = {
   output: {
@@ -21,6 +26,9 @@ module.exports = {
       outputHashing: 'none',
       generatePackageJson: false,
       sourceMap: true,
+    }),
+    new webpack.DefinePlugin({
+      'process.env.API_VERSION': JSON.stringify(apiVersion),
     }),
   ],
 };

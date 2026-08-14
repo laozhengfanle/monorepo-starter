@@ -18,7 +18,7 @@ describe('UsersController', () => {
 
   it('list 委托 service 并透传分页参数', async () => {
     const query = { page: 2, pageSize: 10 };
-    service.list.mockResolvedValue({ success: true, data: {}, error: null });
+    service.list.mockResolvedValue({ items: [], total: 0, page: 2, pageSize: 10 });
 
     await controller.list(query);
 

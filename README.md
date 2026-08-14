@@ -17,9 +17,9 @@
 
 ```
 apps/
-  server/       NestJS + Fastify API（@starter/server，端口 3333）
-  web/          React SPA（@starter/web，端口 4200）
-  web-e2e/      Playwright 端到端测试
+  server/       NestJS + Fastify API（@starter/server，端口 3301）
+  admin/        React SPA 管理端（@starter/admin，端口 3302）
+  admin-e2e/    Playwright 端到端测试
 packages/
   shared/
     contracts/    共享契约：envelope、分页、DTO schema（zod）——前后端单一事实来源
@@ -38,7 +38,7 @@ pnpm install
 
 # 开发
 pnpm exec nx serve server       # http://localhost:3301（Swagger: /api-docs，JSON: /api-docs-json）
-pnpm exec nx serve web          # http://localhost:3302
+pnpm exec nx serve admin         # http://localhost:3302
 
 # 构建 / 测试 / 检查
 pnpm build
@@ -65,22 +65,24 @@ pnpm exec nx g @nx/react:lib my-lib --directory=packages/shared/my-lib   # 生�
 | 应用 | 端口 | 修改位置 |
 |---|---|---|
 | server | 3301 | [apps/server/.env](apps/server/.env) 的 `PORT` |
-| web | 3302 | [apps/web/vite.config.mts](apps/web/vite.config.mts) 的 `server.port` |
+| admin | 3302 | [apps/admin/vite.config.mts](apps/admin/vite.config.mts) 的 `server.port` |
 
 新增应用依次使用 3303、3304…；前端代理后端用环境变量（`VITE_API_BASE_URL`），不硬编码端口。
 
 ## 约定
 
-- **API 响应**：统一 envelope `{ success, data, error, meta }`（见 [packages/shared/contracts](packages/shared/contracts/src/lib/api-envelope.ts)）
+- **API 响应**：成功响应直接返回领域数据（与 [openapi/openapi.json](openapi/openapi.json) 的 200 schema 一致）；失败响应统一 envelope `{ success: false, error: { code, message, details? } }`（见 [packages/shared/contracts](packages/shared/contracts/src/lib/api-envelope.ts)）
+- **契约变更流程**：改后端 DTO/schema 后，依次运行 `pnpm exec nx run server:generate-openapi`（重新发射 OpenAPI）→ `pnpm generate:api`（orval 重新生成前端 client），再提交生成产物
 - **命名规范**：见 [docs/命名规范.md](docs/命名规范.md)（数据库、后端、前端）
-- **Lint 分层**：`pnpm lint` = oxlint 全仓代码规则（毫秒级，无需按项目缓存）；`pnpm lint:boundaries` = ESLint 只跑 `@nx/enforce-module-boundaries` 与 `@nx/dependency-checks`（oxlint 无法运行 Nx 自定义规则）。边界约束定义在 [eslint.config.mjs](eslint.config.mjs) 的 `depConstraints`（`scope:shared` 只依赖共享层、`scope:web`/`scope:server` 只能依赖本端 + 共享层）
-- **模块边界**：项目 tags（`scope:web` / `scope:shared` / `type:app` …）
+- **目录结构**：见 [docs/命名规范.md](docs/命名规范.md)（apps 按业务端组织、feature-first、复用下沉规则）
+- **Lint 分层**：`pnpm lint` = oxlint 全仓代码规则（毫秒级，无需按项目缓存）；`pnpm lint:boundaries` = ESLint 只跑 `@nx/enforce-module-boundaries` 与 `@nx/dependency-checks`（oxlint 无法运行 Nx 自定义规则）。边界约束定义在 [eslint.config.mjs](eslint.config.mjs) 的 `depConstraints`（`scope:shared` 只依赖共享层；`scope:admin`/`scope:member`/`scope:server` 只能依赖本端 + 共享层）
+- **模块边界**：项目 tags（`scope:web` / `scope:shared` / `type:app` …）；前端只从 `@starter/api-client` 获取领域模型与校验 schema，不直接依赖 `@starter/contracts`
 
 ## Roadmap
 
 - [x] 骨架：Nx + pnpm workspace、catalog、契约种子包、CI
 - [x] oxlint 接管代码规则 + ESLint 边界检查分层
 - [x] NestJS + Fastify API（zod 契约、env fail-fast、health/users CRUD、Swagger、e2e，覆盖率 100%）
-- [ ] OpenAPI 发射 + Orval 生成 react-query client
-- [ ] ui 库（antd 主题）+ web 管理页
+- [x] OpenAPI 发射 + Orval 生成 react-query client
+- [x] ui 库（antd 主题）+ web 管理页
 - [ ] Prisma db 库

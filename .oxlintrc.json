@@ -15,7 +15,7 @@
     // 允许样式文件、测试 setup 等副作用导入
     "import/no-unassigned-import": [
       "error",
-      { "allow": ["**/*.css", "**/*.scss", "**/*.less", "@testing-library/jest-dom", "reflect-metadata"] }
+      { "allow": ["**/*.css", "**/*.scss", "**/*.less", "@testing-library/jest-dom", "@testing-library/jest-dom/vitest", "reflect-metadata"] }
     ],
     // React 17+ 新 JSX 转换无需 React 在作用域内（与 ESLint react 插件现代配置一致）
     "react/react-in-jsx-scope": "off",

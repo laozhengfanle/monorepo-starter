@@ -1,0 +1,39 @@
+{
+  "name": "@starter/admin",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "projectType": "application",
+    "tags": [
+      "scope:admin",
+      "type:app"
+    ],
+    "targets": {
+      "build": {
+        "dependsOn": [
+          "@starter/api-client:generate-api"
+        ]
+      },
+      "typecheck": {
+        "dependsOn": [
+          "@starter/api-client:generate-api"
+        ],
+        "inputs": [
+          "default",
+          "{workspaceRoot}/packages/shared/api-client/src/**/*"
+        ]
+      }
+    }
+  },
+  "dependencies": {
+    "@ant-design/icons": "catalog:",
+    "@starter/api-client": "workspace:*",
+    "@starter/ui": "workspace:*",
+    "@tanstack/react-query": "catalog:",
+    "antd": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router-dom": "catalog:"
+  },
+  "devDependencies": {}
+}

@@ -1,6 +1,7 @@
 {
   "name": "@starter/shared-test-utils",
   "version": "0.0.1",
+  "private": true,
   "type": "commonjs",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
