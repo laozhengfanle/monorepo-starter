@@ -36,6 +36,12 @@ docs/           规划与规范文档
 # 环境要求：Node >= 22.18（推荐 24）、pnpm 11
 pnpm install
 
+# 启动 PostgreSQL（本机或 Docker），并准备 .env
+cp apps/server/.env.example apps/server/.env   # 按需改 DATABASE_URL
+
+# 初始化数据库（迁移 + 生成 client + 种子数据）
+cd apps/server && pnpm exec prisma migrate dev && pnpm exec prisma db seed && cd ../..
+
 # 开发
 pnpm exec nx serve server       # http://localhost:3301（Swagger: /api-docs，JSON: /api-docs-json）
 pnpm exec nx serve admin         # http://localhost:3302
@@ -82,7 +88,13 @@ pnpm exec nx g @nx/react:lib my-lib --directory=packages/shared/my-lib   # 生�
 
 - [x] 骨架：Nx + pnpm workspace、catalog、契约种子包、CI
 - [x] oxlint 接管代码规则 + ESLint 边界检查分层
-- [x] NestJS + Fastify API（zod 契约、env fail-fast、health/users CRUD、Swagger、e2e，覆盖率 100%）
+- [x] NestJS + Express API（zod 契约、env fail-fast、health/users CRUD、Swagger、e2e、pino 日志）
 - [x] OpenAPI 发射 + Orval 生成 react-query client
 - [x] ui 库（antd 主题）+ web 管理页
-- [ ] Prisma db 库
+- [x] Prisma 7 数据层（driver adapter + UUIDv7 + 软删除扩展，users 换 Prisma 仓储）
+- [x] GraphQL 双协议（code-first + zod 单一来源契约层 + ZodArgsPipe + users resolver）
+- [x] 前端 GraphQL（Apollo Client + graphql-codegen 类型化 hooks，users 页面切 GraphQL）
+- [x] 用户体系基础（Account/Identity/Profile + 最小 RBAC + JWT 认证 login/me，REST+GraphQL 双协议）
+- [x] 认证增强（双 token access+refresh、tokenVersion 撤销、jti 黑名单、登录锁定、审计日志）
+- [x] 权限控制（AdminMenu permissionCode + PermissionGuard + @RequirePermission，super_admin 绕过）
+- [x] 前端认证接入（登录页 + AuthContext + 路由守卫 + Apollo 认证 header + header 用户/登出）

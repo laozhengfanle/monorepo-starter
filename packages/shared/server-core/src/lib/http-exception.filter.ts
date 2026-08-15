@@ -5,7 +5,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import type { FastifyReply } from 'fastify';
+import type { Response } from 'express';
 import type { ApiEnvelope } from '@starter/contracts';
 import { ZodError } from 'zod';
 import { ZodValidationException } from 'nestjs-zod';
@@ -35,9 +35,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost): void {
-    const response = host.switchToHttp().getResponse<FastifyReply>();
+    // GraphQL 上下文：放行异常，让 @nestjs/graphql 的 formatError 统一处理
+    // （否则本过滤器会用 REST 的 response.status().json() 误处理 GraphQL 响应）
+    if ((host.getType?.() as string) === 'graphql') {
+      throw exception;
+    }
+
+    const response = host.switchToHttp().getResponse<Response>();
     const { status, envelope } = this.toEnvelope(exception);
-    void response.status(status).send(envelope);
+    response.status(status).json(envelope);
   }
 
   private toEnvelope(exception: unknown): ErrorEnvelope {

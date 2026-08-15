@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// 用户体系（阶段 3）：Account 统一身份容器 + 多登录标识 + 档案 + RBAC
+// ============================================================
+
+/// 统一账户表 — 身份容器，不存登录标识和密码
+model Account {
+  id           String    @id @db.Uuid
+  userType     String    @map("user_type") @db.VarChar(10)
+  enabled      Boolean   @default(true)
+  /// token 版本号：重置密码/软删/踢人时 increment → 所有旧 token 失效
+  tokenVersion Int       @default(0) @map("token_version")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  identities   AccountIdentity[]
+  adminProfile AdminProfile?
+  adminRoles   AdminAccountRole[]
+  tokenRevocations TokenRevocation[]
+  auditLogs        AuditLog[]
+
+  @@index([userType])
+  @@map("account")
+}
+
+/// 登录标识表 — 一个账户可有多种登录方式（username/password、phone、email、oauth）
+model AccountIdentity {
+  id           String    @id @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  identityType String    @map("identity_type") @db.VarChar(20)
+  identifier   String    @db.VarChar(255)
+  credential   String?   @db.Text
+  verified     Boolean   @default(false)
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([identityType, identifier])
+  @@index([accountId])
+  @@map("account_identity")
+}
+
+/// 管理端档案 — 只存业务数据（登录标识在 account_identity）
+model AdminProfile {
+  id        String    @id @db.Uuid
+  accountId String    @unique @map("account_id") @db.Uuid
+  nickname  String    @default("") @db.VarChar(50)
+  phone     String    @default("") @db.VarChar(20)
+  email     String    @default("") @db.VarChar(100)
+  avatar    String    @default("") @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@map("admin_profile")
+}
+
+/// 管理端角色 — code 为机器唯一编码（如 super_admin）
+model AdminRole {
+  id          String   @id @db.Uuid
+  name        String   @db.VarChar(50)
+  code        String   @unique @db.VarChar(50)
+  description String   @default("") @db.VarChar(255)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  accountRoles AdminAccountRole[]
+  roleMenus    AdminRoleMenu[]
+
+  @@map("admin_role")
+}
+
+/// 管理端权限点（permissionCode）— type: directory/menu/button
+model AdminMenu {
+  id        String   @id @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  type      String   @db.VarChar(20)
+  /// 权限机器编码，如 user:list / user:create
+  code      String   @unique @db.VarChar(100)
+  sort      Int      @default(0)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  roleMenus AdminRoleMenu[]
+
+  @@index([parentId])
+  @@map("admin_menu")
+}
+
+/// 管理端 角色-权限点关联
+model AdminRoleMenu {
+  id     String @id @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+  menuId String @map("menu_id") @db.Uuid
+
+  role AdminRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  menu AdminMenu @relation(fields: [menuId], references: [id], onDelete: Restrict)
+
+  @@unique([roleId, menuId])
+  @@map("admin_role_menu")
+}
+
+/// 管理端 账户-角色关联
+model AdminAccountRole {
+  id        String @id @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+  roleId    String @map("role_id") @db.Uuid
+
+  account Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  role    AdminRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, roleId])
+  @@map("admin_account_role")
+}
+
+// ============================================================
+// 认证增强（阶段 3）：token 撤销 + 审计
+// ============================================================
+
+/// Token 撤销记录 — 持久化"已撤销 token"清单（jti 精确匹配），Redis 兜底
+model TokenRevocation {
+  id        String   @id @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  /// JWT ID（payload.jti），精确匹配单个 token；'*' 表示该账号所有 token
+  jti       String   @db.VarChar(128)
+  /// 撤销原因：password_reset / password_changed / account_deleted / logout / token_reuse
+  reason    String   @db.VarChar(50)
+  /// 原 token 过期时间，过期后可清理
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([jti])
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("token_revocation")
+}
+
+/// 安全审计日志 — 登录成功/失败/锁定、敏感操作
+model AuditLog {
+  id           String    @id @db.Uuid
+  accountId    String?   @map("account_id") @db.Uuid
+  action       String    @db.VarChar(50)
+  resourceType String?   @map("resource_type") @db.VarChar(50)
+  resourceId   String?   @map("resource_id") @db.Uuid
+  detail       Json?
+  ip           String?   @db.VarChar(50)
+  userAgent    String?   @map("user_agent") @db.VarChar(500)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  account Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ============================================================
+// 业务演示（阶段 1 保留）：User CRUD
+// ============================================================
+
+/// 用户表 — 阶段 1 演示 CRUD，验证数据层链路
+model User {
+  id        String    @id @db.Uuid
+  username  String    @unique @db.VarChar(30)
+  email     String    @unique @db.VarChar(100)
+  role      String    @default("member") @db.VarChar(20)
+  status    String    @default("active") @db.VarChar(20)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("user")
+}

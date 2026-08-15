@@ -1,0 +1,77 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AdminMe {
+  accountId: ID!
+  avatar: String!
+  nickname: String!
+  permissions: [String!]!
+  roleCodes: [String!]!
+  username: String!
+}
+
+type AuthResult {
+  accessToken: String!
+  expiresIn: Int!
+  refreshToken: String!
+}
+
+input CreateUserInput {
+  email: String!
+  role: UserRole
+  status: UserStatus
+  username: String!
+}
+
+input LoginInput {
+  password: String!
+  username: String!
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): User!
+  deleteUser(id: ID!): User!
+  login(input: LoginInput!): AuthResult!
+  updateUser(id: ID!, input: UpdateUserInput!): User!
+}
+
+type PaginatedUsers {
+  items: [User!]!
+  page: Int!
+  pageSize: Int!
+  total: Int!
+}
+
+type Query {
+  me: AdminMe!
+  user(id: ID!): User
+  users(page: Int = 1, pageSize: Int = 20): PaginatedUsers!
+}
+
+input UpdateUserInput {
+  email: String
+  role: UserRole
+  status: UserStatus
+  username: String
+}
+
+type User {
+  createdAt: String!
+  email: String!
+  id: ID!
+  role: UserRole!
+  status: UserStatus!
+  username: String!
+}
+
+enum UserRole {
+  admin
+  member
+}
+
+enum UserStatus {
+  active
+  disabled
+  locked
+}

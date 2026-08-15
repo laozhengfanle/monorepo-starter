@@ -1,18 +1,33 @@
 import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
+import { vi } from 'vitest';
+import { JwtAuthGuard } from '../modules/auth/jwt-auth.guard.js';
+import { PermissionGuard } from '../modules/auth/permission.guard.js';
 import { UsersController } from './users.controller.js';
 import { UsersService } from './users.service.js';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  const service = { list: jest.fn(), findById: jest.fn(), create: jest.fn(), update: jest.fn(), remove: jest.fn() };
+  const service = {
+    list: vi.fn<() => unknown>(),
+    findById: vi.fn<() => unknown>(),
+    create: vi.fn<() => unknown>(),
+    update: vi.fn<() => unknown>(),
+    remove: vi.fn<() => unknown>(),
+  };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [{ provide: UsersService, useValue: service }],
-    }).compile();
+    })
+      // 守卫依赖（JwtService/Prisma 等）不在单测范围，直接放行
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(PermissionGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
     controller = moduleRef.get(UsersController);
   });
 

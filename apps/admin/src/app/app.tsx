@@ -1,10 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider, Menu } from 'antd';
-import { DashboardOutlined, TeamOutlined } from '@ant-design/icons';
+import { ApolloProvider } from '@apollo/client';
+import { Button, ConfigProvider, Menu, Space, Typography } from 'antd';
+import { DashboardOutlined, LogoutOutlined, TeamOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate, Route, Routes } from 'react-router-dom';
 import { AdminLayout, themeConfig } from '@starter/ui';
 import { DashboardPage } from '../features/dashboard/pages/dashboard-page';
 import { UsersPage } from '../features/users/pages/users-page';
+import { LoginPage } from '../features/auth/pages/login-page';
+import { AuthProvider, useAuth } from './auth/auth-context.js';
+import { ProtectedRoute } from './auth/protected-route.js';
+import { apolloClient } from './apollo-client';
 import './app.css';
 
 const queryClient = new QueryClient({
@@ -32,18 +37,52 @@ function AppMenu(): React.JSX.Element {
   );
 }
 
+/** 顶栏右侧：当前用户 + 登出 */
+function HeaderActions(): React.JSX.Element {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async (): Promise<void> => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <Space size="middle">
+      <Typography.Text>{user?.nickname || user?.username}</Typography.Text>
+      <Button size="small" icon={<LogoutOutlined />} onClick={() => void handleLogout()}>
+        退出
+      </Button>
+    </Space>
+  );
+}
+
 export function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ConfigProvider theme={themeConfig}>
-        <AdminLayout title="monorepo-starter" menu={<AppMenu />}>
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/users" element={<UsersPage />} />
-          </Routes>
-        </AdminLayout>
-      </ConfigProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <ApolloProvider client={apolloClient}>
+        <QueryClientProvider client={queryClient}>
+          <ConfigProvider theme={themeConfig}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout title="monorepo-starter" menu={<AppMenu />} headerRight={<HeaderActions />}>
+                      <Routes>
+                        <Route path="/" element={<DashboardPage />} />
+                        <Route path="/users" element={<UsersPage />} />
+                      </Routes>
+                    </AdminLayout>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </ConfigProvider>
+        </QueryClientProvider>
+      </ApolloProvider>
+    </AuthProvider>
   );
 }
 

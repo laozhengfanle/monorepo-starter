@@ -1,8 +1,11 @@
 import 'reflect-metadata';
 
-import { type LogLevel } from '@nestjs/common';
+import { type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -14,16 +17,6 @@ import {
 import { AppModule } from './app/app.module.js';
 
 export const DEFAULT_PORT = 3301;
-
-/** LOG_LEVEL（Nest 语义）→ Nest LogLevel 数组：verbose > debug > log > warn > error > fatal */
-const LOG_LEVEL_TO_NEST_LEVELS: Record<string, LogLevel[]> = {
-  fatal: ['fatal'],
-  error: ['fatal', 'error'],
-  warn: ['fatal', 'error', 'warn'],
-  log: ['fatal', 'error', 'warn', 'log'],
-  debug: ['fatal', 'error', 'warn', 'log', 'debug'],
-  verbose: ['fatal', 'error', 'warn', 'log', 'debug', 'verbose'],
-};
 
 /** 默认放行 admin 开发地址；生产环境通过 CORS_ORIGINS 显式配置 */
 const DEFAULT_CORS_ORIGINS = ['http://localhost:3302'];
@@ -42,22 +35,22 @@ function corsOriginsFromEnv(): string[] {
 
 /**
  * 创建已装配的应用实例（不监听端口，无副作用——可被 e2e 测试安全导入）：
- * - Fastify 适配器
+ * - Express 适配器（NestJS 官方默认）
+ * - pino 结构化日志（bufferLogs + useLogger，requestId 串联）
+ * - helmet（安全头）/ compression（响应压缩）/ cookieParser
  * - 全局 Zod 校验管道（ZodError → AllExceptionsFilter → 422 envelope）
  * - 全局异常过滤器（失败统一 envelope 响应）
- * - LOG_LEVEL 驱动的 Nest logger 级别
  * - CORS 白名单（CORS_ORIGINS，默认 admin 开发地址）
  * - Swagger UI + JSON 端点
  */
-export async function createApp(): Promise<NestFastifyApplication> {
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
-    new FastifyAdapter(),
-  );
+export async function createApp(): Promise<INestApplication> {
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
+  app.use(helmet());
+  app.use(compression());
+  app.use(cookieParser());
   app.useGlobalPipes(new ZodValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
-  const logLevel = process.env['LOG_LEVEL'] ?? 'log';
-  app.useLogger(LOG_LEVEL_TO_NEST_LEVELS[logLevel] ?? ['fatal', 'error', 'warn', 'log']);
   app.enableCors({ origin: corsOriginsFromEnv() });
   configureSwagger(app);
   await app.init();

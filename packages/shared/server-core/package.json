@@ -23,7 +23,9 @@
     "@nestjs/common": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@starter/contracts": "workspace:*",
+    "graphql": "catalog:",
     "nestjs-zod": "catalog:",
+    "uuidv7": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {}

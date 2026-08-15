@@ -8,23 +8,23 @@ import { AllExceptionsFilter } from './http-exception.filter.js';
 interface MockedHost {
   host: ArgumentsHost;
   status: ReturnType<typeof vi.fn>;
-  send: ReturnType<typeof vi.fn>;
+  json: ReturnType<typeof vi.fn>;
 }
 
 function createMockHost(): MockedHost {
-  const send = vi.fn<(payload: unknown) => void>();
+  const json = vi.fn<(payload: unknown) => void>();
   const status = vi
-    .fn<(code: number) => { send: typeof send }>()
-    .mockReturnValue({ send });
+    .fn<(code: number) => { json: typeof json }>()
+    .mockReturnValue({ json });
   const host = {
     switchToHttp: () => ({ getResponse: () => ({ status }) }),
   } as unknown as ArgumentsHost;
-  return { host, status, send };
+  return { host, status, json };
 }
 
-/** 取出最近一次 send 调用的 envelope 负载 */
+/** 取出最近一次 json 调用的 envelope 负载 */
 function lastEnvelope(mocked: MockedHost) {
-  return mocked.send.mock.calls.at(-1)?.[0] as {
+  return mocked.json.mock.calls.at(-1)?.[0] as {
     success: boolean;
     data: null;
     error: { code: string; message: string; details?: Record<string, string[]> };

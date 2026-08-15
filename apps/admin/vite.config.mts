@@ -16,6 +16,11 @@ export default defineConfig(() => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
+      // GraphQL 端点：/graphql → server（3301），不剥离前缀
+      '/graphql': {
+        target: 'http://localhost:3301',
+        changeOrigin: true,
+      },
     },
   },
   preview: {

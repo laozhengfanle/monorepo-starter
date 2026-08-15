@@ -1,5 +1,5 @@
 import { loadEnvFile } from 'node:process';
-import { Logger } from '@nestjs/common';
+import { Logger } from 'nestjs-pino';
 import { createApp, DEFAULT_PORT, emitOpenApi } from './app-setup.js';
 
 // 预载 .env，使 createApp 内（ConfigModule 初始化前）即可读取 LOG_LEVEL/CORS_ORIGINS
@@ -24,7 +24,7 @@ async function bootstrap(): Promise<void> {
   const app = await createApp();
   const port = Number(process.env['PORT'] ?? DEFAULT_PORT);
   await app.listen(port, '0.0.0.0');
-  Logger.log(`API 已启动: http://localhost:${port}/api-docs`, 'Bootstrap');
+  app.get(Logger).log(`API 已启动: http://localhost:${port}/api-docs`);
 }
 
 void bootstrap();

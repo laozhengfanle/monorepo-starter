@@ -1,17 +1,27 @@
-import type { NestFastifyApplication } from '@nestjs/platform-fastify';
+import type { INestApplication } from '@nestjs/common';
 import { readFile, unlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { createApp, emitOpenApi } from '../app-setup.js';
+import { PrismaService } from '../common/prisma/prisma.service.js';
 
 describe('API e2e（进程内 supertest，全链路含校验管道与异常过滤器）', () => {
-  let app: NestFastifyApplication;
+  let app: INestApplication;
+  let prisma: PrismaService;
+  let authToken: string;
 
   beforeAll(async () => {
     app = await createApp();
-    await app.getHttpAdapter().getInstance().ready();
+    prisma = app.get(PrismaService);
+    // 清空测试数据（绕过软删除 hard delete），保证重复运行不因 unique 约束失败
+    await prisma.rawClient.user.deleteMany();
+    // 登录拿 token（seed 的 root 账户）
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ username: 'root', password: 'Root!123' });
+    authToken = login.body.accessToken as string;
   });
 
   afterAll(async () => {
@@ -28,9 +38,24 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
     });
   });
 
+  it('认证：GET /auth/me 未携带 token → 401', async () => {
+    const res = await request(app.getHttpServer()).get('/auth/me');
+    expect(res.status).toBe(401);
+  });
+
+  it('认证：GET /auth/me 携带 token → 返回账户信息', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.username).toBe('root');
+    expect(res.body.roleCodes).toContain('super_admin');
+  });
+
   it('POST /users 非法 body → 422 + 字段级校验详情', async () => {
     const res = await request(app.getHttpServer())
       .post('/users')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({ username: 'ab', email: 'not-an-email' });
 
     expect(res.status).toBe(422);
@@ -46,6 +71,7 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
     // create（成功响应直接为数据本身，无 envelope 包裹）
     const created = await request(server)
       .post('/users')
+      .set('Authorization', `Bearer ${authToken}`)
       .send({ username: 'alice', email: 'alice@example.com' });
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({
@@ -56,7 +82,9 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
     const id = created.body.id as string;
 
     // list（分页字段直接在内层）
-    const list = await request(server).get('/users?page=1&pageSize=10');
+    const list = await request(server)
+      .get('/users?page=1&pageSize=10')
+      .set('Authorization', `Bearer ${authToken}`);
     expect(list.status).toBe(200);
     expect(list.body.items.length).toBeGreaterThanOrEqual(1);
     expect(list.body.total).toBeGreaterThanOrEqual(1);
@@ -64,28 +92,42 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
     // update
     const updated = await request(server)
       .put(`/users/${id}`)
+      .set('Authorization', `Bearer ${authToken}`)
       .send({ status: 'disabled' });
     expect(updated.status).toBe(200);
     expect(updated.body.status).toBe('disabled');
 
     // findOne
-    const found = await request(server).get(`/users/${id}`);
+    const found = await request(server)
+      .get(`/users/${id}`)
+      .set('Authorization', `Bearer ${authToken}`);
     expect(found.status).toBe(200);
     expect(found.body.email).toBe('alice@example.com');
 
     // delete
-    const removed = await request(server).delete(`/users/${id}`);
+    const removed = await request(server)
+      .delete(`/users/${id}`)
+      .set('Authorization', `Bearer ${authToken}`);
     expect(removed.status).toBe(200);
     expect(removed.body.id).toBe(id);
 
     // 已删除 → 业务异常（失败路径统一 envelope）
-    const missing = await request(server).get(`/users/${id}`);
+    const missing = await request(server)
+      .get(`/users/${id}`)
+      .set('Authorization', `Bearer ${authToken}`);
     expect(missing.status).toBe(400);
     expect(missing.body.error.code).toBe('USER_NOT_FOUND');
   });
 
+  it('GET /users 未认证 → 401', async () => {
+    const res = await request(app.getHttpServer()).get('/users');
+    expect(res.status).toBe(401);
+  });
+
   it('GET /users/:id 非法 uuid → 400', async () => {
-    const res = await request(app.getHttpServer()).get('/users/not-a-uuid');
+    const res = await request(app.getHttpServer())
+      .get('/users/not-a-uuid')
+      .set('Authorization', `Bearer ${authToken}`);
     expect(res.status).toBe(400);
   });
 
@@ -102,7 +144,9 @@ describe('API e2e（进程内 supertest，全链路含校验管道与异常过�
   });
 
   it('随机 uuid 查询不存在用户 → 400 USER_NOT_FOUND', async () => {
-    const res = await request(app.getHttpServer()).get(`/users/${randomUUID()}`);
+    const res = await request(app.getHttpServer())
+      .get(`/users/${randomUUID()}`)
+      .set('Authorization', `Bearer ${authToken}`);
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('USER_NOT_FOUND');
   });

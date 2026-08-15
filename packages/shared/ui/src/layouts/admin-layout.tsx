@@ -9,12 +9,14 @@ interface AdminLayoutProps {
   title: string;
   /** 侧栏菜单（通常传入 antd Menu） */
   menu?: ReactNode;
+  /** 顶栏右侧内容（如当前用户 + 登出按钮） */
+  headerRight?: ReactNode;
   /** 内容区 */
   children: ReactNode;
 }
 
 /** 中后台标准布局：可折叠侧栏 + 顶栏 + 内容区（antd 内置 trigger 处理折叠） */
-export function AdminLayout({ title, menu, children }: AdminLayoutProps): React.JSX.Element {
+export function AdminLayout({ title, menu, headerRight, children }: AdminLayoutProps): React.JSX.Element {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -26,7 +28,9 @@ export function AdminLayout({ title, menu, children }: AdminLayoutProps): React.
         {menu}
       </Sider>
       <Layout>
-        <Header style={{ padding: 0, background: '#fff' }} />
+        <Header style={{ padding: 0, background: '#fff', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingRight: 16 }}>
+          {headerRight}
+        </Header>
         <Content style={{ margin: 16 }}>{children}</Content>
       </Layout>
     </Layout>

@@ -12,28 +12,39 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useQueryClient } from '@tanstack/react-query';
+import { ApolloError } from '@apollo/client';
 import {
-  ApiClientError,
-  getUsersControllerListQueryKey,
-  useUsersControllerCreate,
-  useUsersControllerList,
-  useUsersControllerRemove,
-  useUsersControllerUpdate,
+  CreateUserSchema,
+  UpdateUserSchema,
+  userRoleSchema,
+  userStatusSchema,
 } from '@starter/api-client';
-import type { CreateUserDto, UpdateUserDto, UserVo } from '@starter/api-client';
-import { CreateUserSchema, UpdateUserSchema, userRoleSchema, userStatusSchema } from '@starter/api-client';
 import { StatusTag } from '@starter/ui';
+import {
+  useUsersQuery,
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useDeleteUserMutation,
+} from '../../../generated/graphql';
+import type {
+  User,
+  UserRole,
+  UserStatus,
+  CreateUserInput,
+  UpdateUserInput,
+} from '../../../generated/graphql';
+import { usePermission } from '../../../app/auth/use-permission.js';
 
 const DEFAULT_PAGE_SIZE = 10;
 
 /** 表单初始值（创建时） */
 const CREATE_INITIAL_VALUES = { username: '', email: '', role: 'member', status: 'active' } as const;
 
-/** 把 mutation 失败映射为用户提示：业务错误透传消息，其他错误给出通用提示 */
+/** GraphQL 错误 → 用户提示：取首个 GraphQL 错误的业务 message */
 function showMutationError(error: unknown): void {
-  if (error instanceof ApiClientError) {
-    void message.error(error.message);
+  if (error instanceof ApolloError) {
+    const gqlError = error.graphQLErrors[0];
+    void message.error(gqlError?.message ?? '操作失败，请稍后重试');
     return;
   }
   console.error('mutation failed', error);
@@ -54,26 +65,27 @@ function applyZodErrors(
 }
 
 export function UsersPage(): React.JSX.Element {
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
-  const { data, isLoading } = useUsersControllerList({ page, pageSize });
-  const createMutation = useUsersControllerCreate();
-  const updateMutation = useUsersControllerUpdate();
-  const removeMutation = useUsersControllerRemove();
+  // 按钮级权限控制（与后端 @RequirePermission 的 permissionCode 对应）
+  const canCreate = usePermission('user:create');
+  const canUpdate = usePermission('user:update');
+  const canDelete = usePermission('user:delete');
 
-  const users = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const { data, loading, refetch } = useUsersQuery({ variables: { page, pageSize } });
+  const [createUser, { loading: createLoading }] = useCreateUserMutation();
+  const [updateUser, { loading: updateLoading }] = useUpdateUserMutation();
+  const [deleteUser, { loading: deleteLoading }] = useDeleteUserMutation();
+
+  const users = data?.users.items ?? [];
+  const total = data?.users.total ?? 0;
 
   const refreshList = async (): Promise<void> => {
-    // 只失效用户列表查询，避免连带失效 health 等无关缓存
-    await queryClient.invalidateQueries({
-      queryKey: getUsersControllerListQueryKey(),
-    });
+    await refetch({ page, pageSize });
   };
 
   const openCreate = (): void => {
@@ -82,7 +94,7 @@ export function UsersPage(): React.JSX.Element {
     setModalOpen(true);
   };
 
-  const openEdit = (user: UserVo): void => {
+  const openEdit = (user: User): void => {
     setEditingId(user.id);
     form.setFieldsValue({
       username: user.username,
@@ -103,10 +115,14 @@ export function UsersPage(): React.JSX.Element {
     }
     try {
       if (editingId === null) {
-        await createMutation.mutateAsync({ data: parsed.data as CreateUserDto });
+        await createUser({
+          variables: { input: parsed.data as unknown as CreateUserInput },
+        });
         void message.success('创建成功');
       } else {
-        await updateMutation.mutateAsync({ id: editingId, data: parsed.data as UpdateUserDto });
+        await updateUser({
+          variables: { id: editingId, input: parsed.data as unknown as UpdateUserInput },
+        });
         void message.success('更新成功');
       }
       setModalOpen(false);
@@ -119,7 +135,7 @@ export function UsersPage(): React.JSX.Element {
 
   const handleRemove = async (id: string): Promise<void> => {
     try {
-      await removeMutation.mutateAsync({ id });
+      await deleteUser({ variables: { id } });
       void message.success('删除成功');
       await refreshList();
     } catch (error) {
@@ -127,7 +143,7 @@ export function UsersPage(): React.JSX.Element {
     }
   };
 
-  const columns: ColumnsType<UserVo> = [
+  const columns: ColumnsType<User> = [
     { title: '用户名', dataIndex: 'username', key: 'username' },
     { title: '邮箱', dataIndex: 'email', key: 'email' },
     {
@@ -135,13 +151,14 @@ export function UsersPage(): React.JSX.Element {
       dataIndex: 'role',
       key: 'role',
       width: 100,
+      render: (role: UserRole) => role,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 120,
-      render: (status: UserVo['status']) => <StatusTag status={status} />,
+      render: (status: UserStatus) => <StatusTag status={status} />,
     },
     {
       title: '操作',
@@ -149,14 +166,19 @@ export function UsersPage(): React.JSX.Element {
       width: 160,
       render: (_value, user) => (
         <Space>
-          <Button type="link" size="small" onClick={() => openEdit(user)}>
-            编辑
-          </Button>
-          <Popconfirm title="确认删除该用户？" onConfirm={() => handleRemove(user.id)}>
-            <Button type="link" size="small" danger>
-              删除
+          {canUpdate && (
+            <Button type="link" size="small" onClick={() => openEdit(user)}>
+              编辑
             </Button>
-          </Popconfirm>
+          )}
+          {canDelete && (
+            <Popconfirm title="确认删除该用户？" onConfirm={() => handleRemove(user.id)}>
+              <Button type="link" size="small" danger>
+                删除
+              </Button>
+            </Popconfirm>
+          )}
+          {!canUpdate && !canDelete && <Typography.Text type="secondary">无权限</Typography.Text>}
         </Space>
       ),
     },
@@ -168,16 +190,18 @@ export function UsersPage(): React.JSX.Element {
         <Typography.Title level={2} style={{ margin: 0 }}>
           用户管理
         </Typography.Title>
-        <Button type="primary" onClick={openCreate}>
-          新建用户
-        </Button>
+        {canCreate && (
+          <Button type="primary" onClick={openCreate}>
+            新建用户
+          </Button>
+        )}
       </div>
 
-      <Table<UserVo>
+      <Table<User>
         rowKey="id"
         columns={columns}
         dataSource={users}
-        loading={isLoading}
+        loading={loading}
         locale={{ emptyText: '暂无数据' }}
         pagination={{
           current: page,
@@ -199,7 +223,7 @@ export function UsersPage(): React.JSX.Element {
         onCancel={() => setModalOpen(false)}
         okText="确定"
         cancelText="取消"
-        confirmLoading={createMutation.isPending || updateMutation.isPending}
+        confirmLoading={createLoading || updateLoading || deleteLoading}
         destroyOnHidden
       >
         <Form form={form} layout="vertical" initialValues={CREATE_INITIAL_VALUES}>

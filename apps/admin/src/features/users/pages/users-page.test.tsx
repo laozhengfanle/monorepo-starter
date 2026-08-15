@@ -1,28 +1,27 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi } from 'vitest';
-import * as apiClient from '@starter/api-client';
+import * as graphql from '../../../generated/graphql';
 import { UsersPage } from './users-page';
 
-// 部分 mock：只替换生成的 hooks，保留 schema/ApiClientError 等真实导出
-vi.mock('@starter/api-client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@starter/api-client')>();
+// 部分 mock：只替换生成的 Apollo hooks，保留类型/enum 等真实导出
+vi.mock('../../../generated/graphql', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../generated/graphql')>();
   return {
     ...actual,
-    useUsersControllerList: vi.fn<() => unknown>(),
-    useUsersControllerCreate: vi.fn<() => unknown>(),
-    useUsersControllerUpdate: vi.fn<() => unknown>(),
-    useUsersControllerRemove: vi.fn<() => unknown>(),
+    useUsersQuery: vi.fn<() => unknown>(),
+    useCreateUserMutation: vi.fn<() => unknown>(),
+    useUpdateUserMutation: vi.fn<() => unknown>(),
+    useDeleteUserMutation: vi.fn<() => unknown>(),
   };
 });
 
+// 权限检查 mock：单测不覆盖权限逻辑，直接放行
+vi.mock('../../../app/auth/use-permission.js', () => ({
+  usePermission: () => true,
+}));
+
 function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <UsersPage />
-    </QueryClientProvider>
-  );
+  return render(<UsersPage />);
 }
 
 const mockUsers = [
@@ -33,6 +32,7 @@ const mockUsers = [
     role: 'admin' as const,
     status: 'active' as const,
     createdAt: '2026-01-01T00:00:00.000Z',
+    __typename: 'User' as const,
   },
   {
     id: '2',
@@ -41,28 +41,32 @@ const mockUsers = [
     role: 'member' as const,
     status: 'locked' as const,
     createdAt: '2026-01-02T00:00:00.000Z',
+    __typename: 'User' as const,
   },
 ];
 
 const mockListResult = {
-  data: { items: mockUsers, total: 2, page: 1, pageSize: 10 },
-  isLoading: false,
-  isError: false,
-} as unknown as ReturnType<typeof apiClient.useUsersControllerList>;
+  data: { users: { items: mockUsers, total: 2, page: 1, pageSize: 10 } },
+  loading: false,
+  refetch: vi.fn<() => Promise<unknown>>(),
+} as unknown as ReturnType<typeof graphql.useUsersQuery>;
 
 describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(apiClient.useUsersControllerList).mockReturnValue(mockListResult);
-    vi.mocked(apiClient.useUsersControllerCreate).mockReturnValue({
-      mutateAsync: vi.fn<() => Promise<void>>(),
-    } as unknown as ReturnType<typeof apiClient.useUsersControllerCreate>);
-    vi.mocked(apiClient.useUsersControllerUpdate).mockReturnValue({
-      mutateAsync: vi.fn<() => Promise<void>>(),
-    } as unknown as ReturnType<typeof apiClient.useUsersControllerUpdate>);
-    vi.mocked(apiClient.useUsersControllerRemove).mockReturnValue({
-      mutateAsync: vi.fn<() => Promise<void>>(),
-    } as unknown as ReturnType<typeof apiClient.useUsersControllerRemove>);
+    vi.mocked(graphql.useUsersQuery).mockReturnValue(mockListResult);
+    vi.mocked(graphql.useCreateUserMutation).mockReturnValue([
+      vi.fn<() => Promise<unknown>>(),
+      { loading: false },
+    ] as unknown as ReturnType<typeof graphql.useCreateUserMutation>);
+    vi.mocked(graphql.useUpdateUserMutation).mockReturnValue([
+      vi.fn<() => Promise<unknown>>(),
+      { loading: false },
+    ] as unknown as ReturnType<typeof graphql.useUpdateUserMutation>);
+    vi.mocked(graphql.useDeleteUserMutation).mockReturnValue([
+      vi.fn<() => Promise<unknown>>(),
+      { loading: false },
+    ] as unknown as ReturnType<typeof graphql.useDeleteUserMutation>);
   });
 
   it('渲染用户表格与状态标签', () => {
@@ -74,10 +78,10 @@ describe('UsersPage', () => {
   });
 
   it('空列表显示空态', () => {
-    vi.mocked(apiClient.useUsersControllerList).mockReturnValue({
+    vi.mocked(graphql.useUsersQuery).mockReturnValue({
       ...mockListResult,
-      data: { items: [], total: 0, page: 1, pageSize: 10 },
-    } as ReturnType<typeof apiClient.useUsersControllerList>);
+      data: { users: { items: [], total: 0, page: 1, pageSize: 10 } },
+    } as ReturnType<typeof graphql.useUsersQuery>);
 
     renderPage();
 
@@ -85,10 +89,11 @@ describe('UsersPage', () => {
   });
 
   it('创建表单：无效输入展示 zod 校验错误且不调用创建接口', { timeout: 15000 }, async () => {
-    const createMutateAsync = vi.fn<() => Promise<void>>();
-    vi.mocked(apiClient.useUsersControllerCreate).mockReturnValue({
-      mutateAsync: createMutateAsync,
-    } as unknown as ReturnType<typeof apiClient.useUsersControllerCreate>);
+    const createMutation = vi.fn<() => Promise<unknown>>();
+    vi.mocked(graphql.useCreateUserMutation).mockReturnValue([
+      createMutation,
+      { loading: false },
+    ] as unknown as ReturnType<typeof graphql.useCreateUserMutation>);
 
     renderPage();
 
@@ -110,6 +115,6 @@ describe('UsersPage', () => {
       },
       { timeout: 3000 }
     );
-    expect(createMutateAsync).not.toHaveBeenCalled();
+    expect(createMutation).not.toHaveBeenCalled();
   });
 });

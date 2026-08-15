@@ -8,7 +8,7 @@ export const SWAGGER_PATH = 'api-docs';
 export const SWAGGER_JSON_PATH = 'api-docs-json';
 
 const API_TITLE = 'monorepo-starter API';
-const API_DESCRIPTION = '企业级 monorepo starter 的 NestJS + Fastify API';
+const API_DESCRIPTION = '企业级 monorepo starter 的 NestJS + Express API';
 /**
  * API 版本：单一来源为 @starter/server-core 的 package.json version。
  * server 构建时由 webpack DefinePlugin 注入（见 apps/server/webpack.config.js）；

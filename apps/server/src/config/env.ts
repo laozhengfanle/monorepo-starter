@@ -12,6 +12,12 @@ export const EnvSchema = z.object({
     .string()
     .optional()
     .describe('逗号分隔的允许跨域来源，如 https://admin.example.com,http://localhost:3302'),
+  /** PostgreSQL 连接串（Prisma driver adapter 使用） */
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL 不能为空'),
+  /** JWT 签名密钥（认证模块） */
+  JWT_SECRET: z.string().min(16, 'JWT_SECRET 至少 16 个字符'),
+  /** JWT 过期时间（秒，默认 15 分钟） */
+  JWT_ACCESS_TTL: z.coerce.number().int().positive().default(900),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

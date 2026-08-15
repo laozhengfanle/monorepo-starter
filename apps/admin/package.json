@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "catalog:",
+    "@apollo/client": "catalog:",
     "@starter/api-client": "workspace:*",
     "@starter/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
@@ -35,5 +36,10 @@
     "react-dom": "catalog:",
     "react-router-dom": "catalog:"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@graphql-codegen/cli": "catalog:",
+    "@graphql-codegen/typescript": "catalog:",
+    "@graphql-codegen/typescript-operations": "catalog:",
+    "@graphql-codegen/typescript-react-apollo": "catalog:"
+  }
 }
