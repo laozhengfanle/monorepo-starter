@@ -402,7 +402,6 @@ export function AdminMenusPage(): React.JSX.Element {
         okText="确定"
         cancelText="取消"
         confirmLoading={createLoading || updateLoading || deleteLoading}
-        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Form.Item label="上级" name="parentId">

@@ -168,7 +168,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps): React.JS
       title="应用设置"
       destroyOnClose
     >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         {/* ===== 界面显示 ===== */}
         <section style={{ width: '100%' }}>
           <SectionTitle title="界面显示" />

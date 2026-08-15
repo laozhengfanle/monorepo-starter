@@ -355,7 +355,6 @@ export function AdminRolesPage(): React.JSX.Element {
         okText="确定"
         cancelText="取消"
         confirmLoading={createLoading || updateLoading || deleteLoading}
-        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Form.Item label="角色名" name="name">

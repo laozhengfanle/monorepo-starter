@@ -38,7 +38,7 @@ export function ProfilePage(): React.JSX.Element {
   }, [user?.menus, user?.permissions]);
 
   return (
-    <Space direction="vertical" size={token.marginMD} style={{ width: '100%' }}>
+    <Space orientation="vertical" size={token.marginMD} style={{ width: '100%' }}>
       {/* 页面标题 + 账号设置按钮 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <Title level={5} style={{ margin: 0 }}>
@@ -55,7 +55,7 @@ export function ProfilePage(): React.JSX.Element {
       <Row gutter={[token.marginMD, token.marginMD]}>
         {/* 左列：个人中心 + 账号信息 */}
         <Col xs={24} lg={12}>
-          <Space direction="vertical" size={token.marginMD} style={{ width: '100%' }}>
+          <Space orientation="vertical" size={token.marginMD} style={{ width: '100%' }}>
             <Card title="个人中心">
               <div
                 style={{
@@ -109,7 +109,7 @@ export function ProfilePage(): React.JSX.Element {
                 style={{ padding: '24px 0' }}
               />
             ) : (
-              <Space direction="vertical" size={token.marginLG} style={{ width: '100%' }}>
+              <Space orientation="vertical" size={token.marginLG} style={{ width: '100%' }}>
                 {permissionGroups.map((group) => (
                   <div key={group.module}>
                     <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
