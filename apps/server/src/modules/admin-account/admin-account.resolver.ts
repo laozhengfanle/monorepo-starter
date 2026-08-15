@@ -26,8 +26,10 @@ export class AdminAccountResolver {
   async adminAccounts(
     @Args('page', { type: () => Int, nullable: true, defaultValue: 1 }) page: number,
     @Args('pageSize', { type: () => Int, nullable: true, defaultValue: 20 }) pageSize: number,
+    @Args('includeDeleted', { type: () => Boolean, nullable: true, defaultValue: false })
+    includeDeleted?: boolean,
   ): Promise<PaginatedAdminAccountsType> {
-    const result = await this.adminAccountService.list({ page, pageSize });
+    const result = await this.adminAccountService.list({ page, pageSize, includeDeleted });
     return {
       items: result.items as AdminAccountType[],
       total: result.total,

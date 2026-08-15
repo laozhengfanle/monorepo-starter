@@ -1,5 +1,5 @@
-query AdminAccounts($page: Int, $pageSize: Int) {
-  adminAccounts(page: $page, pageSize: $pageSize) {
+query AdminAccounts($page: Int, $pageSize: Int, $includeDeleted: Boolean) {
+  adminAccounts(page: $page, pageSize: $pageSize, includeDeleted: $includeDeleted) {
     items {
       accountId
       username
@@ -9,6 +9,7 @@ query AdminAccounts($page: Int, $pageSize: Int) {
       enabled
       roleCodes
       createdAt
+      deletedAt
     }
     total
     page

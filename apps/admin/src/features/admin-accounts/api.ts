@@ -17,6 +17,16 @@ export async function getAccountMenusApi(accountId: string): Promise<AccountMenu
   return data;
 }
 
+/** 恢复已软删账户 */
+export async function restoreAccountApi(accountId: string): Promise<void> {
+  await axios.post(`/api/admin/accounts/${accountId}/restore`, {}, { headers: authHeaders() });
+}
+
+/** 彻底删除账户（清级联表后硬删） */
+export async function hardRemoveAccountApi(accountId: string): Promise<void> {
+  await axios.delete(`/api/admin/accounts/${accountId}/hard`, { headers: authHeaders() });
+}
+
 /** 保存账户特例授权（全量覆盖） */
 export async function saveAccountMenusApi(
   accountId: string,

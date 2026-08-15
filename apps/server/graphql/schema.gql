@@ -6,6 +6,7 @@ type AdminAccount {
   accountId: ID!
   avatar: String!
   createdAt: String!
+  deletedAt: String
   email: String!
   enabled: Boolean!
   nickname: String!
@@ -131,7 +132,7 @@ type PermissionCode {
 }
 
 type Query {
-  adminAccounts(page: Int = 1, pageSize: Int = 20): PaginatedAdminAccounts!
+  adminAccounts(includeDeleted: Boolean = false, page: Int = 1, pageSize: Int = 20): PaginatedAdminAccounts!
   adminRoles: [AdminRole!]!
   me: AdminMe!
   menuTree: [AdminMenuNode!]!

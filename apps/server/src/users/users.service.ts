@@ -52,7 +52,7 @@ export class UsersService {
     return removed;
   }
 
-  /** 已删除用户列表（回收站） */
+  /** 已删除用户列表（软删除视图） */
   async listDeleted(query: PageQuery): Promise<PaginatedData<UserVo>> {
     return this.repository.listDeleted(query);
   }

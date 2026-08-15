@@ -7,7 +7,6 @@ import { AdminMenusPage } from '../features/admin-menus/pages/admin-menus-page';
 import { ProfilePage } from '../features/account/profile-page';
 import { AccountSettingsPage } from '../features/account/settings-page';
 import { SystemSettingsPage } from '../features/system/pages/system-settings-page';
-import { RecyclePage } from '../features/recycle/pages/recycle-page';
 import { usePermission } from './auth/use-permission.js';
 
 /**
@@ -28,7 +27,6 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/admin/roles', element: <AdminRolesPage />, permission: 'role:list' },
   { path: '/admin/menus', element: <AdminMenusPage />, permission: 'menu:list' },
   { path: '/admin/settings', element: <SystemSettingsPage />, permission: 'config:admin' },
-  { path: '/admin/recycle', element: <RecyclePage />, permission: 'recycle:list' },
   // 个人中心：登录即可访问，不进菜单表（对标老项目静态路由）
   { path: '/account/profile', element: <ProfilePage /> },
   { path: '/account/settings', element: <AccountSettingsPage /> },

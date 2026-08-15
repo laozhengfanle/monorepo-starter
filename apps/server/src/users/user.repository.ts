@@ -27,7 +27,7 @@ export abstract class UserRepository {
   /** 返回被删除的记录；id 不存在时返回 null */
   abstract delete(id: string): Promise<UserVo | null>;
 
-  /** 已删除用户列表（回收站；绕过软删过滤） */
+  /** 已删除用户列表（软删除视图；绕过软删过滤） */
   abstract listDeleted(query: PageQuery): Promise<PaginatedData<UserVo>>;
 
   /** 恢复已软删用户；未删除/不存在返回 null */

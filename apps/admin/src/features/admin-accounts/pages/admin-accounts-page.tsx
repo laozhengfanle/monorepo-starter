@@ -12,6 +12,7 @@ import {
   Space,
   Switch,
   Table,
+  Tag,
   Typography,
   message,
 } from 'antd';
@@ -31,6 +32,7 @@ import { CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/api
 
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { AccountPermissionModal } from '../account-permission-modal.js';
+import { hardRemoveAccountApi, restoreAccountApi } from '../api.js';
 import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
 import {
   useAdminAccountsQuery,
@@ -77,18 +79,27 @@ export function AdminAccountsPage(): React.JSX.Element {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
-    () => new Set(['username', 'nickname', 'email', 'roleCodes', 'enabled', 'actions']),
+    () => new Set(['username', 'nickname', 'email', 'roleCodes', 'status', 'actions']),
   );
   const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
   // 特例授权弹窗
   const [permAccount, setPermAccount] = useState<{ id: string; name: string } | null>(null);
+  // 软删除视图（显示已删除记录）
+  const [includeDeleted, setIncludeDeleted] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const canCreate = usePermission('account:create');
   const canUpdate = usePermission('account:update');
   const canDelete = usePermission('account:delete');
+  // 软删除权限（对标老项目 Vue global:trash:*）
+  const canViewTrash = usePermission('global:trash:view');
+  const canRestoreTrash = usePermission('global:trash:restore');
+  const canHardDeleteTrash = usePermission('global:trash:hard_delete');
 
-  const { data, loading, refetch } = useAdminAccountsQuery({ variables: { page, pageSize } });
+  const { data, loading, refetch } = useAdminAccountsQuery({
+    variables: { page, pageSize, includeDeleted },
+  });
   const { data: rolesData } = useAdminRolesQuery();
   const [createAccount, { loading: createLoading }] = useCreateAdminAccountMutation();
   const [updateAccount, { loading: updateLoading }] = useUpdateAdminAccountMutation();
@@ -112,7 +123,7 @@ export function AdminAccountsPage(): React.JSX.Element {
   }));
 
   const refreshList = async (): Promise<void> => {
-    await refetch({ page, pageSize });
+    await refetch({ page, pageSize, includeDeleted });
   };
 
   const openCreate = (): void => {
@@ -163,6 +174,32 @@ export function AdminAccountsPage(): React.JSX.Element {
     }
   };
 
+  const handleRestore = async (id: string): Promise<void> => {
+    setActionLoading(true);
+    try {
+      await restoreAccountApi(id);
+      void message.success('已恢复正常');
+      await refreshList();
+    } catch {
+      void message.error('恢复失败，请重试');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleHardRemove = async (id: string): Promise<void> => {
+    setActionLoading(true);
+    try {
+      await hardRemoveAccountApi(id);
+      void message.success('已彻底删除');
+      await refreshList();
+    } catch {
+      void message.error('彻底删除失败，请重试');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleRemove = async (id: string): Promise<void> => {
     try {
       await deleteAccount({ variables: { id } });
@@ -184,43 +221,78 @@ export function AdminAccountsPage(): React.JSX.Element {
       render: (roleCodes: string[]) => roleCodes.join(', '),
     },
     {
-      title: '启用',
-      dataIndex: 'enabled',
-      key: 'enabled',
-      width: 80,
-      render: (enabled: boolean) => (enabled ? '是' : '否'),
+      title: '状态',
+      dataIndex: 'deletedAt',
+      key: 'status',
+      width: 130,
+      render: (_value: string | null, account) => {
+        if (account.deletedAt) {
+          return (
+            <Space size="small">
+              <Tag color="red">已删除</Tag>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {account.deletedAt.slice(0, 10)}
+              </Typography.Text>
+            </Space>
+          );
+        }
+        return account.enabled ? <Tag color="green">正常</Tag> : <Tag>禁用</Tag>;
+      },
     },
     {
       title: '操作',
       key: 'actions',
-      width: 160,
-      render: (_value, account) => (
-        <Space>
-          {canUpdate && (
-            <Button type="link" size="small" onClick={() => openEdit(account)}>
-              编辑
-            </Button>
-          )}
-          {canUpdate && (
-            <Button
-              type="link"
-              size="small"
-              icon={<SafetyCertificateOutlined />}
-              onClick={() => setPermAccount({ id: account.accountId, name: account.username })}
-            >
-              特例授权
-            </Button>
-          )}
-          {canDelete && (
-            <Popconfirm title="确认删除该账户？删除后其所有 token 失效" onConfirm={() => handleRemove(account.accountId)}>
-              <Button type="link" size="small" danger>
-                删除
+      width: 180,
+      render: (_value, account) => {
+        const isDeleted = Boolean(account.deletedAt);
+        return (
+          <Space>
+            {!isDeleted && canUpdate && (
+              <Button type="link" size="small" onClick={() => openEdit(account)}>
+                编辑
               </Button>
-            </Popconfirm>
-          )}
-          {!canUpdate && !canDelete && <Typography.Text type="secondary">无权限</Typography.Text>}
-        </Space>
-      ),
+            )}
+            {!isDeleted && canUpdate && (
+              <Button
+                type="link"
+                size="small"
+                icon={<SafetyCertificateOutlined />}
+                onClick={() => setPermAccount({ id: account.accountId, name: account.username })}
+              >
+                特例授权
+              </Button>
+            )}
+            {!isDeleted && canDelete && (
+              <Popconfirm title="确认删除该账户？删除后其所有 token 失效" onConfirm={() => handleRemove(account.accountId)}>
+                <Button type="link" size="small" danger>
+                  删除
+                </Button>
+              </Popconfirm>
+            )}
+            {isDeleted && canRestoreTrash && (
+              <Button
+                type="link"
+                size="small"
+                loading={actionLoading}
+                onClick={() => void handleRestore(account.accountId)}
+              >
+                恢复正常
+              </Button>
+            )}
+            {isDeleted && canHardDeleteTrash && (
+              <Popconfirm
+                title="彻底删除？账户的所有关联数据将永久删除且不可恢复"
+                onConfirm={() => handleHardRemove(account.accountId)}
+              >
+                <Button type="link" size="small" danger loading={actionLoading}>
+                  彻底删除
+                </Button>
+              </Popconfirm>
+            )}
+            {!canUpdate && !canDelete && <Typography.Text type="secondary">无权限</Typography.Text>}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -267,7 +339,7 @@ export function AdminAccountsPage(): React.JSX.Element {
       header,
       ...filteredAccounts.map((a) =>
         exportCols.map((c) => {
-          if (c.key === 'enabled') return a.enabled ? '正常' : '禁用';
+          if (c.key === 'status') return a.deletedAt ? `已删除 ${a.deletedAt.slice(0, 10)}` : a.enabled ? '正常' : '禁用';
           if (c.key === 'roleCodes') return a.roleCodes.join(' / ');
           const dataIdx = (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
           const v = (a as unknown as Record<string, unknown>)[dataIdx];
@@ -301,6 +373,19 @@ export function AdminAccountsPage(): React.JSX.Element {
               style={{ width: 300 }}
             />
           </Form.Item>
+          {canViewTrash && (
+            <Form.Item name="includeDeleted" valuePropName="checked" style={{ marginBottom: 0 }}>
+              <Checkbox
+                checked={includeDeleted}
+                onChange={(e) => {
+                  setIncludeDeleted(e.target.checked);
+                  searchForm.setFieldValue('includeDeleted', e.target.checked);
+                }}
+              >
+                显示已删除
+              </Checkbox>
+            </Form.Item>
+          )}
           <Form.Item style={{ marginBottom: 0 }}>
             <Space>
               <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
@@ -310,6 +395,7 @@ export function AdminAccountsPage(): React.JSX.Element {
                 onClick={() => {
                   searchForm.resetFields();
                   setKeyword('');
+                  setIncludeDeleted(false);
                 }}
               >
                 重置

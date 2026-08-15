@@ -172,14 +172,10 @@ async function main(): Promise<void> {
           icon: 'SettingOutlined',
           sort: 1,
         },
-        {
-          code: 'recycle:list',
-          name: '回收站',
-          type: 'menu',
-          path: '/admin/recycle',
-          icon: 'DeleteOutlined',
-          sort: 2,
-        },
+        // 软删除权限（对标老项目 Vue global:trash:*，三个独立维度）
+        { code: 'global:trash:view', name: '查看软删除', type: 'button', sort: 10 },
+        { code: 'global:trash:restore', name: '恢复已删数据', type: 'button', sort: 11 },
+        { code: 'global:trash:hard_delete', name: '彻底删除数据', type: 'button', sort: 12 },
       ],
     },
   ];
@@ -297,6 +293,40 @@ async function main(): Promise<void> {
       });
     });
     console.log('✅ 已创建演示账号 operator1 / Operator!123（角色 运营专员）');
+  }
+
+  // ── 4.5 演示软删除数据：deleted_demo（已删除演示账号，用于展示回收站/软删除视图） ──
+  const deletedDemoIdentity = await prisma.accountIdentity.findUnique({
+    where: {
+      identityType_identifier: { identityType: 'username', identifier: 'deleted_demo' },
+    },
+  });
+  if (!deletedDemoIdentity) {
+    const accountId = newId();
+    await prisma.$transaction(async (tx) => {
+      await tx.account.create({
+        data: { id: accountId, userType: 'admin', enabled: true, deletedAt: new Date() },
+      });
+      await tx.accountIdentity.create({
+        data: {
+          id: newId(),
+          accountId,
+          identityType: 'username',
+          identifier: 'deleted_demo',
+          credential: await bcrypt.hash('Deleted!123', 10),
+          verified: true,
+        },
+      });
+      await tx.adminProfile.create({
+        data: { id: newId(), accountId, nickname: '已删除演示账号' },
+      });
+      if (operatorRole) {
+        await tx.adminAccountRole.create({
+          data: { id: newId(), accountId, roleId: operatorRole.id },
+        });
+      }
+    });
+    console.log('✅ 已创建软删除演示账号 deleted_demo（在「显示已删除」视图可见）');
   }
 
   // ── 5. 清理旧菜单（老结构遗留）：用户中心 分支（user-center / user:*) ──

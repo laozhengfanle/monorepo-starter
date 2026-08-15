@@ -22,6 +22,7 @@ export type AdminAccount = {
   accountId: Scalars['ID']['output'];
   avatar: Scalars['String']['output'];
   createdAt: Scalars['String']['output'];
+  deletedAt?: Maybe<Scalars['String']['output']>;
   email: Scalars['String']['output'];
   enabled: Scalars['Boolean']['output'];
   nickname: Scalars['String']['output'];
@@ -33,9 +34,12 @@ export type AdminMe = {
   __typename?: 'AdminMe';
   accountId: Scalars['ID']['output'];
   avatar: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  email: Scalars['String']['output'];
   menus: Array<AdminMenuNode>;
   nickname: Scalars['String']['output'];
   permissions: Array<Scalars['String']['output']>;
+  phone: Scalars['String']['output'];
   roleCodes: Array<Scalars['String']['output']>;
   username: Scalars['String']['output'];
 };
@@ -233,6 +237,7 @@ export type Query = {
 
 
 export type QueryAdminAccountsArgs = {
+  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
   page?: InputMaybe<Scalars['Int']['input']>;
   pageSize?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -303,10 +308,11 @@ export enum UserStatus {
 export type AdminAccountsQueryVariables = Exact<{
   page?: InputMaybe<Scalars['Int']['input']>;
   pageSize?: InputMaybe<Scalars['Int']['input']>;
+  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
 }>;
 
 
-export type AdminAccountsQuery = { __typename?: 'Query', adminAccounts: { __typename?: 'PaginatedAdminAccounts', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'AdminAccount', accountId: string, username: string, nickname: string, email: string, avatar: string, enabled: boolean, roleCodes: Array<string>, createdAt: string }> } };
+export type AdminAccountsQuery = { __typename?: 'Query', adminAccounts: { __typename?: 'PaginatedAdminAccounts', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'AdminAccount', accountId: string, username: string, nickname: string, email: string, avatar: string, enabled: boolean, roleCodes: Array<string>, createdAt: string, deletedAt?: string | null }> } };
 
 export type AdminRolesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -461,8 +467,8 @@ export const MenuNodeFieldsFragmentDoc = gql`
 }
     `;
 export const AdminAccountsDocument = gql`
-    query AdminAccounts($page: Int, $pageSize: Int) {
-  adminAccounts(page: $page, pageSize: $pageSize) {
+    query AdminAccounts($page: Int, $pageSize: Int, $includeDeleted: Boolean) {
+  adminAccounts(page: $page, pageSize: $pageSize, includeDeleted: $includeDeleted) {
     items {
       accountId
       username
@@ -472,6 +478,7 @@ export const AdminAccountsDocument = gql`
       enabled
       roleCodes
       createdAt
+      deletedAt
     }
     total
     page
@@ -494,6 +501,7 @@ export const AdminAccountsDocument = gql`
  *   variables: {
  *      page: // value for 'page'
  *      pageSize: // value for 'pageSize'
+ *      includeDeleted: // value for 'includeDeleted'
  *   },
  * });
  */

@@ -33,7 +33,7 @@ export class UsersController {
 
   @Get('deleted')
   @RequirePermission('user:list')
-  @ApiOkResponse({ description: '已删除用户列表（回收站）' })
+  @ApiOkResponse({ description: '已删除用户列表（软删除视图）' })
   listDeleted(@Query() query: QueryUsersDto): Promise<PaginatedData<UserVo>> {
     return this.usersService.listDeleted(query);
   }
@@ -69,14 +69,14 @@ export class UsersController {
   }
 
   @Post(':id/restore')
-  @RequirePermission('user:update')
+  @RequirePermission('global:trash:restore')
   @ApiOkResponse({ type: UserVo })
   restore(@Param('id', new ParseUUIDPipe()) id: string): Promise<UserVo> {
     return this.usersService.restore(id);
   }
 
   @Delete(':id/hard')
-  @RequirePermission('user:delete')
+  @RequirePermission('global:trash:hard_delete')
   @ApiOkResponse({ description: '彻底删除（硬删）' })
   hardRemove(@Param('id', new ParseUUIDPipe()) id: string): Promise<UserVo> {
     return this.usersService.hardRemove(id);

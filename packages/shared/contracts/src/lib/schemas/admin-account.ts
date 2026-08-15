@@ -12,6 +12,8 @@ export const AdminAccountSchema = z.object({
   /** 角色机器编码列表 */
   roleCodes: z.array(z.string()),
   createdAt: z.iso.datetime(),
+  /** 软删除时间（未删除为 null） */
+  deletedAt: z.string().nullable(),
 });
 
 export type AdminAccount = z.infer<typeof AdminAccountSchema>;

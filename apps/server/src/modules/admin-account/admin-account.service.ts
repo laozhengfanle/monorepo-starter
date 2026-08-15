@@ -33,6 +33,7 @@ function toAdminAccount(row: {
   id: string;
   enabled: boolean;
   createdAt: Date;
+  deletedAt: Date | null;
   adminProfile: { nickname: string; email: string; avatar: string } | null;
   adminRoles: { role: { code: string } }[];
   identities: { identityType: string; identifier: string }[];
@@ -47,6 +48,7 @@ function toAdminAccount(row: {
     enabled: row.enabled,
     roleCodes: row.adminRoles.map((r) => r.role.code).sort(),
     createdAt: row.createdAt.toISOString(),
+    deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
   };
 }
 
@@ -69,16 +71,24 @@ export class AdminAccountService {
     identities: true,
   } as const;
 
-  async list(query: { page: number; pageSize: number }): Promise<PaginatedData<AdminAccount>> {
-    const [rows, total] = await this.prisma.client.$transaction([
-      this.prisma.client.account.findMany({
-        where: { userType: 'admin' },
+  async list(query: {
+    page: number;
+    pageSize: number;
+    /** 是否包含已软删记录（软删除视图） */
+    includeDeleted?: boolean;
+  }): Promise<PaginatedData<AdminAccount>> {
+    // includeDeleted=true 走 rawClient（绕过软删过滤）；否则走 client（自动过滤）
+    const db = query.includeDeleted ? this.prisma.rawClient : this.prisma.client;
+    const where = query.includeDeleted ? { userType: 'admin' } : { userType: 'admin' };
+    const [rows, total] = await db.$transaction([
+      db.account.findMany({
+        where,
         include: this.accountInclude,
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.client.account.count({ where: { userType: 'admin', deletedAt: null } }),
+      db.account.count({ where: query.includeDeleted ? { userType: 'admin' } : { userType: 'admin', deletedAt: null } }),
     ]);
     return {
       items: rows.map(toAdminAccount),
@@ -251,28 +261,6 @@ export class AdminAccountService {
     return this.getAccountMenus(accountId);
   }
 
-  /** 已删除账户列表（回收站；rawClient 绕过软删过滤） */
-  async listDeleted(query: { page: number; pageSize: number }): Promise<PaginatedData<AdminAccount>> {
-    const [rows, total] = await this.prisma.rawClient.$transaction([
-      this.prisma.rawClient.account.findMany({
-        where: { userType: 'admin', deletedAt: { not: null } },
-        include: this.accountInclude,
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize,
-        orderBy: { deletedAt: 'desc' },
-      }),
-      this.prisma.rawClient.account.count({
-        where: { userType: 'admin', deletedAt: { not: null } },
-      }),
-    ]);
-    return {
-      items: rows.map(toAdminAccount),
-      total,
-      page: query.page,
-      pageSize: query.pageSize,
-    };
-  }
-
   /** 恢复已软删账户（deletedAt → null） */
   async restore(id: string): Promise<AdminAccount> {
     const account = await this.prisma.rawClient.account.findUnique({ where: { id } });
@@ -283,7 +271,7 @@ export class AdminAccountService {
     return this.findById(id);
   }
 
-  /** 彻底删除（回收站）：清级联表后硬删（rawClient 无软删扩展） */
+  /** 彻底删除：清级联表后硬删（软删除视图）（rawClient 无软删扩展） */
   async hardRemove(id: string): Promise<AdminAccount> {
     const account = await this.prisma.rawClient.account.findUnique({ where: { id } });
     if (!account || account.userType !== 'admin') {

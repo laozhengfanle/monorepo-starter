@@ -31,6 +31,9 @@ export class AdminAccountType implements AdminAccount {
 
   @Field(() => String)
   createdAt!: string;
+
+  @Field(() => String, { nullable: true })
+  deletedAt!: string | null;
 }
 
 /** 账户分页结果 */
