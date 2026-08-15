@@ -85,17 +85,24 @@ export function MainLayout({ children }: { children: ReactNode }): React.JSX.Ele
               </div>
             ) : null}
 
-            <Layout ref={scrollRef} className="flex-1 overflow-auto">
-              <Content
-                className="grow shrink-0 basis-auto"
-                style={{ padding: token.paddingLG }}
-              >
-                {children}
-              </Content>
+            {/* 滚动容器：minHeight:0 是 flex 子项可滚动的关键，
+               否则内容超出会被 overflow-hidden 父级裁掉（footer 不可见） */}
+            <Layout
+              ref={scrollRef}
+              className="flex-1 overflow-auto"
+              style={{ minHeight: 0 }}
+            >
+              {/* 内层包裹：min-height 100% + flex column 实现 sticky footer ——
+                  内容不足时 Content 撑满、footer 贴底；
+                  内容多时包裹层随内容变高、footer 被顶到下方滚动可见 */}
+              <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+                {/* flex: 1 0 auto —— grow 填充不足空间，shrink 0 防止内容被压缩溢出 */}
+                <Content style={{ flex: '1 0 auto', padding: token.paddingLG }}>
+                  {children}
+                </Content>
+                {showFooter ? <LayoutFooter /> : null}
+              </div>
             </Layout>
-
-            {/* 页脚固定在视口底部，不随内容滚动 */}
-            {showFooter ? <LayoutFooter /> : null}
           </Layout>
         </Layout>
 
