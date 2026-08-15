@@ -64,4 +64,4 @@ test-output
 .claude/settings.local.json
 .nx/polygraph
 .nx/self-healing
-.nx/migrate-runs
+.nx/migrate-runsapps/server/uploads/
