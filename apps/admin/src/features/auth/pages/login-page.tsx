@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { App, Button, Card, Form, Input, theme as antdTheme } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -24,15 +24,22 @@ export function LoginPage(): React.JSX.Element {
   const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+  // 防重复提交：setLoading 是异步的，快速连点/回车会在重渲染前二次触发 onFinish；
+  // ref 读写同步，入口处检查彻底杜绝竞态
+  const submittingRef = useRef(false);
 
   const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
 
   const handleSubmit = async (values: { username: string; password: string }): Promise<void> => {
+    if (submittingRef.current) {
+      return;
+    }
     const parsed = LoginSchema.safeParse(values);
     if (!parsed.success) {
       void message.error(parsed.error.issues[0]?.message ?? '输入不合法');
       return;
     }
+    submittingRef.current = true;
     setLoading(true);
     try {
       await login(parsed.data.username, parsed.data.password);
@@ -41,6 +48,7 @@ export function LoginPage(): React.JSX.Element {
     } catch {
       void message.error('用户名或密码错误');
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
