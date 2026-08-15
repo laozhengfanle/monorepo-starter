@@ -11,6 +11,7 @@ export interface MenuRow {
   icon: string | null;
   sort: number;
   enabled: boolean;
+  visible: boolean;
   createdAt: Date;
 }
 
@@ -64,6 +65,7 @@ export function buildMenuTree(
     icon: row.icon,
     sort: row.sort,
     enabled: row.enabled,
+    visible: row.visible,
     createdAt: row.createdAt.toISOString(),
     children: (childrenOf.get(row.id) ?? []).map(toNode),
   });

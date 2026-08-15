@@ -165,7 +165,7 @@ export class AuthService {
     // 菜单树：与权限同一张表；超管全量下发，其余按权限裁剪（目录经祖先链自动保留）。
     // 侧栏只需 directory + menu（按钮权限点在 permissions 数组里，不进树）
     const menuRows = await this.prisma.client.adminMenu.findMany({
-      where: { enabled: true, type: { in: ['directory', 'menu'] } },
+      where: { enabled: true, visible: true, type: { in: ['directory', 'menu'] } },
       orderBy: { sort: 'asc' },
     });
     const menus = buildMenuTree(menuRows, isSuperAdmin ? null : permissionSet);

@@ -104,6 +104,8 @@ async function main(): Promise<void> {
     path?: string;
     icon?: string;
     sort: number;
+    /** false = 隐藏目录/菜单（如全局权限），不进入 me() 菜单树，仅作为权限点分组 */
+    visible?: boolean;
     children?: MenuSeed[];
   };
 
@@ -172,7 +174,20 @@ async function main(): Promise<void> {
           icon: 'SettingOutlined',
           sort: 1,
         },
-        // 软删除权限（对标老项目 Vue global:trash:*，三个独立维度）
+      ],
+    },
+    {
+      // 全局权限（对标老项目 Vue 的隐藏「全局权限」目录）：
+      // visible: false → 不出现在 me() 菜单树/侧边栏，仅作为权限点分组，
+      // 在角色权限分配/特例授权时可见。软删除三权限是独立维度：
+      //   view = 列表显示「显示已删除」，restore = 恢复，hard_delete = 彻底删除
+      code: 'global-center',
+      name: '全局权限',
+      type: 'directory',
+      icon: 'GlobalOutlined',
+      sort: 30,
+      visible: false,
+      children: [
         { code: 'global:trash:view', name: '查看软删除', type: 'button', sort: 10 },
         { code: 'global:trash:restore', name: '恢复已删数据', type: 'button', sort: 11 },
         { code: 'global:trash:hard_delete', name: '彻底删除数据', type: 'button', sort: 12 },
@@ -197,6 +212,7 @@ async function main(): Promise<void> {
           path: node.path ?? null,
           icon: node.icon ?? null,
           sort: node.sort,
+          visible: node.visible ?? true,
           parentId,
         },
         create: {
@@ -207,6 +223,7 @@ async function main(): Promise<void> {
           path: node.path ?? null,
           icon: node.icon ?? null,
           sort: node.sort,
+          visible: node.visible ?? true,
           parentId,
         },
       });
@@ -295,7 +312,7 @@ async function main(): Promise<void> {
     console.log('✅ 已创建演示账号 operator1 / Operator!123（角色 运营专员）');
   }
 
-  // ── 4.5 演示软删除数据：deleted_demo（已删除演示账号，用于展示回收站/软删除视图） ──
+  // ── 4.5 演示软删除数据：deleted_demo（已删除演示账号，用于展示软删除视图） ──
   const deletedDemoIdentity = await prisma.accountIdentity.findUnique({
     where: {
       identityType_identifier: { identityType: 'username', identifier: 'deleted_demo' },

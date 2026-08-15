@@ -57,6 +57,7 @@ export type AdminMenuNode = {
   path?: Maybe<Scalars['String']['output']>;
   sort: Scalars['Int']['output'];
   type: Scalars['String']['output'];
+  visible: Scalars['Boolean']['output'];
 };
 
 export type AdminRole = {
@@ -93,6 +94,7 @@ export type CreateMenuInput = {
   path?: InputMaybe<Scalars['String']['input']>;
   sort?: InputMaybe<Scalars['Int']['input']>;
   type: Scalars['String']['input'];
+  visible?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type CreateRoleInput = {
@@ -268,6 +270,7 @@ export type UpdateMenuInput = {
   path?: InputMaybe<Scalars['String']['input']>;
   sort?: InputMaybe<Scalars['Int']['input']>;
   type?: InputMaybe<Scalars['String']['input']>;
+  visible?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type UpdateRoleInput = {
@@ -341,19 +344,19 @@ export type DeleteAdminAccountMutationVariables = Exact<{
 
 export type DeleteAdminAccountMutation = { __typename?: 'Mutation', deleteAdminAccount: { __typename?: 'AdminAccount', accountId: string } };
 
-export type MenuNodeFieldsFragment = { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string };
+export type MenuNodeFieldsFragment = { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string };
 
 export type MenuTreeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MenuTreeQuery = { __typename?: 'Query', menuTree: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string }> }> }> }> }> };
+export type MenuTreeQuery = { __typename?: 'Query', menuTree: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string }> }> }> }> }> };
 
 export type CreateMenuMutationVariables = Exact<{
   input: CreateMenuInput;
 }>;
 
 
-export type CreateMenuMutation = { __typename?: 'Mutation', createMenu: { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string } };
+export type CreateMenuMutation = { __typename?: 'Mutation', createMenu: { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string } };
 
 export type UpdateMenuMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -361,7 +364,7 @@ export type UpdateMenuMutationVariables = Exact<{
 }>;
 
 
-export type UpdateMenuMutation = { __typename?: 'Mutation', updateMenu: { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string } };
+export type UpdateMenuMutation = { __typename?: 'Mutation', updateMenu: { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string } };
 
 export type DeleteMenuMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -463,6 +466,7 @@ export const MenuNodeFieldsFragmentDoc = gql`
   icon
   sort
   enabled
+  visible
   createdAt
 }
     `;

@@ -3,6 +3,7 @@ import {
   DashboardOutlined,
   DeleteOutlined,
   FileOutlined,
+  GlobalOutlined,
   MenuOutlined,
   SafetyOutlined,
   SettingOutlined,
@@ -33,6 +34,7 @@ const iconMap: Record<string, ReactNode> = {
   SettingOutlined: <SettingOutlined />,
   FileOutlined: <FileOutlined />,
   AppstoreOutlined: <AppstoreOutlined />,
+  GlobalOutlined: <GlobalOutlined />,
 };
 
 function resolveIcon(icon?: string | null): ReactNode {
@@ -54,7 +56,9 @@ function buildMenuData(nodes: AdminMenuNode[]): BuildResult {
     const result: MenuItem[] = [];
     for (const node of list) {
       if (node.type === 'button') continue;
-      const children = (node.children ?? []).filter((c) => c.type !== 'button');
+      // 隐藏节点（如全局权限目录）不进侧栏（me.menus 已过滤，此处双保险）
+      if (node.visible === false) continue;
+      const children = (node.children ?? []).filter((c) => c.type !== 'button' && c.visible !== false);
       const key = node.path ?? node.code;
       // 有子菜单（目录）时：记录子级 → 父级关系
       if (children.length > 0) {

@@ -39,6 +39,7 @@ type AdminMenuNode {
   path: String
   sort: Int!
   type: String!
+  visible: Boolean!
 }
 
 type AdminRole {
@@ -73,6 +74,7 @@ input CreateMenuInput {
   path: String
   sort: Int
   type: String!
+  visible: Boolean
 }
 
 input CreateRoleInput {
@@ -156,6 +158,7 @@ input UpdateMenuInput {
   path: String
   sort: Int
   type: String
+  visible: Boolean
 }
 
 input UpdateRoleInput {

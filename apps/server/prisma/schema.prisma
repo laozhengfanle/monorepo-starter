@@ -101,6 +101,8 @@ model AdminMenu {
   icon      String?  @db.VarChar(50)
   sort      Int      @default(0)
   enabled   Boolean  @default(true)
+  /// 是否在侧栏显示（false = hideInMenu，如全局权限目录，对标 Vue visible）
+  visible   Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

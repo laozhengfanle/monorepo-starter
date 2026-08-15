@@ -31,6 +31,9 @@ export class AdminMenuNodeType implements AdminMenuNode {
   @Field(() => Boolean)
   enabled!: boolean;
 
+  @Field(() => Boolean)
+  visible!: boolean;
+
   @Field(() => String)
   createdAt!: string;
 
@@ -61,6 +64,9 @@ export class CreateMenuInputType implements CreateMenuInput {
 
   @Field(() => Int, { nullable: true })
   sort?: number;
+
+  @Field(() => Boolean, { nullable: true })
+  visible?: boolean;
 }
 
 /** 更新菜单入参（GraphQL 薄壳，全字段可选） */
@@ -86,4 +92,7 @@ export class UpdateMenuInputType implements UpdateMenuInput {
 
   @Field(() => Boolean, { nullable: true })
   enabled?: boolean;
+
+  @Field(() => Boolean, { nullable: true })
+  visible?: boolean;
 }

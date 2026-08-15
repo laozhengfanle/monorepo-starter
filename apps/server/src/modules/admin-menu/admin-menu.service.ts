@@ -27,6 +27,7 @@ function toNode(row: MenuRow): AdminMenuNode {
     icon: row.icon,
     sort: row.sort,
     enabled: row.enabled,
+    visible: row.visible,
     createdAt: row.createdAt.toISOString(),
     children: [],
   };
@@ -65,6 +66,7 @@ export class AdminMenuService {
           path: data.type === 'menu' ? (data.path ?? null) : null,
           icon: data.icon ?? null,
           sort: data.sort ?? 0,
+          visible: data.visible ?? true,
         },
       });
       return toNode(row);
@@ -102,6 +104,7 @@ export class AdminMenuService {
         ...(data.icon !== undefined ? { icon: data.icon } : {}),
         ...(data.sort !== undefined ? { sort: data.sort } : {}),
         ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
+        ...(data.visible !== undefined ? { visible: data.visible } : {}),
       },
     });
     return toNode(row);

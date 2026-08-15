@@ -19,6 +19,8 @@ export const AdminMenuSchema = z.object({
   icon: z.string().nullable(),
   sort: z.number().int(),
   enabled: z.boolean(),
+  /** 是否在侧栏显示（false = hideInMenu，如全局权限目录） */
+  visible: z.boolean(),
   createdAt: z.iso.datetime(),
 });
 
@@ -46,6 +48,7 @@ export const CreateMenuSchema = z.object({
   path: z.string().max(200, '路由最多 200 个字符').optional(),
   icon: z.string().max(50, '图标名最多 50 个字符').optional(),
   sort: z.number().int().min(0, '排序不小于 0').max(9999, '排序不超过 9999').optional(),
+  visible: z.boolean().optional(),
 });
 
 export type CreateMenuInput = z.input<typeof CreateMenuSchema>;
@@ -59,6 +62,7 @@ export const UpdateMenuSchema = z.object({
   icon: z.string().max(50, '图标名最多 50 个字符').optional(),
   sort: z.number().int().min(0).max(9999).optional(),
   enabled: z.boolean().optional(),
+  visible: z.boolean().optional(),
 });
 
 export type UpdateMenuInput = z.input<typeof UpdateMenuSchema>;

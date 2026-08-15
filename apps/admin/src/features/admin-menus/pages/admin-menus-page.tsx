@@ -75,6 +75,7 @@ interface MenuRowItem {
   icon?: string | null;
   sort: number;
   enabled: boolean;
+  visible: boolean;
   children?: MenuRowItem[];
 }
 
@@ -89,6 +90,7 @@ const ICON_OPTIONS = [
   { value: 'FileOutlined', label: 'FileOutlined（文件）' },
   { value: 'AppstoreOutlined', label: 'AppstoreOutlined（应用）' },
   { value: 'DeleteOutlined', label: 'DeleteOutlined（删除）' },
+  { value: 'GlobalOutlined', label: 'GlobalOutlined（全局）' },
 ];
 
 /** GraphQL 错误 → 用户提示 */
@@ -144,7 +146,7 @@ export function AdminMenusPage(): React.JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
-    () => new Set(['name', 'code', 'type', 'path', 'icon', 'sort', 'enabled', 'actions']),
+    () => new Set(['name', 'code', 'type', 'path', 'icon', 'sort', 'enabled', 'visible', 'actions']),
   );
   const [form] = Form.useForm();
   const menuType = Form.useWatch('type', form) as MenuType | undefined;
@@ -179,7 +181,7 @@ export function AdminMenusPage(): React.JSX.Element {
   const openCreate = (): void => {
     setEditingId(null);
     form.resetFields();
-    form.setFieldsValue({ type: 'menu', sort: 1, enabled: true });
+    form.setFieldsValue({ type: 'menu', sort: 1, enabled: true, visible: true });
     setTreeExpandedKeys(collectParentIds(tree));
     setModalOpen(true);
   };
@@ -194,6 +196,7 @@ export function AdminMenusPage(): React.JSX.Element {
       icon: node.icon ?? undefined,
       sort: node.sort,
       enabled: node.enabled,
+      visible: node.visible,
     });
     setTreeExpandedKeys(collectParentIds(tree));
     setModalOpen(true);
@@ -270,6 +273,13 @@ export function AdminMenusPage(): React.JSX.Element {
       key: 'enabled',
       width: 70,
       render: (enabled: boolean) => (enabled ? '是' : '否'),
+    },
+    {
+      title: '显示',
+      dataIndex: 'visible',
+      key: 'visible',
+      width: 70,
+      render: (visible: boolean) => (visible ? '是' : '否'),
     },
     {
       title: '操作',
@@ -349,6 +359,7 @@ export function AdminMenusPage(): React.JSX.Element {
       ...flattenTree(tree).map((n) =>
         exportCols.map((c) => {
           if (c.key === 'enabled') return n.enabled ? '正常' : '禁用';
+          if (c.key === 'visible') return n.visible ? '显示' : '隐藏';
           if (c.key === 'type') return TYPE_LABELS[n.type] ?? n.type;
           const dataIdx = (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
           const v = (n as unknown as Record<string, unknown>)[dataIdx];
@@ -469,6 +480,14 @@ export function AdminMenusPage(): React.JSX.Element {
               <Switch />
             </Form.Item>
           )}
+          <Form.Item
+            label="显示"
+            name="visible"
+            valuePropName="checked"
+            extra="关闭后不出现在侧栏，仅作为权限点分组（如全局权限）"
+          >
+            <Switch />
+          </Form.Item>
         </Form>
       </Modal>
     </div>
