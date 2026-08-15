@@ -150,6 +150,18 @@ export class AuthService {
         r.role.roleMenus.filter((rm) => rm.menu.enabled).map((rm) => rm.menu.code),
       ),
     );
+    // 账户级特例授权覆盖（对标老项目 AdminAccountMenu）：grant 追加，deny 移除
+    const overrides = await this.prisma.client.adminAccountMenu.findMany({
+      where: { accountId },
+      include: { menu: true },
+    });
+    for (const o of overrides) {
+      if (o.type === 'grant') {
+        permissionSet.add(o.menu.code);
+      } else if (o.type === 'deny') {
+        permissionSet.delete(o.menu.code);
+      }
+    }
     // 菜单树：与权限同一张表；超管全量下发，其余按权限裁剪（目录经祖先链自动保留）。
     // 侧栏只需 directory + menu（按钮权限点在 permissions 数组里，不进树）
     const menuRows = await this.prisma.client.adminMenu.findMany({

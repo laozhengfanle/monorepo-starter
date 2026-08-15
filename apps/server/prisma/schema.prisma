@@ -29,6 +29,7 @@ model Account {
   tokenRevocations TokenRevocation[]
   auditLogs        AuditLog[]
   uploadFiles      UploadFile[]
+  adminAccountMenus AdminAccountMenu[]
 
   @@index([userType])
   @@map("account")
@@ -104,6 +105,7 @@ model AdminMenu {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   roleMenus AdminRoleMenu[]
+  accountMenus AdminAccountMenu[]
 
   @@index([parentId])
   @@map("admin_menu")
@@ -133,6 +135,20 @@ model AdminAccountRole {
 
   @@unique([accountId, roleId])
   @@map("admin_account_role")
+}
+
+/// 管理端 账户额外权限覆盖 — grant 授权追加 / deny 禁止移除（对标老项目 AdminAccountMenu）
+model AdminAccountMenu {
+  id        String @id @db.Uuid
+  accountId String @map("account_id") @db.Uuid
+  menuId    String @map("menu_id") @db.Uuid
+  type      String @default("grant") @db.VarChar(10)
+
+  account Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  menu    AdminMenu @relation(fields: [menuId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, menuId])
+  @@map("admin_account_menu")
 }
 
 // ============================================================

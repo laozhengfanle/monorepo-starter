@@ -21,6 +21,7 @@ export {
   UpdateMenuSchema,
   UpdateSelfSchema,
   ChangePasswordSchema,
+  SaveAccountMenusSchema,
 } from '@starter/contracts';
 export type {
   AdminMe,
@@ -41,4 +42,8 @@ export type {
   UpdateMenuInput,
   UpdateSelfInput,
   ChangePasswordInput,
+  AccountMenuOverride,
+  AccountMenuType,
+  AccountMenusResult,
+  SaveAccountMenusInput,
 } from '@starter/contracts';

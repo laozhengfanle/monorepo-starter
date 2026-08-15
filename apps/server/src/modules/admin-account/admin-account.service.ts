@@ -2,12 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { BizException, newId } from '@starter/server-core';
 import {
   CreateAdminAccountSchema,
+  SaveAccountMenusSchema,
   UpdateAdminAccountSchema,
 } from '@starter/contracts';
 import type {
+  AccountMenusResult,
+  AccountMenuType,
   AdminAccount,
   CreateAdminAccountInput,
   PaginatedData,
+  SaveAccountMenusInput,
   UpdateAdminAccountInput,
 } from '@starter/contracts';
 import bcrypt from 'bcrypt';
@@ -182,6 +186,7 @@ export class AdminAccountService {
       // 避免已删除账户仍占用角色（角色删除时的 ROLE_IN_USE 校验按真实绑定计数）
       await tx.account.delete({ where: { id } });
       await tx.adminAccountRole.deleteMany({ where: { accountId: id } });
+      await tx.adminAccountMenu.deleteMany({ where: { accountId: id } });
     });
     // 撤销该账户所有 token（tokenVersion 自增）
     await this.tokenBlacklist.revokeAccountTokens(id, 'account_deleted');
@@ -191,6 +196,59 @@ export class AdminAccountService {
       adminRoles: [],
       identities: [],
     });
+  }
+
+  /** 读取账户特例授权：已有覆盖 + 角色基线菜单 id（只读展示） */
+  async getAccountMenus(accountId: string): Promise<AccountMenusResult> {
+    const account = await this.prisma.client.account.findUnique({
+      where: { id: accountId },
+      include: {
+        adminRoles: { include: { role: { include: { roleMenus: true } } } },
+      },
+    });
+    if (!account) {
+      throw new BizException({ code: 'ACCOUNT_NOT_FOUND', message: '账户不存在' });
+    }
+    const overrides = await this.prisma.client.adminAccountMenu.findMany({
+      where: { accountId },
+      select: { menuId: true, type: true },
+    });
+    // 角色基线：账户角色绑定的全部菜单 id（去重）
+    const roleMenuIds = [
+      ...new Set(
+        account.adminRoles.flatMap((r) => r.role.roleMenus.map((rm) => rm.menuId)),
+      ),
+    ];
+    return {
+      overrides: overrides.map((o) => ({ menuId: o.menuId, type: o.type as AccountMenuType })),
+      roleMenuIds,
+    };
+  }
+
+  /** 保存账户特例授权（全量覆盖：先删后建） */
+  async saveAccountMenus(accountId: string, input: SaveAccountMenusInput): Promise<AccountMenusResult> {
+    const data = SaveAccountMenusSchema.parse(input);
+    const account = await this.prisma.client.account.findUnique({ where: { id: accountId } });
+    if (!account) {
+      throw new BizException({ code: 'ACCOUNT_NOT_FOUND', message: '账户不存在' });
+    }
+    // 校验菜单存在（menuId 白名单）
+    const menuIds = data.items.map((i) => i.menuId);
+    if (menuIds.length > 0) {
+      const count = await this.prisma.client.adminMenu.count({ where: { id: { in: menuIds } } });
+      if (count !== menuIds.length) {
+        throw new BizException({ code: 'MENU_NOT_FOUND', message: '存在无效的菜单' });
+      }
+    }
+    await this.prisma.client.$transaction(async (tx) => {
+      await tx.adminAccountMenu.deleteMany({ where: { accountId } });
+      if (data.items.length > 0) {
+        await tx.adminAccountMenu.createMany({
+          data: data.items.map((i) => ({ id: newId(), accountId, menuId: i.menuId, type: i.type })),
+        });
+      }
+    });
+    return this.getAccountMenus(accountId);
   }
 
   private async findById(accountId: string): Promise<AdminAccount> {

@@ -37,3 +37,31 @@ export const UpdateAdminAccountSchema = z.object({
 });
 
 export type UpdateAdminAccountInput = z.input<typeof UpdateAdminAccountSchema>;
+
+/** 账户额外权限覆盖类型：grant 授权追加 / deny 禁止移除（对标老项目特例授权） */
+export const AccountMenuTypeSchema = z.enum(['grant', 'deny']);
+
+export type AccountMenuType = z.infer<typeof AccountMenuTypeSchema>;
+
+/** 单条覆盖：menuId + 类型 */
+export const AccountMenuOverrideSchema = z.object({
+  menuId: z.string().min(1, 'menuId 不能为空'),
+  type: AccountMenuTypeSchema,
+});
+
+export type AccountMenuOverride = z.infer<typeof AccountMenuOverrideSchema>;
+
+/** 保存账户特例授权入参（全量覆盖） */
+export const SaveAccountMenusSchema = z.object({
+  items: z.array(AccountMenuOverrideSchema).default([]),
+});
+
+export type SaveAccountMenusInput = z.input<typeof SaveAccountMenusSchema>;
+
+/** 账户特例授权结果：已有覆盖 + 角色基线菜单 id（只读展示） */
+export const AccountMenusResultSchema = z.object({
+  overrides: z.array(AccountMenuOverrideSchema),
+  roleMenuIds: z.array(z.string()),
+});
+
+export type AccountMenusResult = z.infer<typeof AccountMenusResultSchema>;
