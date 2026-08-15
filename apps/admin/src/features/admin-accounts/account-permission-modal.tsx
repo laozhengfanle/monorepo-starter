@@ -93,6 +93,10 @@ export function AccountPermissionModal({
       const menuId = String(node.key);
       const isRoleBase = roleMenuIds.has(menuId);
       const state = overrides[menuId];
+      // 基线权限只给「禁止」（角色已有无需再允许）；非基线只给「允许」。
+      // 已有覆盖（grant/deny）保持对应按钮可见，便于查看与清除
+      const showAllow = !isRoleBase || state === 'grant';
+      const showDeny = isRoleBase || state === 'deny';
       return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           {isRoleBase && (
@@ -108,27 +112,31 @@ export function AccountPermissionModal({
           )}
           <span>{String(node.title)}</span>
           <span style={{ display: 'inline-flex', gap: 4, marginLeft: 8 }}>
-            <Button
-              size="small"
-              type={state === 'grant' ? 'primary' : 'default'}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleOverride(menuId, 'grant');
-              }}
-            >
-              允许
-            </Button>
-            <Button
-              size="small"
-              type={state === 'deny' ? 'primary' : 'default'}
-              danger={state === 'deny'}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleOverride(menuId, 'deny');
-              }}
-            >
-              禁止
-            </Button>
+            {showAllow && (
+              <Button
+                size="small"
+                type={state === 'grant' ? 'primary' : 'default'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleOverride(menuId, 'grant');
+                }}
+              >
+                允许
+              </Button>
+            )}
+            {showDeny && (
+              <Button
+                size="small"
+                type={state === 'deny' ? 'primary' : 'default'}
+                danger={state === 'deny'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleOverride(menuId, 'deny');
+                }}
+              >
+                禁止
+              </Button>
+            )}
           </span>
         </span>
       );
