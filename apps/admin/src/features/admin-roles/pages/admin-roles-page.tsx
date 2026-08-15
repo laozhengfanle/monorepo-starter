@@ -19,6 +19,8 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeliveredProcedureOutlined,
+  FileExcelOutlined,
+  FileTextOutlined,
   FilterOutlined,
   PlusOutlined,
   RedoOutlined,
@@ -342,8 +344,8 @@ export function AdminRolesPage(): React.JSX.Element {
               arrow
               menu={{
                 items: [
-                  { key: 'excel', label: '导出 Excel', icon: <DeliveredProcedureOutlined /> },
-                  { key: 'csv', label: '导出 CSV' },
+                  { key: 'excel', label: '导出 Excel', icon: <FileExcelOutlined /> },
+                  { key: 'csv', label: '导出 CSV', icon: <FileTextOutlined /> },
                 ],
                 onClick: ({ key }) => handleExport(key as 'excel' | 'csv'),
               }}

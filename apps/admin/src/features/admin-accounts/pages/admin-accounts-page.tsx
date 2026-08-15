@@ -18,15 +18,19 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeliveredProcedureOutlined,
+  FileExcelOutlined,
+  FileTextOutlined,
   FilterOutlined,
   PlusOutlined,
   RedoOutlined,
+  SafetyCertificateOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
 import { ApolloError } from '@apollo/client';
 import { CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/api-client';
 
 import { usePermission } from '../../../app/auth/use-permission.js';
+import { AccountPermissionModal } from '../account-permission-modal.js';
 import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
 import {
   useAdminAccountsQuery,
@@ -77,6 +81,8 @@ export function AdminAccountsPage(): React.JSX.Element {
   );
   const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
+  // 特例授权弹窗
+  const [permAccount, setPermAccount] = useState<{ id: string; name: string } | null>(null);
 
   const canCreate = usePermission('account:create');
   const canUpdate = usePermission('account:update');
@@ -193,6 +199,16 @@ export function AdminAccountsPage(): React.JSX.Element {
           {canUpdate && (
             <Button type="link" size="small" onClick={() => openEdit(account)}>
               编辑
+            </Button>
+          )}
+          {canUpdate && (
+            <Button
+              type="link"
+              size="small"
+              icon={<SafetyCertificateOutlined />}
+              onClick={() => setPermAccount({ id: account.accountId, name: account.username })}
+            >
+              特例授权
             </Button>
           )}
           {canDelete && (
@@ -325,8 +341,8 @@ export function AdminAccountsPage(): React.JSX.Element {
               arrow
               menu={{
                 items: [
-                  { key: 'excel', label: '导出 Excel', icon: <DeliveredProcedureOutlined /> },
-                  { key: 'csv', label: '导出 CSV' },
+                  { key: 'excel', label: '导出 Excel', icon: <FileExcelOutlined /> },
+                  { key: 'csv', label: '导出 CSV', icon: <FileTextOutlined /> },
                 ],
                 onClick: ({ key }) => handleExport(key as 'excel' | 'csv'),
               }}
@@ -393,6 +409,13 @@ export function AdminAccountsPage(): React.JSX.Element {
           )}
         </Form>
       </Modal>
+
+      <AccountPermissionModal
+        open={permAccount !== null}
+        accountId={permAccount?.id ?? ''}
+        accountName={permAccount?.name ?? ''}
+        onClose={() => setPermAccount(null)}
+      />
     </div>
   );
 }
