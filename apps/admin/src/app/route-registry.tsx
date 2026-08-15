@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { Result } from 'antd';
 import { DashboardPage } from '../features/dashboard/pages/dashboard-page';
-import { UsersPage } from '../features/users/pages/users-page';
 import { AdminAccountsPage } from '../features/admin-accounts/pages/admin-accounts-page';
 import { AdminRolesPage } from '../features/admin-roles/pages/admin-roles-page';
 import { AdminMenusPage } from '../features/admin-menus/pages/admin-menus-page';
 import { ProfilePage } from '../features/account/profile-page';
 import { AccountSettingsPage } from '../features/account/settings-page';
+import { SystemSettingsPage } from '../features/system/pages/system-settings-page';
 import { usePermission } from './auth/use-permission.js';
 
 /**
@@ -23,10 +23,10 @@ export interface AppRoute {
 
 export const APP_ROUTES: AppRoute[] = [
   { path: '/', element: <DashboardPage /> },
-  { path: '/users', element: <UsersPage />, permission: 'user:list' },
   { path: '/admin/accounts', element: <AdminAccountsPage />, permission: 'account:list' },
   { path: '/admin/roles', element: <AdminRolesPage />, permission: 'role:list' },
   { path: '/admin/menus', element: <AdminMenusPage />, permission: 'menu:list' },
+  { path: '/admin/settings', element: <SystemSettingsPage />, permission: 'config:admin' },
   // 个人中心：登录即可访问，不进菜单表（对标老项目静态路由）
   { path: '/account/profile', element: <ProfilePage /> },
   { path: '/account/settings', element: <AccountSettingsPage /> },

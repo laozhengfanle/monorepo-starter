@@ -109,33 +109,11 @@ async function main(): Promise<void> {
 
   const MENU_TREE: MenuSeed[] = [
     {
-      code: 'user-center',
-      name: '用户中心',
-      type: 'directory',
-      icon: 'TeamOutlined',
-      sort: 10,
-      children: [
-        {
-          code: 'user:list',
-          name: '用户管理',
-          type: 'menu',
-          path: '/users',
-          icon: 'TeamOutlined',
-          sort: 1,
-          children: [
-            { code: 'user:create', name: '新建用户', type: 'button', sort: 1 },
-            { code: 'user:update', name: '编辑用户', type: 'button', sort: 2 },
-            { code: 'user:delete', name: '删除用户', type: 'button', sort: 3 },
-          ],
-        },
-      ],
-    },
-    {
       code: 'permission-center',
       name: '权限中心',
       type: 'directory',
       icon: 'SafetyOutlined',
-      sort: 20,
+      sort: 10,
       children: [
         {
           code: 'account:list',
@@ -175,6 +153,24 @@ async function main(): Promise<void> {
             { code: 'menu:update', name: '编辑菜单', type: 'button', sort: 2 },
             { code: 'menu:delete', name: '删除菜单', type: 'button', sort: 3 },
           ],
+        },
+      ],
+    },
+    {
+      // 系统设置（对标老项目 配置中心/系统设置）：后台设置占位页
+      code: 'system-center',
+      name: '系统设置',
+      type: 'directory',
+      icon: 'SettingOutlined',
+      sort: 20,
+      children: [
+        {
+          code: 'config:admin',
+          name: '后台设置',
+          type: 'menu',
+          path: '/admin/settings',
+          icon: 'SettingOutlined',
+          sort: 1,
         },
       ],
     },
@@ -230,6 +226,20 @@ async function main(): Promise<void> {
   if (superAdminRole) {
     const boundCount = await upsertMenuTree(prisma, superAdminRole.id, MENU_TREE, null);
     console.log(`✅ 已对齐菜单树并绑定 super_admin 的 ${boundCount} 个菜单/权限点`);
+  }
+
+  // ── 4. 清理旧菜单（老结构遗留）：用户中心 分支（user-center / user:*) ──
+  // 对齐老项目：管理端无"用户中心"，菜单树里不再保留该分支及其权限点
+  const LEGACY_MENU_CODES = ['user-center', 'user:list', 'user:create', 'user:update', 'user:delete'];
+  const legacyMenus = await prisma.adminMenu.findMany({
+    where: { code: { in: LEGACY_MENU_CODES } },
+    select: { id: true },
+  });
+  if (legacyMenus.length > 0) {
+    const legacyIds = legacyMenus.map((m) => m.id);
+    await prisma.adminRoleMenu.deleteMany({ where: { menuId: { in: legacyIds } } });
+    await prisma.adminMenu.deleteMany({ where: { id: { in: legacyIds } } });
+    console.log(`🗑️ 已清理旧「用户中心」菜单/权限点 ${legacyMenus.length} 个`);
   }
 
   await pool.end();
