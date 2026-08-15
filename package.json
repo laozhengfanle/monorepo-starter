@@ -91,6 +91,8 @@
     "@types/react-dom": "catalog:",
     "@types/supertest": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "tailwindcss": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "@vitest/ui": "catalog:",
     "esbuild": "catalog:",

@@ -6,7 +6,7 @@ import type { ThemeConfig } from 'antd';
  */
 export const brandTokens = {
   colorPrimary: '#1677ff',
-  borderRadius: 6,
+  borderRadius: 3,
   fontSize: 14,
 } satisfies ThemeConfig['token'];
 

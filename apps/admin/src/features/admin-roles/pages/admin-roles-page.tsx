@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Button,
+  Card,
   Form,
   Input,
   Modal,
@@ -14,8 +15,10 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined } from '@ant-design/icons';
 import { ApolloError } from '@apollo/client';
 import { CreateRoleSchema, UpdateRoleSchema } from '@starter/api-client';
+import { PageHeader } from '@starter/ui';
 import type { AdminRole, CreateRoleInput, UpdateRoleInput } from '@starter/api-client';
 import { usePermission } from '../../../app/auth/use-permission.js';
 import {
@@ -202,17 +205,19 @@ export function AdminRolesPage(): React.JSX.Element {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          角色权限
-        </Typography.Title>
-        {canCreate && (
-          <Button type="primary" onClick={openCreate}>
-            新建角色
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="角色权限"
+        description="角色 CRUD + 权限点分配（菜单与权限同一张表，role:* 权限控制）"
+        extra={
+          canCreate ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              新建角色
+            </Button>
+          ) : undefined
+        }
+      />
 
+      <Card>
       <Table<AdminRole>
         rowKey="id"
         columns={columns}
@@ -221,6 +226,7 @@ export function AdminRolesPage(): React.JSX.Element {
         locale={{ emptyText: '暂无数据' }}
         pagination={false}
       />
+      </Card>
 
       <Modal
         title={editingId === null ? '新建角色' : '编辑角色'}

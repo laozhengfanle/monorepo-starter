@@ -97,7 +97,7 @@ describe('UsersPage', () => {
 
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: '新建用户' }));
+    fireEvent.click(screen.getByRole('button', { name: /新建用户/ }));
     // jsdom 中 antd Modal 的出现动画（rc-motion）需要约 1-2s 完成，等待超时放宽
     await waitFor(
       () => {

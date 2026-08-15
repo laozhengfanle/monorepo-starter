@@ -1,6 +1,7 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
@@ -27,7 +28,7 @@ export default defineConfig(() => ({
     port: 3302,
     host: '0.0.0.0',
   },
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   build: {
     outDir: './dist',
     emptyOutDir: true,

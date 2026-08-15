@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Button,
+  Card,
   Form,
   Input,
   Modal,
@@ -13,8 +14,10 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined } from '@ant-design/icons';
 import { ApolloError } from '@apollo/client';
 import { CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/api-client';
+import { PageHeader } from '@starter/ui';
 import { usePermission } from '../../../app/auth/use-permission.js';
 import {
   useAdminAccountsQuery,
@@ -183,17 +186,19 @@ export function AdminAccountsPage(): React.JSX.Element {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          账户管理
-        </Typography.Title>
-        {canCreate && (
-          <Button type="primary" onClick={openCreate}>
-            新建账户
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="账户管理"
+        description="管理端账户：账号 CRUD + 角色分配（删除同步撤销 token 与角色绑定）"
+        extra={
+          canCreate ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              新建账户
+            </Button>
+          ) : undefined
+        }
+      />
 
+      <Card>
       <Table<AdminAccount>
         rowKey="accountId"
         columns={columns}
@@ -212,6 +217,7 @@ export function AdminAccountsPage(): React.JSX.Element {
           },
         }}
       />
+      </Card>
 
       <Modal
         title={editingId === null ? '新建账户' : '编辑账户'}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Button,
+  Card,
   Form,
   Input,
   Modal,
@@ -12,6 +13,7 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined } from '@ant-design/icons';
 import { ApolloError } from '@apollo/client';
 import {
   CreateUserSchema,
@@ -19,7 +21,7 @@ import {
   userRoleSchema,
   userStatusSchema,
 } from '@starter/api-client';
-import { StatusTag } from '@starter/ui';
+import { PageHeader, StatusTag } from '@starter/ui';
 import {
   useUsersQuery,
   useCreateUserMutation,
@@ -186,35 +188,38 @@ export function UsersPage(): React.JSX.Element {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          用户管理
-        </Typography.Title>
-        {canCreate && (
-          <Button type="primary" onClick={openCreate}>
-            新建用户
-          </Button>
-        )}
-      </div>
-
-      <Table<User>
-        rowKey="id"
-        columns={columns}
-        dataSource={users}
-        loading={loading}
-        locale={{ emptyText: '暂无数据' }}
-        pagination={{
-          current: page,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showTotal: (t) => `共 ${t} 条`,
-          onChange: (nextPage, nextPageSize) => {
-            setPage(nextPageSize === pageSize ? nextPage : 1);
-            setPageSize(nextPageSize);
-          },
-        }}
+      <PageHeader
+        title="用户管理"
+        description="演示模块：用户 CRUD（GraphQL + REST 双协议示例）"
+        extra={
+          canCreate ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              新建用户
+            </Button>
+          ) : undefined
+        }
       />
+
+      <Card>
+        <Table<User>
+          rowKey="id"
+          columns={columns}
+          dataSource={users}
+          loading={loading}
+          locale={{ emptyText: '暂无数据' }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (nextPage, nextPageSize) => {
+              setPage(nextPageSize === pageSize ? nextPage : 1);
+              setPageSize(nextPageSize);
+            },
+          }}
+        />
+      </Card>
 
       <Modal
         title={editingId === null ? '新建用户' : '编辑用户'}

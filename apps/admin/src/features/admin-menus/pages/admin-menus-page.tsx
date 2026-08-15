@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
+  Card,
   Form,
   Input,
   InputNumber,
@@ -17,8 +18,10 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined } from '@ant-design/icons';
 import { ApolloError } from '@apollo/client';
 import { CreateMenuSchema, UpdateMenuSchema } from '@starter/api-client';
+import { PageHeader } from '@starter/ui';
 import type { MenuType } from '@starter/api-client';
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { useAuth } from '../../../app/auth/auth-context.js';
@@ -283,20 +286,19 @@ export function AdminMenusPage(): React.JSX.Element {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          菜单管理
-        </Typography.Title>
-        <Typography.Text type="secondary">
-          目录 → 菜单（有路由）→ 按钮（权限点），与角色权限联动
-        </Typography.Text>
-        {canCreate && (
-          <Button type="primary" onClick={openCreate}>
-            新建菜单
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="菜单管理"
+        description="目录 → 菜单（有路由）→ 按钮（权限点），与角色权限联动"
+        extra={
+          canCreate ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              新建菜单
+            </Button>
+          ) : undefined
+        }
+      />
 
+      <Card>
       <Table<MenuRowItem>
         rowKey="id"
         columns={columns}
@@ -309,6 +311,7 @@ export function AdminMenusPage(): React.JSX.Element {
           onExpandedRowsChange: (keys) => setExpandedKeys(keys as string[]),
         }}
       />
+      </Card>
 
       <Modal
         title={editingId === null ? '新建菜单' : '编辑菜单'}
