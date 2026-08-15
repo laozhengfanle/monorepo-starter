@@ -228,7 +228,70 @@ async function main(): Promise<void> {
     console.log(`✅ 已对齐菜单树并绑定 super_admin 的 ${boundCount} 个菜单/权限点`);
   }
 
-  // ── 4. 清理旧菜单（老结构遗留）：用户中心 分支（user-center / user:*) ──
+  // ── 4. 演示角色 + 账号（特例授权演示）：部分权限 ──
+  // 运营专员角色只拥有部分权限（account:list / account:update / role:list），
+  // 配合账号 operator1 可在「特例授权」弹窗直观看到：基线权限只显示禁止、其余只显示允许
+  const OPERATOR_CODES = ['account:list', 'account:update', 'role:list'];
+  let operatorRole = await prisma.adminRole.findUnique({ where: { code: 'operator' } });
+  if (!operatorRole) {
+    operatorRole = await prisma.adminRole.create({
+      data: {
+        id: newId(),
+        name: '运营专员',
+        code: 'operator',
+        description: '演示角色：拥有部分权限（账户管理/角色权限），用于特例授权演示',
+      },
+    });
+    console.log('✅ 已创建演示角色 运营专员（operator）');
+  }
+  // 幂等绑定部分权限
+  const operatorMenus = await prisma.adminMenu.findMany({
+    where: { code: { in: OPERATOR_CODES } },
+    select: { id: true },
+  });
+  for (const menu of operatorMenus) {
+    const bound = await prisma.adminRoleMenu.findUnique({
+      where: { roleId_menuId: { roleId: operatorRole.id, menuId: menu.id } },
+    });
+    if (!bound) {
+      await prisma.adminRoleMenu.create({
+        data: { id: newId(), roleId: operatorRole.id, menuId: menu.id },
+      });
+    }
+  }
+  // 演示账号 operator1（绑定运营专员角色）
+  const operatorIdentity = await prisma.accountIdentity.findUnique({
+    where: {
+      identityType_identifier: { identityType: 'username', identifier: 'operator1' },
+    },
+  });
+  if (!operatorIdentity) {
+    const accountId = newId();
+    await prisma.$transaction(async (tx) => {
+      await tx.account.create({
+        data: { id: accountId, userType: 'admin', enabled: true },
+      });
+      await tx.accountIdentity.create({
+        data: {
+          id: newId(),
+          accountId,
+          identityType: 'username',
+          identifier: 'operator1',
+          credential: await bcrypt.hash('Operator!123', 10),
+          verified: true,
+        },
+      });
+      await tx.adminProfile.create({
+        data: { id: newId(), accountId, nickname: '运营专员' },
+      });
+      await tx.adminAccountRole.create({
+        data: { id: newId(), accountId, roleId: operatorRole.id },
+      });
+    });
+    console.log('✅ 已创建演示账号 operator1 / Operator!123（角色 运营专员）');
+  }
+
+  // ── 5. 清理旧菜单（老结构遗留）：用户中心 分支（user-center / user:*) ──
   // 对齐老项目：管理端无"用户中心"，菜单树里不再保留该分支及其权限点
   const LEGACY_MENU_CODES = ['user-center', 'user:list', 'user:create', 'user:update', 'user:delete'];
   const legacyMenus = await prisma.adminMenu.findMany({
