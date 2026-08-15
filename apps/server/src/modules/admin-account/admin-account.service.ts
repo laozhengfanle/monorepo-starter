@@ -171,18 +171,22 @@ export class AdminAccountService {
     return this.findById(id);
   }
 
-  /** 删除（软删 + 撤销 token） */
+  /** 删除（软删 + 清理角色绑定 + 撤销 token） */
   async remove(id: string): Promise<AdminAccount> {
     const account = await this.prisma.client.account.findUnique({ where: { id } });
     if (!account || account.userType !== 'admin') {
       throw new BizException({ code: 'ACCOUNT_NOT_FOUND', message: '账户不存在' });
     }
-    // softDeleteExtension 将 delete 改写为软删
-    const removed = await this.prisma.client.account.delete({ where: { id } });
+    await this.prisma.client.$transaction(async (tx) => {
+      // softDeleteExtension 将 delete 改写为软删；角色绑定一并清除，
+      // 避免已删除账户仍占用角色（角色删除时的 ROLE_IN_USE 校验按真实绑定计数）
+      await tx.account.delete({ where: { id } });
+      await tx.adminAccountRole.deleteMany({ where: { accountId: id } });
+    });
     // 撤销该账户所有 token（tokenVersion 自增）
     await this.tokenBlacklist.revokeAccountTokens(id, 'account_deleted');
     return toAdminAccount({
-      ...removed,
+      ...account,
       adminProfile: null,
       adminRoles: [],
       identities: [],

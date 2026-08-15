@@ -1,14 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApolloProvider } from '@apollo/client';
 import { Button, ConfigProvider, Menu, Space, Typography } from 'antd';
-import { DashboardOutlined, LogoutOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import { DashboardOutlined, LogoutOutlined, SafetyOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate, Route, Routes } from 'react-router-dom';
 import { AdminLayout, themeConfig } from '@starter/ui';
 import { DashboardPage } from '../features/dashboard/pages/dashboard-page';
 import { UsersPage } from '../features/users/pages/users-page';
 import { AdminAccountsPage } from '../features/admin-accounts/pages/admin-accounts-page';
+import { AdminRolesPage } from '../features/admin-roles/pages/admin-roles-page';
 import { LoginPage } from '../features/auth/pages/login-page';
 import { AuthProvider, useAuth } from './auth/auth-context.js';
+import { usePermission } from './auth/use-permission.js';
 import { ProtectedRoute } from './auth/protected-route.js';
 import { apolloClient } from './apollo-client';
 import './app.css';
@@ -19,10 +21,13 @@ const queryClient = new QueryClient({
   },
 });
 
-/** 侧栏导航：与路由一一对应，当前路径高亮 */
+/** 侧栏导航：按权限动态显隐，与路由一一对应 */
 function AppMenu(): React.JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
+  const canViewUsers = usePermission('user:list');
+  const canViewAccounts = usePermission('account:list');
+  const canViewRoles = usePermission('role:list');
 
   return (
     <Menu
@@ -32,8 +37,15 @@ function AppMenu(): React.JSX.Element {
       onClick={({ key }) => navigate(key)}
       items={[
         { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
-        { key: '/users', icon: <TeamOutlined />, label: '用户管理' },
-        { key: '/admin/accounts', icon: <UserOutlined />, label: '账户管理' },
+        ...(canViewUsers
+          ? [{ key: '/users', icon: <TeamOutlined />, label: '用户管理' }]
+          : []),
+        ...(canViewAccounts
+          ? [{ key: '/admin/accounts', icon: <UserOutlined />, label: '账户管理' }]
+          : []),
+        ...(canViewRoles
+          ? [{ key: '/admin/roles', icon: <SafetyOutlined />, label: '角色权限' }]
+          : []),
       ]}
     />
   );
@@ -76,6 +88,7 @@ export function App() {
                         <Route path="/" element={<DashboardPage />} />
                         <Route path="/users" element={<UsersPage />} />
                         <Route path="/admin/accounts" element={<AdminAccountsPage />} />
+                        <Route path="/admin/roles" element={<AdminRolesPage />} />
                       </Routes>
                     </AdminLayout>
                   </ProtectedRoute>

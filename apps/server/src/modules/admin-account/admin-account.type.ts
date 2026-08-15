@@ -49,19 +49,6 @@ export class PaginatedAdminAccountsType {
   pageSize!: number;
 }
 
-/** 管理端角色（供账户管理分配角色） */
-@ObjectType('AdminRole')
-export class AdminRoleType {
-  @Field(() => ID)
-  id!: string;
-
-  @Field(() => String)
-  code!: string;
-
-  @Field(() => String)
-  name!: string;
-}
-
 /** 创建管理员入参（GraphQL 薄壳） */
 @InputType('CreateAdminAccountInput')
 export class CreateAdminAccountInputType implements CreateAdminAccountInput {

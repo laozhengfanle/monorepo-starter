@@ -24,8 +24,12 @@ type AdminMe {
 
 type AdminRole {
   code: String!
+  createdAt: String!
+  description: String!
+  enabled: Boolean!
   id: ID!
   name: String!
+  permissionCodes: [String!]!
 }
 
 type AuthResult {
@@ -42,6 +46,13 @@ input CreateAdminAccountInput {
   username: String!
 }
 
+input CreateRoleInput {
+  code: String!
+  description: String
+  name: String!
+  permissionCodes: [String!]
+}
+
 input CreateUserInput {
   email: String!
   role: UserRole
@@ -56,11 +67,14 @@ input LoginInput {
 
 type Mutation {
   createAdminAccount(input: CreateAdminAccountInput!): AdminAccount!
+  createRole(input: CreateRoleInput!): AdminRole!
   createUser(input: CreateUserInput!): User!
   deleteAdminAccount(id: ID!): AdminAccount!
+  deleteRole(id: ID!): AdminRole!
   deleteUser(id: ID!): User!
   login(input: LoginInput!): AuthResult!
   updateAdminAccount(id: ID!, input: UpdateAdminAccountInput!): AdminAccount!
+  updateRole(id: ID!, input: UpdateRoleInput!): AdminRole!
   updateUser(id: ID!, input: UpdateUserInput!): User!
 }
 
@@ -78,10 +92,18 @@ type PaginatedUsers {
   total: Int!
 }
 
+type PermissionCode {
+  code: String!
+  id: ID!
+  name: String!
+  type: String!
+}
+
 type Query {
   adminAccounts(page: Int = 1, pageSize: Int = 20): PaginatedAdminAccounts!
   adminRoles: [AdminRole!]!
   me: AdminMe!
+  permissionCodes: [PermissionCode!]!
   user(id: ID!): User
   users(page: Int = 1, pageSize: Int = 20): PaginatedUsers!
 }
@@ -91,6 +113,13 @@ input UpdateAdminAccountInput {
   enabled: Boolean
   nickname: String
   roleCodes: [String!]
+}
+
+input UpdateRoleInput {
+  description: String
+  enabled: Boolean
+  name: String
+  permissionCodes: [String!]
 }
 
 input UpdateUserInput {

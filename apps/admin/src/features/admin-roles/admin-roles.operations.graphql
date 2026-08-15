@@ -1,0 +1,48 @@
+query AdminRoleList {
+  adminRoles {
+    id
+    name
+    code
+    description
+    enabled
+    permissionCodes
+    createdAt
+  }
+}
+
+query PermissionCodeList {
+  permissionCodes {
+    id
+    code
+    name
+    type
+  }
+}
+
+mutation CreateRole($input: CreateRoleInput!) {
+  createRole(input: $input) {
+    id
+    name
+    code
+    description
+    enabled
+    permissionCodes
+  }
+}
+
+mutation UpdateRole($id: ID!, $input: UpdateRoleInput!) {
+  updateRole(id: $id, input: $input) {
+    id
+    name
+    code
+    description
+    enabled
+    permissionCodes
+  }
+}
+
+mutation DeleteRole($id: ID!) {
+  deleteRole(id: $id) {
+    id
+  }
+}

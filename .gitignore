@@ -5,6 +5,9 @@ dist
 tmp
 out-tsc
 
+# 本地验证脚本（headless 浏览器等）
+.tmp/
+
 # dependencies
 node_modules
 

@@ -10,6 +10,7 @@ import { PrismaModule } from '../common/prisma/prisma.module.js';
 import { GqlThrottlerGuard } from '../common/throttler/gql-throttler.guard.js';
 import { AuthModule } from '../modules/auth/auth.module.js';
 import { AdminAccountModule } from '../modules/admin-account/admin-account.module.js';
+import { AdminRoleModule } from '../modules/admin-role/admin-role.module.js';
 import { UploadModule } from '../modules/upload/upload.module.js';
 import { WsModule } from '../modules/ws/ws.module.js';
 import { validateEnv } from '../config/env.validation.js';
@@ -36,6 +37,7 @@ import { UsersModule } from '../users/users.module.js';
     GraphQLModule,
     AuthModule,
     AdminAccountModule,
+    AdminRoleModule,
     UploadModule,
     WsModule,
     HealthModule,

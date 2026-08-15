@@ -15,6 +15,8 @@ export {
   RefreshSchema,
   CreateAdminAccountSchema,
   UpdateAdminAccountSchema,
+  CreateRoleSchema,
+  UpdateRoleSchema,
 } from '@starter/contracts';
 export type {
   AdminMe,
@@ -24,4 +26,8 @@ export type {
   AdminAccount,
   CreateAdminAccountInput,
   UpdateAdminAccountInput,
+  AdminRole,
+  PermissionCode,
+  CreateRoleInput,
+  UpdateRoleInput,
 } from '@starter/contracts';

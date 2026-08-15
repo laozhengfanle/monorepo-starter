@@ -104,6 +104,10 @@ async function main(): Promise<void> {
     { code: 'account:create', name: '新建账户', type: 'button' },
     { code: 'account:update', name: '编辑账户', type: 'button' },
     { code: 'account:delete', name: '删除账户', type: 'button' },
+    { code: 'role:list', name: '角色列表', type: 'menu' },
+    { code: 'role:create', name: '新建角色', type: 'button' },
+    { code: 'role:update', name: '编辑角色', type: 'button' },
+    { code: 'role:delete', name: '删除角色', type: 'button' },
   ];
   const superAdminRole = await prisma.adminRole.findUnique({ where: { code: 'super_admin' } });
   if (superAdminRole) {

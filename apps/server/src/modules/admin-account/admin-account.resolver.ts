@@ -2,36 +2,24 @@ import { Args, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/contracts';
 import { ZodArgsPipe } from '@starter/server-core';
-import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
 import { AdminAccountService } from './admin-account.service.js';
 import {
   AdminAccountType,
-  AdminRoleType,
   CreateAdminAccountInputType,
   PaginatedAdminAccountsType,
   UpdateAdminAccountInputType,
 } from './admin-account.type.js';
 
-/** 管理端账户 GraphQL Resolver：列表 + 创建/更新/删除（RBAC 保护） */
+/** 管理端账户 GraphQL Resolver：列表 + 创建/更新/删除（RBAC 保护）
+ * 注：角色列表查询 adminRoles 由 AdminRoleModule 提供（role:list），
+ * 账户管理页的角色下拉同样走该查询。 */
 @Resolver(() => AdminAccountType)
 @UseGuards(JwtAuthGuard, PermissionGuard)
 export class AdminAccountResolver {
-  constructor(
-    private readonly adminAccountService: AdminAccountService,
-    private readonly prisma: PrismaService,
-  ) {}
-
-  @Query(() => [AdminRoleType])
-  @RequirePermission('account:list')
-  async adminRoles(): Promise<AdminRoleType[]> {
-    return this.prisma.client.adminRole.findMany({
-      where: { enabled: true },
-      orderBy: { createdAt: 'asc' },
-    });
-  }
+  constructor(private readonly adminAccountService: AdminAccountService) {}
 
   @Query(() => PaginatedAdminAccountsType)
   @RequirePermission('account:list')
