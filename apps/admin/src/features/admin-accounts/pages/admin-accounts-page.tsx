@@ -27,7 +27,7 @@ import { ApolloError } from '@apollo/client';
 import { CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/api-client';
 
 import { usePermission } from '../../../app/auth/use-permission.js';
-import { downloadBlob, toCSV } from '../../../shared/utils/export.js';
+import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
 import {
   useAdminAccountsQuery,
   useAdminRolesQuery,
@@ -244,7 +244,7 @@ export function AdminAccountsPage(): React.JSX.Element {
   const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
 
   // 导出 CSV：导出过滤后的账户（含可见列）
-  const handleExport = (): void => {
+  const handleExport = (format: 'excel' | 'csv'): void => {
     const exportCols = fullColumns.filter((c) => visibleKeys.has(c.key as string) && c.key !== 'actions');
     const header = exportCols.map((c) => String(c.title));
     const rows: (string | number | boolean | null | undefined)[][] = [
@@ -260,7 +260,11 @@ export function AdminAccountsPage(): React.JSX.Element {
       ),
     ];
     const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
-    downloadBlob(toCSV(rows), `账户管理_${ts}.csv`, 'text/csv;charset=utf-8;');
+    if (format === 'excel') {
+      downloadBlob(toExcel(rows), `账户管理_${ts}.xls`, 'application/vnd.ms-excel;charset=utf-8;');
+    } else {
+      downloadBlob(toCSV(rows), `账户管理_${ts}.csv`, 'text/csv;charset=utf-8;');
+    }
     void message.success(`已导出 ${filteredAccounts.length} 条`);
   };
 
@@ -311,11 +315,24 @@ export function AdminAccountsPage(): React.JSX.Element {
             )}
             <Dropdown
               trigger={['click']}
+              arrow
               menu={{ items: columnMenuItems, onClick: (info) => info.domEvent.stopPropagation() }}
             >
               <Button icon={<FilterOutlined />} aria-label="列控制" />
             </Dropdown>
-            <Button icon={<DeliveredProcedureOutlined />} onClick={handleExport} aria-label="导出 CSV" />
+            <Dropdown
+              trigger={['click']}
+              arrow
+              menu={{
+                items: [
+                  { key: 'excel', label: '导出 Excel', icon: <DeliveredProcedureOutlined /> },
+                  { key: 'csv', label: '导出 CSV' },
+                ],
+                onClick: ({ key }) => handleExport(key as 'excel' | 'csv'),
+              }}
+            >
+              <Button icon={<DeliveredProcedureOutlined />} aria-label="导出" />
+            </Dropdown>
             <Button icon={<RedoOutlined />} onClick={() => void refreshList()} aria-label="刷新" />
           </Space>
         }

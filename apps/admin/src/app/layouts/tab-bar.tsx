@@ -135,7 +135,7 @@ export function TabBar(): React.JSX.Element {
       </div>
 
       <div className="flex items-center shrink-0 pl-2 pr-1">
-        <Dropdown trigger={['hover']} menu={{ items: menuItems, onClick: onMenuClick }}>
+        <Dropdown trigger={['hover']} arrow menu={{ items: menuItems, onClick: onMenuClick }}>
           <Button type="text" size="small" icon={<MoreOutlined />} />
         </Dropdown>
       </div>

@@ -119,6 +119,7 @@ export function LayoutHeader(): React.JSX.Element {
 
         <Dropdown
           trigger={['hover']}
+          arrow
           placement="bottomRight"
           menu={{
             items: userMenuItems,
