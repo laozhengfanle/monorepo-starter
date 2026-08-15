@@ -1,22 +1,18 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import {
-  AdminAccountVo,
-  CreateAdminAccountDto,
-  QueryAdminAccountsDto,
-  SaveAccountMenusDto,
-  UpdateAdminAccountDto,
-} from '@starter/server-core';
-import type { AccountMenusResult, AdminAccount, PaginatedData } from '@starter/contracts';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { SaveAccountMenusDto } from '@starter/server-core';
+import type { AccountMenusResult, AdminAccount } from '@starter/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
 import { AdminAccountService } from './admin-account.service.js';
 
 /**
- * 管理端账户 REST 端点（阶段 3 扩展）：
- * JWT 认证 + 权限点（account:list/create/update/delete）
- * - GET/PUT /admin/accounts/:id/menus：账户特例授权（grant/deny 覆写）
+ * 管理端账户 REST 端点（BFF 胶水层，仅保留前端真实使用的操作类端点）：
+ * - 账户 CRUD 前端走 GraphQL（adminAccounts / createAdminAccount / ...）
+ * - 这里只保留 GraphQL 不适合或更优雅的 REST 场景：
+ *   - POST :id/restore / DELETE :id/hard：软删除恢复/彻底删除（操作类）
+ *   - GET/PUT :id/menus：账户特例授权（grant/deny 覆写）
  */
 @ApiTags('admin-accounts')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -24,42 +20,9 @@ import { AdminAccountService } from './admin-account.service.js';
 export class AdminAccountController {
   constructor(private readonly adminAccountService: AdminAccountService) {}
 
-  @Get()
-  @RequirePermission('account:list')
-  @ApiOkResponse({ type: AdminAccountVo, isArray: true })
-  list(@Query() query: QueryAdminAccountsDto): Promise<PaginatedData<AdminAccount>> {
-    return this.adminAccountService.list(query);
-  }
-
-  @Post()
-  @RequirePermission('account:create')
-  @ApiCreatedResponse({ type: AdminAccountVo })
-  @ApiBody({ type: CreateAdminAccountDto })
-  create(@Body() body: CreateAdminAccountDto): Promise<AdminAccount> {
-    return this.adminAccountService.create(body);
-  }
-
-  @Put(':id')
-  @RequirePermission('account:update')
-  @ApiOkResponse({ type: AdminAccountVo })
-  @ApiBody({ type: UpdateAdminAccountDto })
-  update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() body: UpdateAdminAccountDto,
-  ): Promise<AdminAccount> {
-    return this.adminAccountService.update(id, body);
-  }
-
-  @Delete(':id')
-  @RequirePermission('account:delete')
-  @ApiOkResponse({ type: AdminAccountVo })
-  remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<AdminAccount> {
-    return this.adminAccountService.remove(id);
-  }
-
   @Post(':id/restore')
   @RequirePermission('global:trash:restore')
-  @ApiOkResponse({ type: AdminAccountVo })
+  @ApiOkResponse({ description: '恢复已软删账户' })
   restore(@Param('id', new ParseUUIDPipe()) id: string): Promise<AdminAccount> {
     return this.adminAccountService.restore(id);
   }
