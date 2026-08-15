@@ -73,7 +73,7 @@ export function LoginLayout({ children }: { children: ReactNode }): React.JSX.El
           padding: `${token.paddingSM}px ${token.paddingLG}px`,
         }}
       >
-        monorepo-starter v{APP_VERSION} ©{new Date().getFullYear()} 郑博 zhengbo
+        monorepo-starter v{APP_VERSION} ©{new Date().getFullYear()} zhengbo
       </Footer>
     </Layout>
   );
