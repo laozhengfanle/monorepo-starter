@@ -49,7 +49,7 @@ export function LayoutHeader(): React.JSX.Element {
 
   const userMenuItems = [
     {
-      key: 'profile',
+      key: 'user-info',
       label: (
         <div>
           <div style={{ fontWeight: 500 }}>{user?.nickname || user?.username}</div>
