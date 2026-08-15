@@ -16,7 +16,6 @@ import { useAuth } from '../auth/auth-context.js';
 import { useTheme } from '../providers/theme-provider.js';
 import { useFullscreen } from '../hooks/use-fullscreen.js';
 import { SettingsDrawer } from '../../features/settings/settings-drawer.js';
-import { APP_VERSION } from '../version.js';
 import heroPng from '../../assets/hero.png';
 
 const { Header } = Layout;
@@ -89,9 +88,6 @@ export function LayoutHeader(): React.JSX.Element {
       </div>
 
       <Space size={4}>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          v{APP_VERSION}
-        </Typography.Text>
         <Input.Search placeholder="搜索" allowClear style={{ width: 220 }} />
         <Dropdown
           trigger={['hover']}

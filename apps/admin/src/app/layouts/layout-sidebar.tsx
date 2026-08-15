@@ -1,5 +1,6 @@
 import {
   AppstoreOutlined,
+  BookOutlined,
   DashboardOutlined,
   DeleteOutlined,
   FileOutlined,
@@ -43,6 +44,7 @@ const iconMap: Record<string, ReactNode> = {
   FolderOutlined: <FolderOutlined />,
   ThunderboltOutlined: <ThunderboltOutlined />,
   SafetyCertificateOutlined: <SafetyCertificateOutlined />,
+  BookOutlined: <BookOutlined />,
 };
 
 function resolveIcon(icon?: string | null): ReactNode {

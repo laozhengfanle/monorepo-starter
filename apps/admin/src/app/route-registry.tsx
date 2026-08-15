@@ -11,6 +11,7 @@ import { AuditLogsPage } from '../features/system/pages/audit-logs-page';
 import { StorageDriverPage } from '../features/system/pages/storage-driver-page';
 import { CacheAdminPage } from '../features/system/pages/cache-admin-page';
 import { TurnstilePage } from '../features/system/pages/turnstile-page';
+import { SysDictPage } from '../features/system/pages/sys-dict-page';
 import { usePermission } from './auth/use-permission.js';
 
 /**
@@ -35,6 +36,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/admin/storage', element: <StorageDriverPage />, permission: 'config:file:view' },
   { path: '/admin/cache', element: <CacheAdminPage />, permission: 'config:cache:view' },
   { path: '/admin/turnstile', element: <TurnstilePage />, permission: 'config:turnstile:view' },
+  { path: '/admin/dicts', element: <SysDictPage />, permission: 'config:dict:view' },
   // 个人中心：登录即可访问，不进菜单表（对标老项目静态路由）
   { path: '/account/profile', element: <ProfilePage /> },
   { path: '/account/settings', element: <AccountSettingsPage /> },

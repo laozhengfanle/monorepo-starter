@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, App, Button, Card, Form, Input, Select, Typography } from 'antd';
+import { Alert, App, Button, Card, Form, Input, Select, Spin, Typography } from 'antd';
 import { useAdminConfigsQuery, useBatchUpdateConfigsMutation } from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
 
@@ -89,17 +89,19 @@ export function StorageDriverPage(): React.JSX.Element {
   };
 
   return (
-    <Card title="存储驱动" loading={isLoading}>
+    <Card title="存储驱动">
+      <Spin spinning={isLoading}>
       <Alert
         type="info"
         showIcon
         title="本地存储无需额外配置；云存储（OSS/COS/S3）需填写对应密钥"
-        style={{ marginBottom: 16, maxWidth: 720 }}
+        style={{ marginBottom: 16 }}
       />
       <Form<StorageFormValues>
         form={form}
-        layout="vertical"
-        style={{ maxWidth: 560 }}
+        layout="horizontal"
+        labelCol={{ flex: '140px' }}
+        labelWrap
         initialValues={{ driver: 'local', localPath: './uploads' }}
       >
         <Form.Item label="驱动" name="driver" rules={[{ required: true, message: '请选择存储驱动' }]}>
@@ -147,6 +149,7 @@ export function StorageDriverPage(): React.JSX.Element {
           <Text type="secondary">当前角色无编辑配置权限（config:admin:update）</Text>
         )}
       </Form>
+      </Spin>
     </Card>
   );
 }

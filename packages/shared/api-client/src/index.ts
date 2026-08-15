@@ -32,6 +32,12 @@ export {
   CacheKeySchema,
   CacheStatsSchema,
   DeleteCacheKeysResultSchema,
+  SysDictItemSchema,
+  SysDictTypeSchema,
+  CreateDictTypeSchema,
+  UpdateDictTypeSchema,
+  CreateDictItemSchema,
+  UpdateDictItemSchema,
   AUDIT_ACTION_OPTIONS,
   AUDIT_RESOURCE_TYPE_OPTIONS,
 } from '@starter/contracts';
@@ -68,4 +74,10 @@ export type {
   CacheKey,
   CacheStats,
   DeleteCacheKeysResult,
+  SysDictItem,
+  SysDictType,
+  CreateDictTypeInput,
+  UpdateDictTypeInput,
+  CreateDictItemInput,
+  UpdateDictItemInput,
 } from '@starter/contracts';

@@ -95,6 +95,7 @@ const ICON_OPTIONS = [
   { value: 'FolderOutlined', label: 'FolderOutlined（文件夹）' },
   { value: 'ThunderboltOutlined', label: 'ThunderboltOutlined（闪电）' },
   { value: 'SafetyCertificateOutlined', label: 'SafetyCertificateOutlined（证书）' },
+  { value: 'BookOutlined', label: 'BookOutlined（书本）' },
 ];
 
 /** GraphQL 错误 → 用户提示 */

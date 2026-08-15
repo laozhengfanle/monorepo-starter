@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, App, Button, Card, Form, Input, Switch, Typography } from 'antd';
+import { Alert, App, Button, Card, Form, Input, Spin, Switch, Typography } from 'antd';
 import { useAdminConfigsQuery, useBatchUpdateConfigsMutation } from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
 
@@ -81,18 +81,20 @@ export function TurnstilePage(): React.JSX.Element {
   };
 
   return (
-    <Card title="Turnstile 配置" loading={isLoading}>
+    <Card title="Turnstile 配置">
+      <Spin spinning={isLoading}>
       <Alert
         type="info"
         showIcon
         title="即时生效"
         description="修改 siteKey / secretKey 后立即生效，无需重启服务"
-        style={{ marginBottom: 16, maxWidth: 720 }}
+        style={{ marginBottom: 16 }}
       />
       <Form<TurnstileFormValues>
         form={form}
-        layout="vertical"
-        style={{ maxWidth: 560 }}
+        layout="horizontal"
+        labelCol={{ flex: '140px' }}
+        labelWrap
       >
         <Form.Item
           label="启用"
@@ -126,6 +128,7 @@ export function TurnstilePage(): React.JSX.Element {
           <Text type="secondary">当前角色无编辑配置权限（config:admin:update）</Text>
         )}
       </Form>
+      </Spin>
     </Card>
   );
 }

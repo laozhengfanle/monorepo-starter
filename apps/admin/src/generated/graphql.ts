@@ -132,6 +132,23 @@ export type CreateAdminAccountInput = {
   username: Scalars['String']['input'];
 };
 
+export type CreateDictItemInput = {
+  dictTypeId: Scalars['ID']['input'];
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  label: Scalars['String']['input'];
+  remark?: InputMaybe<Scalars['String']['input']>;
+  sort?: InputMaybe<Scalars['Int']['input']>;
+  value: Scalars['String']['input'];
+};
+
+export type CreateDictTypeInput = {
+  code: Scalars['String']['input'];
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  name: Scalars['String']['input'];
+  remark?: InputMaybe<Scalars['String']['input']>;
+  sort?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type CreateMenuInput = {
   code: Scalars['String']['input'];
   icon?: InputMaybe<Scalars['String']['input']>;
@@ -174,6 +191,8 @@ export type Mutation = {
   clearAuditLogs: ClearAuditLogsResult;
   clearCacheByPattern: Scalars['Int']['output'];
   createAdminAccount: AdminAccount;
+  createDictItem: SysDictItem;
+  createDictType: SysDictType;
   createMenu: AdminMenuNode;
   createRole: AdminRole;
   createUser: User;
@@ -181,11 +200,15 @@ export type Mutation = {
   deleteAuditLog: Scalars['Boolean']['output'];
   deleteCacheKey: Scalars['Boolean']['output'];
   deleteCacheKeys: DeleteCacheKeysResult;
+  deleteDictItem: Scalars['Boolean']['output'];
+  deleteDictType: Scalars['Boolean']['output'];
   deleteMenu: AdminMenuNode;
   deleteRole: AdminRole;
   deleteUser: User;
   login: AuthResult;
   updateAdminAccount: AdminAccount;
+  updateDictItem: SysDictItem;
+  updateDictType: SysDictType;
   updateMenu: AdminMenuNode;
   updateRole: AdminRole;
   updateUser: User;
@@ -204,6 +227,16 @@ export type MutationClearCacheByPatternArgs = {
 
 export type MutationCreateAdminAccountArgs = {
   input: CreateAdminAccountInput;
+};
+
+
+export type MutationCreateDictItemArgs = {
+  input: CreateDictItemInput;
+};
+
+
+export type MutationCreateDictTypeArgs = {
+  input: CreateDictTypeInput;
 };
 
 
@@ -242,6 +275,16 @@ export type MutationDeleteCacheKeysArgs = {
 };
 
 
+export type MutationDeleteDictItemArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeleteDictTypeArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationDeleteMenuArgs = {
   id: Scalars['ID']['input'];
 };
@@ -265,6 +308,18 @@ export type MutationLoginArgs = {
 export type MutationUpdateAdminAccountArgs = {
   id: Scalars['ID']['input'];
   input: UpdateAdminAccountInput;
+};
+
+
+export type MutationUpdateDictItemArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateDictItemInput;
+};
+
+
+export type MutationUpdateDictTypeArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateDictTypeInput;
 };
 
 
@@ -331,6 +386,7 @@ export type Query = {
   me: AdminMe;
   menuTree: Array<AdminMenuNode>;
   permissionCodes: Array<PermissionCode>;
+  sysDictTypes: Array<SysDictType>;
   user?: Maybe<User>;
   users: PaginatedUsers;
 };
@@ -388,6 +444,31 @@ export type QueryUsersArgs = {
   pageSize?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type SysDictItem = {
+  __typename?: 'SysDictItem';
+  createdAt: Scalars['String']['output'];
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  label: Scalars['String']['output'];
+  remark?: Maybe<Scalars['String']['output']>;
+  sort: Scalars['Int']['output'];
+  updatedAt: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+};
+
+export type SysDictType = {
+  __typename?: 'SysDictType';
+  code: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  items: Array<SysDictItem>;
+  name: Scalars['String']['output'];
+  remark?: Maybe<Scalars['String']['output']>;
+  sort: Scalars['Int']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
 export type SystemConfig = {
   __typename?: 'SystemConfig';
   createdAt: Scalars['String']['output'];
@@ -404,6 +485,20 @@ export type UpdateAdminAccountInput = {
   enabled?: InputMaybe<Scalars['Boolean']['input']>;
   nickname?: InputMaybe<Scalars['String']['input']>;
   roleCodes?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type UpdateDictItemInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  label?: InputMaybe<Scalars['String']['input']>;
+  remark?: InputMaybe<Scalars['String']['input']>;
+  sort?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateDictTypeInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  remark?: InputMaybe<Scalars['String']['input']>;
+  sort?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateMenuInput = {
@@ -569,6 +664,59 @@ export type DashboardRecentUsersQueryVariables = Exact<{ [key: string]: never; }
 
 export type DashboardRecentUsersQuery = { __typename?: 'Query', users: { __typename?: 'PaginatedUsers', items: Array<{ __typename?: 'User', id: string, username: string, email: string, role: UserRole, status: UserStatus, createdAt: string }> } };
 
+export type SysDictItemFieldsFragment = { __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string };
+
+export type SysDictTypeFieldsFragment = { __typename?: 'SysDictType', id: string, code: string, name: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> };
+
+export type SysDictTypesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type SysDictTypesQuery = { __typename?: 'Query', sysDictTypes: Array<{ __typename?: 'SysDictType', id: string, code: string, name: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> }> };
+
+export type CreateDictTypeMutationVariables = Exact<{
+  input: CreateDictTypeInput;
+}>;
+
+
+export type CreateDictTypeMutation = { __typename?: 'Mutation', createDictType: { __typename?: 'SysDictType', id: string, code: string, name: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> } };
+
+export type UpdateDictTypeMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateDictTypeInput;
+}>;
+
+
+export type UpdateDictTypeMutation = { __typename?: 'Mutation', updateDictType: { __typename?: 'SysDictType', id: string, code: string, name: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> } };
+
+export type DeleteDictTypeMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteDictTypeMutation = { __typename?: 'Mutation', deleteDictType: boolean };
+
+export type CreateDictItemMutationVariables = Exact<{
+  input: CreateDictItemInput;
+}>;
+
+
+export type CreateDictItemMutation = { __typename?: 'Mutation', createDictItem: { __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string } };
+
+export type UpdateDictItemMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateDictItemInput;
+}>;
+
+
+export type UpdateDictItemMutation = { __typename?: 'Mutation', updateDictItem: { __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string } };
+
+export type DeleteDictItemMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteDictItemMutation = { __typename?: 'Mutation', deleteDictItem: boolean };
+
 export type SystemConfigFieldsFragment = { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string };
 
 export type AdminConfigsQueryVariables = Exact<{ [key: string]: never; }>;
@@ -715,6 +863,33 @@ export const MenuNodeFieldsFragmentDoc = gql`
   createdAt
 }
     `;
+export const SysDictItemFieldsFragmentDoc = gql`
+    fragment SysDictItemFields on SysDictItem {
+  id
+  label
+  value
+  remark
+  enabled
+  sort
+  createdAt
+  updatedAt
+}
+    `;
+export const SysDictTypeFieldsFragmentDoc = gql`
+    fragment SysDictTypeFields on SysDictType {
+  id
+  code
+  name
+  remark
+  enabled
+  sort
+  createdAt
+  updatedAt
+  items {
+    ...SysDictItemFields
+  }
+}
+    ${SysDictItemFieldsFragmentDoc}`;
 export const SystemConfigFieldsFragmentDoc = gql`
     fragment SystemConfigFields on SystemConfig {
   id
@@ -1493,6 +1668,244 @@ export type DashboardRecentUsersQueryHookResult = ReturnType<typeof useDashboard
 export type DashboardRecentUsersLazyQueryHookResult = ReturnType<typeof useDashboardRecentUsersLazyQuery>;
 export type DashboardRecentUsersSuspenseQueryHookResult = ReturnType<typeof useDashboardRecentUsersSuspenseQuery>;
 export type DashboardRecentUsersQueryResult = Apollo.QueryResult<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>;
+export const SysDictTypesDocument = gql`
+    query SysDictTypes {
+  sysDictTypes {
+    ...SysDictTypeFields
+  }
+}
+    ${SysDictTypeFieldsFragmentDoc}`;
+
+/**
+ * __useSysDictTypesQuery__
+ *
+ * To run a query within a React component, call `useSysDictTypesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSysDictTypesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSysDictTypesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useSysDictTypesQuery(baseOptions?: Apollo.QueryHookOptions<SysDictTypesQuery, SysDictTypesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SysDictTypesQuery, SysDictTypesQueryVariables>(SysDictTypesDocument, options);
+      }
+export function useSysDictTypesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SysDictTypesQuery, SysDictTypesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SysDictTypesQuery, SysDictTypesQueryVariables>(SysDictTypesDocument, options);
+        }
+// @ts-ignore
+export function useSysDictTypesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<SysDictTypesQuery, SysDictTypesQueryVariables>): Apollo.UseSuspenseQueryResult<SysDictTypesQuery, SysDictTypesQueryVariables>;
+export function useSysDictTypesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<SysDictTypesQuery, SysDictTypesQueryVariables>): Apollo.UseSuspenseQueryResult<SysDictTypesQuery | undefined, SysDictTypesQueryVariables>;
+export function useSysDictTypesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<SysDictTypesQuery, SysDictTypesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<SysDictTypesQuery, SysDictTypesQueryVariables>(SysDictTypesDocument, options);
+        }
+export type SysDictTypesQueryHookResult = ReturnType<typeof useSysDictTypesQuery>;
+export type SysDictTypesLazyQueryHookResult = ReturnType<typeof useSysDictTypesLazyQuery>;
+export type SysDictTypesSuspenseQueryHookResult = ReturnType<typeof useSysDictTypesSuspenseQuery>;
+export type SysDictTypesQueryResult = Apollo.QueryResult<SysDictTypesQuery, SysDictTypesQueryVariables>;
+export const CreateDictTypeDocument = gql`
+    mutation CreateDictType($input: CreateDictTypeInput!) {
+  createDictType(input: $input) {
+    ...SysDictTypeFields
+  }
+}
+    ${SysDictTypeFieldsFragmentDoc}`;
+export type CreateDictTypeMutationFn = Apollo.MutationFunction<CreateDictTypeMutation, CreateDictTypeMutationVariables>;
+
+/**
+ * __useCreateDictTypeMutation__
+ *
+ * To run a mutation, you first call `useCreateDictTypeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateDictTypeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createDictTypeMutation, { data, loading, error }] = useCreateDictTypeMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateDictTypeMutation(baseOptions?: Apollo.MutationHookOptions<CreateDictTypeMutation, CreateDictTypeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateDictTypeMutation, CreateDictTypeMutationVariables>(CreateDictTypeDocument, options);
+      }
+export type CreateDictTypeMutationHookResult = ReturnType<typeof useCreateDictTypeMutation>;
+export type CreateDictTypeMutationResult = Apollo.MutationResult<CreateDictTypeMutation>;
+export type CreateDictTypeMutationOptions = Apollo.BaseMutationOptions<CreateDictTypeMutation, CreateDictTypeMutationVariables>;
+export const UpdateDictTypeDocument = gql`
+    mutation UpdateDictType($id: ID!, $input: UpdateDictTypeInput!) {
+  updateDictType(id: $id, input: $input) {
+    ...SysDictTypeFields
+  }
+}
+    ${SysDictTypeFieldsFragmentDoc}`;
+export type UpdateDictTypeMutationFn = Apollo.MutationFunction<UpdateDictTypeMutation, UpdateDictTypeMutationVariables>;
+
+/**
+ * __useUpdateDictTypeMutation__
+ *
+ * To run a mutation, you first call `useUpdateDictTypeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDictTypeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDictTypeMutation, { data, loading, error }] = useUpdateDictTypeMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateDictTypeMutation(baseOptions?: Apollo.MutationHookOptions<UpdateDictTypeMutation, UpdateDictTypeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateDictTypeMutation, UpdateDictTypeMutationVariables>(UpdateDictTypeDocument, options);
+      }
+export type UpdateDictTypeMutationHookResult = ReturnType<typeof useUpdateDictTypeMutation>;
+export type UpdateDictTypeMutationResult = Apollo.MutationResult<UpdateDictTypeMutation>;
+export type UpdateDictTypeMutationOptions = Apollo.BaseMutationOptions<UpdateDictTypeMutation, UpdateDictTypeMutationVariables>;
+export const DeleteDictTypeDocument = gql`
+    mutation DeleteDictType($id: ID!) {
+  deleteDictType(id: $id)
+}
+    `;
+export type DeleteDictTypeMutationFn = Apollo.MutationFunction<DeleteDictTypeMutation, DeleteDictTypeMutationVariables>;
+
+/**
+ * __useDeleteDictTypeMutation__
+ *
+ * To run a mutation, you first call `useDeleteDictTypeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteDictTypeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteDictTypeMutation, { data, loading, error }] = useDeleteDictTypeMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteDictTypeMutation(baseOptions?: Apollo.MutationHookOptions<DeleteDictTypeMutation, DeleteDictTypeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteDictTypeMutation, DeleteDictTypeMutationVariables>(DeleteDictTypeDocument, options);
+      }
+export type DeleteDictTypeMutationHookResult = ReturnType<typeof useDeleteDictTypeMutation>;
+export type DeleteDictTypeMutationResult = Apollo.MutationResult<DeleteDictTypeMutation>;
+export type DeleteDictTypeMutationOptions = Apollo.BaseMutationOptions<DeleteDictTypeMutation, DeleteDictTypeMutationVariables>;
+export const CreateDictItemDocument = gql`
+    mutation CreateDictItem($input: CreateDictItemInput!) {
+  createDictItem(input: $input) {
+    ...SysDictItemFields
+  }
+}
+    ${SysDictItemFieldsFragmentDoc}`;
+export type CreateDictItemMutationFn = Apollo.MutationFunction<CreateDictItemMutation, CreateDictItemMutationVariables>;
+
+/**
+ * __useCreateDictItemMutation__
+ *
+ * To run a mutation, you first call `useCreateDictItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateDictItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createDictItemMutation, { data, loading, error }] = useCreateDictItemMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateDictItemMutation(baseOptions?: Apollo.MutationHookOptions<CreateDictItemMutation, CreateDictItemMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateDictItemMutation, CreateDictItemMutationVariables>(CreateDictItemDocument, options);
+      }
+export type CreateDictItemMutationHookResult = ReturnType<typeof useCreateDictItemMutation>;
+export type CreateDictItemMutationResult = Apollo.MutationResult<CreateDictItemMutation>;
+export type CreateDictItemMutationOptions = Apollo.BaseMutationOptions<CreateDictItemMutation, CreateDictItemMutationVariables>;
+export const UpdateDictItemDocument = gql`
+    mutation UpdateDictItem($id: ID!, $input: UpdateDictItemInput!) {
+  updateDictItem(id: $id, input: $input) {
+    ...SysDictItemFields
+  }
+}
+    ${SysDictItemFieldsFragmentDoc}`;
+export type UpdateDictItemMutationFn = Apollo.MutationFunction<UpdateDictItemMutation, UpdateDictItemMutationVariables>;
+
+/**
+ * __useUpdateDictItemMutation__
+ *
+ * To run a mutation, you first call `useUpdateDictItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDictItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDictItemMutation, { data, loading, error }] = useUpdateDictItemMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateDictItemMutation(baseOptions?: Apollo.MutationHookOptions<UpdateDictItemMutation, UpdateDictItemMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateDictItemMutation, UpdateDictItemMutationVariables>(UpdateDictItemDocument, options);
+      }
+export type UpdateDictItemMutationHookResult = ReturnType<typeof useUpdateDictItemMutation>;
+export type UpdateDictItemMutationResult = Apollo.MutationResult<UpdateDictItemMutation>;
+export type UpdateDictItemMutationOptions = Apollo.BaseMutationOptions<UpdateDictItemMutation, UpdateDictItemMutationVariables>;
+export const DeleteDictItemDocument = gql`
+    mutation DeleteDictItem($id: ID!) {
+  deleteDictItem(id: $id)
+}
+    `;
+export type DeleteDictItemMutationFn = Apollo.MutationFunction<DeleteDictItemMutation, DeleteDictItemMutationVariables>;
+
+/**
+ * __useDeleteDictItemMutation__
+ *
+ * To run a mutation, you first call `useDeleteDictItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteDictItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteDictItemMutation, { data, loading, error }] = useDeleteDictItemMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteDictItemMutation(baseOptions?: Apollo.MutationHookOptions<DeleteDictItemMutation, DeleteDictItemMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteDictItemMutation, DeleteDictItemMutationVariables>(DeleteDictItemDocument, options);
+      }
+export type DeleteDictItemMutationHookResult = ReturnType<typeof useDeleteDictItemMutation>;
+export type DeleteDictItemMutationResult = Apollo.MutationResult<DeleteDictItemMutation>;
+export type DeleteDictItemMutationOptions = Apollo.BaseMutationOptions<DeleteDictItemMutation, DeleteDictItemMutationVariables>;
 export const AdminConfigsDocument = gql`
     query AdminConfigs {
   adminConfigs {

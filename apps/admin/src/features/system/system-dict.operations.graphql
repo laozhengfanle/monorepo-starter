@@ -1,0 +1,62 @@
+fragment SysDictItemFields on SysDictItem {
+  id
+  label
+  value
+  remark
+  enabled
+  sort
+  createdAt
+  updatedAt
+}
+
+fragment SysDictTypeFields on SysDictType {
+  id
+  code
+  name
+  remark
+  enabled
+  sort
+  createdAt
+  updatedAt
+  items {
+    ...SysDictItemFields
+  }
+}
+
+query SysDictTypes {
+  sysDictTypes {
+    ...SysDictTypeFields
+  }
+}
+
+mutation CreateDictType($input: CreateDictTypeInput!) {
+  createDictType(input: $input) {
+    ...SysDictTypeFields
+  }
+}
+
+mutation UpdateDictType($id: ID!, $input: UpdateDictTypeInput!) {
+  updateDictType(id: $id, input: $input) {
+    ...SysDictTypeFields
+  }
+}
+
+mutation DeleteDictType($id: ID!) {
+  deleteDictType(id: $id)
+}
+
+mutation CreateDictItem($input: CreateDictItemInput!) {
+  createDictItem(input: $input) {
+    ...SysDictItemFields
+  }
+}
+
+mutation UpdateDictItem($id: ID!, $input: UpdateDictItemInput!) {
+  updateDictItem(id: $id, input: $input) {
+    ...SysDictItemFields
+  }
+}
+
+mutation DeleteDictItem($id: ID!) {
+  deleteDictItem(id: $id)
+}

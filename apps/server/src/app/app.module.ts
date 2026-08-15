@@ -18,6 +18,7 @@ import { SystemConfigModule } from '../modules/system-config/system-config.modul
 import { AuditLogModule } from '../modules/audit-log/audit-log.module.js';
 import { CacheAdminModule } from '../modules/cache-admin/cache-admin.module.js';
 import { TurnstileModule } from '../modules/turnstile/turnstile.module.js';
+import { SysDictModule } from '../modules/system-dict/system-dict.module.js';
 import { validateEnv } from '../config/env.validation.js';
 import { HealthModule } from '../health/health.module.js';
 import { UsersModule } from '../users/users.module.js';
@@ -50,6 +51,7 @@ import { UsersModule } from '../users/users.module.js';
     AuditLogModule,
     CacheAdminModule,
     TurnstileModule,
+    SysDictModule,
     HealthModule,
     UsersModule,
   ],

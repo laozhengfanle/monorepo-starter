@@ -168,10 +168,17 @@ export function AuditLogsPage(): React.JSX.Element {
 
   const columns: ColumnsType<AuditLogItem> = [
     {
+      title: '时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 170,
+      render: (v: string) => <span>{formatDateTime(v)}</span>,
+    },
+    {
       title: '操作者',
       dataIndex: 'accountUsername',
       key: 'accountUsername',
-      width: 120,
+      width: 110,
       render: (v: string | null) =>
         v ? <span>{v}</span> : <Tag color="default">系统</Tag>,
     },
@@ -186,15 +193,31 @@ export function AuditLogsPage(): React.JSX.Element {
       title: '资源类型',
       dataIndex: 'resourceType',
       key: 'resourceType',
-      width: 130,
+      width: 150,
       render: (v: string | null) => (v ? <Tag>{v}</Tag> : <span>-</span>),
     },
     {
-      title: '时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 170,
-      render: (v: string) => <span>{formatDateTime(v)}</span>,
+      title: '资源ID',
+      dataIndex: 'resourceId',
+      key: 'resourceId',
+      width: 200,
+      ellipsis: true,
+      render: (v: string | null) => (v ? <span>{v}</span> : <span>-</span>),
+    },
+    {
+      title: 'IP',
+      dataIndex: 'ip',
+      key: 'ip',
+      width: 130,
+      render: (v: string | null) => (v ? <span>{v}</span> : <span>-</span>),
+    },
+    {
+      title: '详情',
+      dataIndex: 'detail',
+      key: 'detail',
+      width: 220,
+      ellipsis: true,
+      render: (v: string | null) => (v ? <span>{v.slice(0, 80)}</span> : <span>-</span>),
     },
     {
       title: '操作',
@@ -283,7 +306,7 @@ export function AuditLogsPage(): React.JSX.Element {
         columns={columns}
         dataSource={logs}
         loading={loading}
-        scroll={{ x: 900 }}
+        scroll={{ x: 1300 }}
         pagination={{
           current: page,
           pageSize,

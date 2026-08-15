@@ -224,6 +224,49 @@ model UploadFile {
 }
 
 // ============================================================
+// 数据字典（阶段 4）：字典类型 + 字典项，支撑可配置枚举（审计 action/资源类型/状态等）
+// ============================================================
+
+/// 字典类型 — 如 audit_action（审计操作）/ storage_driver（存储驱动）/ account_status（账户状态）
+model SysDictType {
+  id        String    @id @db.Uuid
+  /// 字典类型编码（机器可读，唯一），如 audit_action
+  code      String    @unique @db.VarChar(100)
+  /// 字典类型名称（展示），如 审计操作类型
+  name      String    @db.VarChar(100)
+  remark    String?   @db.VarChar(255)
+  enabled   Boolean   @default(true)
+  sort      Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  items SysDictItem[]
+
+  @@map("sys_dict_type")
+}
+
+/// 字典项 — 属于某字典类型下的一个可选项（label 展示 / value 存储）
+model SysDictItem {
+  id         String    @id @db.Uuid
+  dictTypeId String    @map("dict_type_id") @db.Uuid
+  /// 字典项标签（展示），如 登录成功
+  label      String    @db.VarChar(100)
+  /// 字典项值（存储），如 login_success
+  value      String    @db.VarChar(100)
+  remark     String?   @db.VarChar(255)
+  enabled    Boolean   @default(true)
+  sort       Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  dictType SysDictType @relation(fields: [dictTypeId], references: [id], onDelete: Cascade)
+
+  @@index([dictTypeId])
+  @@unique([dictTypeId, value])
+  @@map("sys_dict_item")
+}
+
+// ============================================================
 // 系统配置（阶段 4）：key-value JSON 键值存储，支撑后台设置/存储驱动/Turnstile 等
 // ============================================================
 

@@ -221,6 +221,17 @@ async function main(): Promise<void> {
             { code: 'config:turnstile:update', name: '编辑配置', type: 'button', sort: 1 },
           ],
         },
+        {
+          code: 'config:dict:view',
+          name: '字典管理',
+          type: 'menu',
+          path: '/admin/dicts',
+          icon: 'BookOutlined',
+          sort: 6,
+          children: [
+            { code: 'config:dict:update', name: '编辑字典', type: 'button', sort: 1 },
+          ],
+        },
       ],
     },
     {
@@ -441,6 +452,143 @@ async function main(): Promise<void> {
         },
       });
       console.log(`✅ 已创建系统配置 ${cfg.key}`);
+    }
+  }
+
+  // ── 4.7 数据字典种子（sys_dict_type / sys_dict_item） ──
+  // 常用可配置枚举统一入字典：审计操作/资源类型/菜单类型/密码复杂度/存储驱动/账户状态/缓存类型
+  const DICT_SEED: {
+    code: string;
+    name: string;
+    remark?: string;
+    items: { label: string; value: string; remark?: string; sort?: number }[];
+  }[] = [
+    {
+      code: 'audit_action',
+      name: '审计操作类型',
+      remark: '审计日志 action 的可选项（audit_log.action）',
+      items: [
+        { label: '登录成功', value: 'login_success', sort: 1 },
+        { label: '登录失败', value: 'login_failed', sort: 2 },
+        { label: '登录锁定', value: 'login_locked', sort: 3 },
+        { label: '退出登录', value: 'logout', sort: 4 },
+        { label: '修改密码', value: 'password_changed', sort: 5 },
+        { label: '创建账户', value: 'account_created', sort: 10 },
+        { label: '更新账户', value: 'account_updated', sort: 11 },
+        { label: '启用账户', value: 'account_enabled', sort: 12 },
+        { label: '禁用账户', value: 'account_disabled', sort: 13 },
+        { label: '删除账户', value: 'account_deleted', sort: 14 },
+        { label: '恢复账户', value: 'account_restored', sort: 15 },
+        { label: '彻底删除账户', value: 'account_hard_deleted', sort: 16 },
+        { label: '创建角色', value: 'role_created', sort: 20 },
+        { label: '更新角色', value: 'role_updated', sort: 21 },
+        { label: '删除角色', value: 'role_deleted', sort: 22 },
+        { label: '创建菜单', value: 'menu_created', sort: 30 },
+        { label: '更新菜单', value: 'menu_updated', sort: 31 },
+        { label: '删除菜单', value: 'menu_deleted', sort: 32 },
+        { label: '权限变更', value: 'permission_changed', sort: 33 },
+        { label: '账户权限变更', value: 'account_permission_changed', sort: 34 },
+        { label: '上传文件', value: 'file_uploaded', sort: 40 },
+        { label: '删除文件', value: 'file_deleted', sort: 41 },
+        { label: '配置更新', value: 'config_updated', sort: 50 },
+        { label: '清空审计', value: 'audit_cleared', sort: 51 },
+      ],
+    },
+    {
+      code: 'audit_resource',
+      name: '审计资源类型',
+      remark: '审计日志 resourceType 的可选项',
+      items: [
+        { label: '管理账户', value: 'admin_account', sort: 1 },
+        { label: '管理角色', value: 'admin_role', sort: 2 },
+        { label: '管理菜单', value: 'admin_menu', sort: 3 },
+        { label: '系统配置', value: 'system_config', sort: 4 },
+        { label: '上传文件', value: 'upload_file', sort: 5 },
+        { label: '账户身份', value: 'account_identity', sort: 6 },
+        { label: '认证', value: 'auth', sort: 7 },
+        { label: '审计日志', value: 'audit_log', sort: 8 },
+      ],
+    },
+    {
+      code: 'menu_type',
+      name: '菜单类型',
+      remark: 'admin_menu.type 的可选项',
+      items: [
+        { label: '目录', value: 'directory', sort: 1 },
+        { label: '菜单', value: 'menu', sort: 2 },
+        { label: '按钮', value: 'button', sort: 3 },
+      ],
+    },
+    {
+      code: 'password_complexity',
+      name: '密码复杂度',
+      remark: '后台设置 settings.passwordComplexity 的可选项',
+      items: [
+        { label: '低（仅长度要求）', value: 'low', sort: 1 },
+        { label: '中（含字母和数字）', value: 'medium', sort: 2 },
+        { label: '高（含大小写/数字/特殊字符）', value: 'high', sort: 3 },
+      ],
+    },
+    {
+      code: 'storage_driver',
+      name: '存储驱动',
+      remark: '文件存储 storage.driver 的可选项',
+      items: [
+        { label: '本地存储', value: 'local', sort: 1 },
+        { label: '阿里云 OSS', value: 'oss', sort: 2 },
+        { label: '腾讯云 COS', value: 'cos', sort: 3 },
+        { label: 'AWS S3', value: 's3', sort: 4 },
+      ],
+    },
+    {
+      code: 'account_status',
+      name: '账户状态',
+      remark: '管理账户状态的可选项（正常/禁用/已删除）',
+      items: [
+        { label: '正常', value: 'active', sort: 1 },
+        { label: '禁用', value: 'disabled', sort: 2 },
+        { label: '已删除', value: 'deleted', sort: 3 },
+      ],
+    },
+    {
+      code: 'cache_type',
+      name: '缓存类型',
+      remark: 'Redis key 类型（缓存管理页展示）',
+      items: [
+        { label: '字符串', value: 'string', sort: 1 },
+        { label: '哈希', value: 'hash', sort: 2 },
+        { label: '列表', value: 'list', sort: 3 },
+        { label: '集合', value: 'set', sort: 4 },
+        { label: '有序集合', value: 'zset', sort: 5 },
+        { label: '流', value: 'stream', sort: 6 },
+      ],
+    },
+  ];
+  for (const dict of DICT_SEED) {
+    let type = await prisma.sysDictType.findUnique({ where: { code: dict.code } });
+    if (!type) {
+      type = await prisma.sysDictType.create({
+        data: { id: newId(), code: dict.code, name: dict.name, remark: dict.remark ?? null },
+      });
+      console.log(`✅ 已创建字典类型 ${dict.code}（${dict.name}）`);
+    }
+    // 幂等补项（缺失才创建，已存在不覆盖，保留用户修改）
+    for (const item of dict.items) {
+      const existing = await prisma.sysDictItem.findFirst({
+        where: { dictTypeId: type.id, value: item.value },
+      });
+      if (!existing) {
+        await prisma.sysDictItem.create({
+          data: {
+            id: newId(),
+            dictTypeId: type.id,
+            label: item.label,
+            value: item.value,
+            remark: item.remark ?? null,
+            sort: item.sort ?? 0,
+          },
+        });
+      }
     }
   }
 
