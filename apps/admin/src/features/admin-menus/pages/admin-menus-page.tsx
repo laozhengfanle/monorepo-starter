@@ -163,6 +163,22 @@ export function AdminMenusPage(): React.JSX.Element {
 
   const tree = useMemo(() => data?.menuTree ?? [], [data]);
 
+  // Table 专用：剥离空 children（后端每节点都带 children: []，
+  // rc-table 会把含 children 键的行渲染成可展开的「+」，叶子行不该有展开图标）
+  const tableData = useMemo(() => {
+    const strip = (nodes: MenuRowItem[]): MenuRowItem[] =>
+      nodes.map((n) => {
+        const kids = strip(n.children ?? []);
+        if (kids.length === 0) {
+          // 必须彻底删除 children 键（仅设 undefined 时 'children' in record 仍为真）
+          const { children: _drop, ...rest } = n;
+          return rest;
+        }
+        return { ...n, children: kids };
+      });
+    return strip(tree);
+  }, [tree]);
+
   // 数据异步加载后默认全展开（defaultExpandAllRows 只对首次渲染生效）
   const [expandedKeys, setExpandedKeys] = useState<string[] | undefined>(undefined);
   useEffect(() => {
@@ -414,7 +430,7 @@ export function AdminMenusPage(): React.JSX.Element {
       <Table<MenuRowItem>
         rowKey="id"
         columns={columns}
-        dataSource={tree}
+        dataSource={tableData}
         loading={loading}
         locale={{ emptyText: '暂无数据' }}
         pagination={false}

@@ -346,18 +346,27 @@ async function main(): Promise<void> {
     console.log('✅ 已创建软删除演示账号 deleted_demo（在「显示已删除」视图可见）');
   }
 
-  // ── 5. 清理旧菜单（老结构遗留）：用户中心 分支（user-center / user:*) ──
-  // 对齐老项目：管理端无"用户中心"，菜单树里不再保留该分支及其权限点
-  const LEGACY_MENU_CODES = ['user-center', 'user:list', 'user:create', 'user:update', 'user:delete'];
+  // ── 5. 清理旧菜单（老结构遗留）──
+  // 对齐老项目：管理端无"用户中心"、无独立"回收站"菜单，
+  // 软删除已集成到账户列表（显示已删除），权限点在隐藏的全局权限目录下。
+  // 注意：种子只做增量对齐，被移除的菜单不会自动消失，必须在此显式清理，
+  // 否则旧行会一直残留在侧栏（回收站曾因此反复出现）。
+  const LEGACY_MENU_CODES = [
+    // 用户中心 分支（user-center / user:*）
+    'user-center', 'user:list', 'user:create', 'user:update', 'user:delete',
+    // 独立回收站菜单（已废弃，软删除集成进账户列表）
+    'recycle:list',
+  ];
   const legacyMenus = await prisma.adminMenu.findMany({
     where: { code: { in: LEGACY_MENU_CODES } },
-    select: { id: true },
+    select: { id: true, code: true },
   });
   if (legacyMenus.length > 0) {
     const legacyIds = legacyMenus.map((m) => m.id);
+    await prisma.adminAccountMenu.deleteMany({ where: { menuId: { in: legacyIds } } });
     await prisma.adminRoleMenu.deleteMany({ where: { menuId: { in: legacyIds } } });
     await prisma.adminMenu.deleteMany({ where: { id: { in: legacyIds } } });
-    console.log(`🗑️ 已清理旧「用户中心」菜单/权限点 ${legacyMenus.length} 个`);
+    console.log(`🗑️ 已清理旧菜单/权限点 ${legacyMenus.length} 个（${legacyMenus.map((m) => m.code).join(', ')}）`);
   }
 
   await pool.end();
