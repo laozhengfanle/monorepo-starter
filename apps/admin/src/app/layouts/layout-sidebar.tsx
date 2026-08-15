@@ -2,7 +2,6 @@ import {
   AppstoreOutlined,
   DashboardOutlined,
   FileOutlined,
-  LeftOutlined,
   MenuOutlined,
   SafetyOutlined,
   SettingOutlined,
@@ -16,6 +15,7 @@ import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { AdminMenuNode } from '@starter/api-client';
 import { useAuth } from '../auth/auth-context.js';
+import { SiderTrigger } from './sider-trigger.js';
 
 const { Sider } = Layout;
 
@@ -147,19 +147,8 @@ export function LayoutSidebar({
         />
       </div>
 
-      {/* 折叠按钮：悬浮在侧栏右边缘 */}
-      <button
-        onClick={onToggle}
-        aria-label={collapsed ? '展开侧栏' : '收起侧栏'}
-        className="absolute top-1/2 -translate-y-1/2 translate-x-1/2 right-0 z-10 flex items-center justify-center w-7 h-7 rounded-full cursor-pointer border shadow-sm transition-colors duration-200 hover:border-blue-400 hover:text-blue-500"
-        style={{
-          background: token.colorBgContainer,
-          borderColor: token.colorBorderSecondary,
-          color: token.colorTextSecondary,
-        }}
-      >
-        <LeftOutlined rotate={collapsed ? 180 : 0} />
-      </button>
+      {/* 折叠按钮：自绘双箭头，悬浮在侧栏右边缘 */}
+      <SiderTrigger collapsed={collapsed} onToggle={onToggle} />
     </Sider>
   );
 }
