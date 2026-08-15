@@ -90,18 +90,16 @@ export function LayoutHeader(): React.JSX.Element {
             onClick: ({ key }) => setMode(key as 'system' | 'light' | 'dark'),
           }}
         >
-          <Button type="text" icon={themeIconMap[mode]} aria-label="主题切换" />
+          <Button icon={themeIconMap[mode]} aria-label="主题切换" />
         </Dropdown>
 
         <Button
-          type="text"
           icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
           onClick={() => void toggle()}
           aria-label={isFullscreen ? '退出全屏' : '进入全屏'}
         />
 
         <Button
-          type="text"
           icon={<SettingOutlined />}
           onClick={() => setSettingsOpen(true)}
           aria-label="偏好设置"
@@ -119,9 +117,9 @@ export function LayoutHeader(): React.JSX.Element {
             },
           }}
         >
-          <Button type="text" style={{ height: 40, padding: '0 8px' }}>
+          <Button style={{ padding: '0 8px' }}>
             <Space size={8}>
-              <Avatar size={28} icon={<UserOutlined />} />
+              <Avatar size={24} icon={<UserOutlined />} />
               <span style={{ lineHeight: 'normal' }}>{user?.nickname || user?.username}</span>
             </Space>
           </Button>
