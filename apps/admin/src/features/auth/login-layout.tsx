@@ -2,6 +2,7 @@ import { Button, Dropdown, Layout, Space, theme as antdTheme } from 'antd';
 import { ExpandOutlined, LaptopOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import { useTheme } from '../../app/providers/theme-provider.js';
+import { APP_VERSION } from '../../app/version.js';
 import heroPng from '../../assets/hero.png';
 
 const { Header, Footer, Content } = Layout;
@@ -72,7 +73,7 @@ export function LoginLayout({ children }: { children: ReactNode }): React.JSX.El
           padding: `${token.paddingSM}px ${token.paddingLG}px`,
         }}
       >
-        monorepo-starter ©{new Date().getFullYear()}
+        monorepo-starter v{APP_VERSION} ©{new Date().getFullYear()} 郑博 zhengbo
       </Footer>
     </Layout>
   );

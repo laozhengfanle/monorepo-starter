@@ -15,7 +15,7 @@ export function LayoutFooter(): React.JSX.Element {
         color: token.colorTextSecondary,
       }}
     >
-      monorepo-starter v{APP_VERSION} ©{new Date().getFullYear()} Created with Ant Design
+      monorepo-starter v{APP_VERSION} ©{new Date().getFullYear()} 郑博 zhengbo
     </Footer>
   );
 }
