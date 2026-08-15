@@ -104,3 +104,4 @@ pnpm exec nx g @nx/react:lib my-lib --directory=packages/shared/my-lib   # 生�
 - [x] 文件上传（Multer 本地磁盘 + UploadFile 元数据 + 静态访问 + 10MB 限制）
 - [x] WebSocket（socket.io 网关 + 握手 JWT 鉴权 + 示例事件）
 - [x] 监控（Prometheus /metrics + 登录计数业务指标）
+- [x] 后台权限闭环（角色管理 CRUD + 权限点分配，role:*；菜单与权限同一张表：me 下发菜单树 + 侧栏动态渲染 + 菜单管理页 menu:*）
