@@ -92,9 +92,10 @@ export function MainLayout({ children }: { children: ReactNode }): React.JSX.Ele
               >
                 {children}
               </Content>
-
-              {showFooter ? <LayoutFooter /> : null}
             </Layout>
+
+            {/* 页脚固定在视口底部，不随内容滚动 */}
+            {showFooter ? <LayoutFooter /> : null}
           </Layout>
         </Layout>
 
