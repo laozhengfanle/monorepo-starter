@@ -166,7 +166,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps): React.JS
       onClose={onClose}
       size={400}
       title="应用设置"
-      destroyOnClose
+      destroyOnHidden
     >
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         {/* ===== 界面显示 ===== */}

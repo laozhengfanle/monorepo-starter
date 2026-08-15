@@ -166,7 +166,7 @@ export function AccountPermissionModal({
       width={720}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, gap: 12 }}>
-        <Alert type="info" showIcon message="通过右侧「允许/禁止」按钮设置特例覆写，带圆点标记的菜单为角色基线权限。" />
+        <Alert type="info" showIcon title="通过右侧「允许/禁止」按钮设置特例覆写，带圆点标记的菜单为角色基线权限。" />
         <Space size="small" style={{ flexShrink: 0 }}>
           <Tag color="blue" style={{ marginInlineEnd: 0 }}>允许 {stats.grant}</Tag>
           <Tag color="red" style={{ marginInlineEnd: 0 }}>禁止 {stats.deny}</Tag>
