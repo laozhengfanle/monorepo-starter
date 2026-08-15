@@ -251,6 +251,62 @@ export class AdminAccountService {
     return this.getAccountMenus(accountId);
   }
 
+  /** 已删除账户列表（回收站；rawClient 绕过软删过滤） */
+  async listDeleted(query: { page: number; pageSize: number }): Promise<PaginatedData<AdminAccount>> {
+    const [rows, total] = await this.prisma.rawClient.$transaction([
+      this.prisma.rawClient.account.findMany({
+        where: { userType: 'admin', deletedAt: { not: null } },
+        include: this.accountInclude,
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        orderBy: { deletedAt: 'desc' },
+      }),
+      this.prisma.rawClient.account.count({
+        where: { userType: 'admin', deletedAt: { not: null } },
+      }),
+    ]);
+    return {
+      items: rows.map(toAdminAccount),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
+  }
+
+  /** 恢复已软删账户（deletedAt → null） */
+  async restore(id: string): Promise<AdminAccount> {
+    const account = await this.prisma.rawClient.account.findUnique({ where: { id } });
+    if (!account || account.userType !== 'admin' || !account.deletedAt) {
+      throw new BizException({ code: 'ACCOUNT_NOT_FOUND', message: '账户不存在或未删除' });
+    }
+    await this.prisma.rawClient.account.update({ where: { id }, data: { deletedAt: null } });
+    return this.findById(id);
+  }
+
+  /** 彻底删除（回收站）：清级联表后硬删（rawClient 无软删扩展） */
+  async hardRemove(id: string): Promise<AdminAccount> {
+    const account = await this.prisma.rawClient.account.findUnique({ where: { id } });
+    if (!account || account.userType !== 'admin') {
+      throw new BizException({ code: 'ACCOUNT_NOT_FOUND', message: '账户不存在' });
+    }
+    await this.prisma.rawClient.$transaction(async (tx) => {
+      await tx.adminAccountMenu.deleteMany({ where: { accountId: id } });
+      await tx.adminAccountRole.deleteMany({ where: { accountId: id } });
+      await tx.tokenRevocation.deleteMany({ where: { accountId: id } });
+      await tx.auditLog.deleteMany({ where: { accountId: id } });
+      await tx.uploadFile.deleteMany({ where: { accountId: id } });
+      await tx.accountIdentity.deleteMany({ where: { accountId: id } });
+      await tx.adminProfile.deleteMany({ where: { accountId: id } });
+      await tx.account.delete({ where: { id } });
+    });
+    return toAdminAccount({
+      ...account,
+      adminProfile: null,
+      adminRoles: [],
+      identities: [],
+    });
+  }
+
   private async findById(accountId: string): Promise<AdminAccount> {
     const row = await this.prisma.client.account.findUnique({
       where: { id: accountId },

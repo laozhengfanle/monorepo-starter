@@ -88,6 +88,7 @@ const ICON_OPTIONS = [
   { value: 'DashboardOutlined', label: 'DashboardOutlined（仪表盘）' },
   { value: 'FileOutlined', label: 'FileOutlined（文件）' },
   { value: 'AppstoreOutlined', label: 'AppstoreOutlined（应用）' },
+  { value: 'DeleteOutlined', label: 'DeleteOutlined（删除）' },
 ];
 
 /** GraphQL 错误 → 用户提示 */

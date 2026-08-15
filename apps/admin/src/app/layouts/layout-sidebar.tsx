@@ -1,6 +1,7 @@
 import {
   AppstoreOutlined,
   DashboardOutlined,
+  DeleteOutlined,
   FileOutlined,
   MenuOutlined,
   SafetyOutlined,
@@ -24,6 +25,7 @@ type MenuItem = NonNullable<MenuProps['items']>[number];
 /** 后端菜单图标名 → antd 图标节点（与菜单管理页 ICON_OPTIONS 保持一致） */
 const iconMap: Record<string, ReactNode> = {
   DashboardOutlined: <DashboardOutlined />,
+  DeleteOutlined: <DeleteOutlined />,
   TeamOutlined: <TeamOutlined />,
   UserOutlined: <UserOutlined />,
   SafetyOutlined: <SafetyOutlined />,

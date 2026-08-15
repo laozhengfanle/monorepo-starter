@@ -51,4 +51,27 @@ export class UsersService {
     }
     return removed;
   }
+
+  /** 已删除用户列表（回收站） */
+  async listDeleted(query: PageQuery): Promise<PaginatedData<UserVo>> {
+    return this.repository.listDeleted(query);
+  }
+
+  /** 恢复已软删用户 */
+  async restore(id: string): Promise<UserVo> {
+    const restored = await this.repository.restore(id);
+    if (!restored) {
+      throw new BizException({ code: USER_NOT_FOUND, message: '用户不存在或未删除' });
+    }
+    return restored;
+  }
+
+  /** 彻底删除（硬删） */
+  async hardRemove(id: string): Promise<UserVo> {
+    const removed = await this.repository.hardDelete(id);
+    if (!removed) {
+      throw new BizException({ code: USER_NOT_FOUND, message: '用户不存在' });
+    }
+    return removed;
+  }
 }

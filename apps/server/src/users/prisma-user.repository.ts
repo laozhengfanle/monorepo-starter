@@ -121,4 +121,40 @@ export class PrismaUserRepository implements UserRepository {
     const row = await this.prisma.client.user.delete({ where: { id } });
     return toUserVo(row);
   }
+
+  async listDeleted(query: PageQuery): Promise<PaginatedData<UserVo>> {
+    const [rows, total] = await this.prisma.rawClient.$transaction([
+      this.prisma.rawClient.user.findMany({
+        where: { deletedAt: { not: null } },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        orderBy: { deletedAt: 'desc' },
+      }),
+      this.prisma.rawClient.user.count({ where: { deletedAt: { not: null } } }),
+    ]);
+    return {
+      items: rows.map(toUserVo),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
+  }
+
+  async restore(id: string): Promise<UserVo | null> {
+    const existing = await this.prisma.rawClient.user.findUnique({ where: { id } });
+    if (!existing || !existing.deletedAt) {
+      return null;
+    }
+    await this.prisma.rawClient.user.update({ where: { id }, data: { deletedAt: null } });
+    return toUserVo(existing);
+  }
+
+  async hardDelete(id: string): Promise<UserVo | null> {
+    const existing = await this.prisma.rawClient.user.findUnique({ where: { id } });
+    if (!existing) {
+      return null;
+    }
+    await this.prisma.rawClient.user.delete({ where: { id } });
+    return toUserVo(existing);
+  }
 }

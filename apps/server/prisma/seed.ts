@@ -172,6 +172,14 @@ async function main(): Promise<void> {
           icon: 'SettingOutlined',
           sort: 1,
         },
+        {
+          code: 'recycle:list',
+          name: '回收站',
+          type: 'menu',
+          path: '/admin/recycle',
+          icon: 'DeleteOutlined',
+          sort: 2,
+        },
       ],
     },
   ];

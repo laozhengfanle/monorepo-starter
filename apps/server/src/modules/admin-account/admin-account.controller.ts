@@ -57,6 +57,27 @@ export class AdminAccountController {
     return this.adminAccountService.remove(id);
   }
 
+  @Get('deleted')
+  @RequirePermission('account:list')
+  @ApiOkResponse({ description: '已删除账户列表（回收站）' })
+  listDeleted(@Query() query: QueryAdminAccountsDto): Promise<PaginatedData<AdminAccount>> {
+    return this.adminAccountService.listDeleted(query);
+  }
+
+  @Post(':id/restore')
+  @RequirePermission('account:update')
+  @ApiOkResponse({ type: AdminAccountVo })
+  restore(@Param('id', new ParseUUIDPipe()) id: string): Promise<AdminAccount> {
+    return this.adminAccountService.restore(id);
+  }
+
+  @Delete(':id/hard')
+  @RequirePermission('account:delete')
+  @ApiOkResponse({ description: '彻底删除（清级联表后硬删）' })
+  hardRemove(@Param('id', new ParseUUIDPipe()) id: string): Promise<AdminAccount> {
+    return this.adminAccountService.hardRemove(id);
+  }
+
   @Get(':id/menus')
   @RequirePermission('account:update')
   @ApiOkResponse({ description: '账户特例授权（覆盖 + 角色基线菜单）' })
