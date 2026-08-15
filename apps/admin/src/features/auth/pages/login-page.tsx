@@ -53,7 +53,7 @@ export function LoginPage(): React.JSX.Element {
     <LoginLayout>
       <div
         className="login-content relative flex items-center justify-center"
-        style={{ minHeight: '100%', background: token.colorBgLayout }}
+        style={{ flex: 1, background: token.colorBgLayout }}
       >
         {/* 背景装饰：圆点底纹 + 多档尺寸几何元素 + 多种动画 */}
         <style>{`

@@ -57,7 +57,10 @@ export function LoginLayout({ children }: { children: ReactNode }): React.JSX.El
         </Space>
       </Header>
 
-      <Content className="flex-1 overflow-auto" style={{ background: token.colorBgLayout }}>
+      <Content
+        className="flex-1 overflow-auto"
+        style={{ background: token.colorBgLayout, display: 'flex' }}
+      >
         {children}
       </Content>
 

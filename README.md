@@ -83,6 +83,7 @@ pnpm exec nx g @nx/react:lib my-lib --directory=packages/shared/my-lib   # 生�
 - **目录结构**：见 [docs/命名规范.md](docs/命名规范.md)（apps 按业务端组织、feature-first、复用下沉规则）
 - **Lint 分层**：`pnpm lint` = oxlint 全仓代码规则（毫秒级，无需按项目缓存）；`pnpm lint:boundaries` = ESLint 只跑 `@nx/enforce-module-boundaries` 与 `@nx/dependency-checks`（oxlint 无法运行 Nx 自定义规则）。边界约束定义在 [eslint.config.mjs](eslint.config.mjs) 的 `depConstraints`（`scope:shared` 只依赖共享层；`scope:admin`/`scope:member`/`scope:server` 只能依赖本端 + 共享层）
 - **模块边界**：项目 tags（`scope:web` / `scope:shared` / `type:app` …）；前端只从 `@starter/api-client` 获取领域模型与校验 schema，不直接依赖 `@starter/contracts`
+- **版本管理（规定）**：版本单一来源为 `apps/admin/src/app/version.ts`（UI 顶栏右上角与页脚显示 `vX.Y.Z`）。**每次提交到仓库前**运行 `pnpm bump [major|minor|patch]`（默认 patch）：脚本自动升级 version.ts 与根 package.json、提交 `chore(release): vX.Y.Z` 并打注释标签 `vX.Y.Z`。功能改动先自行提交，bump 只提交版本文件
 
 ## Roadmap
 

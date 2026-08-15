@@ -1,4 +1,5 @@
 import { Layout, theme } from 'antd';
+import { APP_VERSION } from '../version.js';
 
 const { Footer } = Layout;
 
@@ -14,7 +15,7 @@ export function LayoutFooter(): React.JSX.Element {
         color: token.colorTextSecondary,
       }}
     >
-      monorepo-starter ©{new Date().getFullYear()} Created with Ant Design
+      monorepo-starter v{APP_VERSION} ©{new Date().getFullYear()} Created with Ant Design
     </Footer>
   );
 }
