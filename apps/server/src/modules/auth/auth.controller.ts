@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { ChangePasswordDto, UpdateSelfDto } from '@starter/server-core';
 import type { AdminMe, LoginInput, RefreshInput } from '@starter/contracts';
 import type { Request } from 'express';
 import { CurrentUser } from './current-user.decorator.js';
@@ -15,6 +16,8 @@ import type { IssuedTokens } from './token-issuance.service.js';
  * - POST /auth/refresh：refresh token → 新双 token
  * - POST /auth/logout：撤销账号所有 token（需 JWT）
  * - GET /auth/me：当前账户信息（需 JWT）
+ * - PATCH /auth/me：个人中心更新自己资料（需 JWT）
+ * - POST /auth/me/password：个人中心修改密码（需 JWT）
  */
 @ApiTags('auth')
 @Controller('auth')
@@ -47,5 +50,25 @@ export class AuthController {
   @ApiOkResponse({ description: '当前账户信息' })
   me(@CurrentUser() user: AuthUser): Promise<AdminMe> {
     return this.authService.me(user.accountId);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ description: '更新当前账户资料（nickname/email/phone/avatar）' })
+  @ApiBody({ type: UpdateSelfDto })
+  updateSelf(@CurrentUser() user: AuthUser, @Body() body: UpdateSelfDto): Promise<AdminMe> {
+    return this.authService.updateSelf(user.accountId, body);
+  }
+
+  @Post('me/password')
+  @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ description: '修改密码（校验当前密码，成功后撤销全部 token）' })
+  @ApiBody({ type: ChangePasswordDto })
+  async changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() body: ChangePasswordDto,
+  ): Promise<{ success: true }> {
+    await this.authService.changePassword(user.accountId, body);
+    return { success: true };
   }
 }

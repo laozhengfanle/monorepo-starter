@@ -61,6 +61,9 @@ export function LayoutHeader(): React.JSX.Element {
       disabled: true,
     },
     { type: 'divider' as const },
+    { key: 'profile', icon: <UserOutlined />, label: '个人中心' },
+    { key: 'settings', icon: <SettingOutlined />, label: '账号设置' },
+    { type: 'divider' as const },
     { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true },
   ];
 
@@ -115,7 +118,11 @@ export function LayoutHeader(): React.JSX.Element {
           menu={{
             items: userMenuItems,
             onClick: ({ key }) => {
-              if (key === 'logout') {
+              if (key === 'profile') {
+                navigate('/account/profile');
+              } else if (key === 'settings') {
+                navigate('/account/settings');
+              } else if (key === 'logout') {
                 void handleLogout();
               }
             },

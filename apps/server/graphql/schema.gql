@@ -16,9 +16,12 @@ type AdminAccount {
 type AdminMe {
   accountId: ID!
   avatar: String!
+  createdAt: String!
+  email: String!
   menus: [AdminMenuNode!]!
   nickname: String!
   permissions: [String!]!
+  phone: String!
   roleCodes: [String!]!
   username: String!
 }

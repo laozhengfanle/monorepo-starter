@@ -19,6 +19,8 @@ export {
   UpdateRoleSchema,
   CreateMenuSchema,
   UpdateMenuSchema,
+  UpdateSelfSchema,
+  ChangePasswordSchema,
 } from '@starter/contracts';
 export type {
   AdminMe,
@@ -37,4 +39,6 @@ export type {
   MenuType,
   CreateMenuInput,
   UpdateMenuInput,
+  UpdateSelfInput,
+  ChangePasswordInput,
 } from '@starter/contracts';

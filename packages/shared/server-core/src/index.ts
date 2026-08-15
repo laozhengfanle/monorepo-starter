@@ -9,3 +9,4 @@ export * from './dto/health.dto.js';
 export * from './dto/admin-account.dto.js';
 export * from './dto/admin-role.dto.js';
 export * from './dto/admin-menu.dto.js';
+export * from './dto/self.dto.js';

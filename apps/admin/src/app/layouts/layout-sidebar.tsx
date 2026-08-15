@@ -47,7 +47,8 @@ interface BuildResult {
 function buildMenuData(nodes: AdminMenuNode[]): BuildResult {
   const parentMap = new Map<string, string>();
 
-  const build = (list: AdminMenuNode[]): MenuItem[] => {
+  // depth=0 为顶级栏目（带 icon），子栏目一律不带 icon
+  const build = (list: AdminMenuNode[], depth: number): MenuItem[] => {
     const result: MenuItem[] = [];
     for (const node of list) {
       if (node.type === 'button') continue;
@@ -61,15 +62,15 @@ function buildMenuData(nodes: AdminMenuNode[]): BuildResult {
       }
       result.push({
         key,
-        icon: resolveIcon(node.icon),
+        ...(depth === 0 ? { icon: resolveIcon(node.icon) } : {}),
         label: node.name,
-        ...(children.length > 0 ? { children: build(children) } : {}),
+        ...(children.length > 0 ? { children: build(children, depth + 1) } : {}),
       });
     }
     return result;
   };
 
-  return { items: build(nodes), parentMap };
+  return { items: build(nodes, 0), parentMap };
 }
 
 interface LayoutSidebarProps {
@@ -122,7 +123,7 @@ export function LayoutSidebar({
       collapsed={collapsed}
       onCollapse={onToggle}
       trigger={null}
-      width={220}
+      width={260}
       breakpoint="lg"
       collapsedWidth={0}
       onBreakpoint={onBreakpoint}

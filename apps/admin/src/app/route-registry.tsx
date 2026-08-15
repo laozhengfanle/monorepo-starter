@@ -5,6 +5,8 @@ import { UsersPage } from '../features/users/pages/users-page';
 import { AdminAccountsPage } from '../features/admin-accounts/pages/admin-accounts-page';
 import { AdminRolesPage } from '../features/admin-roles/pages/admin-roles-page';
 import { AdminMenusPage } from '../features/admin-menus/pages/admin-menus-page';
+import { ProfilePage } from '../features/account/profile-page';
+import { AccountSettingsPage } from '../features/account/settings-page';
 import { usePermission } from './auth/use-permission.js';
 
 /**
@@ -25,6 +27,9 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/admin/accounts', element: <AdminAccountsPage />, permission: 'account:list' },
   { path: '/admin/roles', element: <AdminRolesPage />, permission: 'role:list' },
   { path: '/admin/menus', element: <AdminMenusPage />, permission: 'menu:list' },
+  // 个人中心：登录即可访问，不进菜单表（对标老项目静态路由）
+  { path: '/account/profile', element: <ProfilePage /> },
+  { path: '/account/settings', element: <AccountSettingsPage /> },
 ];
 
 /** 路由守卫：无权限时渲染 403（菜单已按权限隐藏，直达 URL 时兜底） */

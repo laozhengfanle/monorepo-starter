@@ -1,8 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { BizException } from '@starter/server-core';
-import { LoginSchema } from '@starter/contracts';
-import type { AdminMe, LoginInput } from '@starter/contracts';
+import { ChangePasswordSchema, LoginSchema, UpdateSelfSchema } from '@starter/contracts';
+import type {
+  AdminMe,
+  ChangePasswordInput,
+  LoginInput,
+  UpdateSelfInput,
+} from '@starter/contracts';
 import bcrypt from 'bcrypt';
 import type { Counter } from 'prom-client';
 import type { Request } from 'express';
@@ -158,9 +163,56 @@ export class AuthService {
       username: identity?.identifier ?? '',
       nickname: account.adminProfile?.nickname ?? '',
       avatar: account.adminProfile?.avatar ?? '',
+      email: account.adminProfile?.email ?? '',
+      phone: account.adminProfile?.phone ?? '',
+      createdAt: account.createdAt.toISOString(),
       roleCodes: account.adminRoles.map((r) => r.role.code).sort(),
       permissions: [...permissionSet].sort(),
       menus,
     };
+  }
+
+  /** 个人中心：更新自己的资料（仅本人，profile 字段） */
+  async updateSelf(accountId: string, input: UpdateSelfInput): Promise<AdminMe> {
+    const data = UpdateSelfSchema.parse(input);
+    const account = await this.prisma.client.account.findUnique({
+      where: { id: accountId },
+      include: { adminProfile: true },
+    });
+    if (!account || !account.adminProfile) {
+      throw new BizException({ code: 'ACCOUNT_NOT_FOUND', message: '账户不存在' });
+    }
+    await this.prisma.client.adminProfile.update({
+      where: { accountId },
+      data: {
+        ...(data.nickname !== undefined ? { nickname: data.nickname } : {}),
+        ...(data.email !== undefined ? { email: data.email } : {}),
+        ...(data.phone !== undefined ? { phone: data.phone } : {}),
+        ...(data.avatar !== undefined ? { avatar: data.avatar } : {}),
+      },
+    });
+    return this.me(accountId);
+  }
+
+  /** 个人中心：修改密码（校验当前密码 → 更新 hash → 撤销全部 token） */
+  async changePassword(accountId: string, input: ChangePasswordInput): Promise<void> {
+    const data = ChangePasswordSchema.parse(input);
+    const identity = await this.prisma.client.accountIdentity.findFirst({
+      where: { accountId, identityType: 'username' },
+    });
+    if (!identity) {
+      throw new BizException({ code: 'ACCOUNT_NOT_FOUND', message: '账户不存在' });
+    }
+    const valid = await bcrypt.compare(data.currentPassword, identity.credential ?? '');
+    if (!valid) {
+      throw new BizException({ code: 'CURRENT_PASSWORD_INVALID', message: '当前密码不正确' });
+    }
+    const newHash = await bcrypt.hash(data.newPassword, 10);
+    await this.prisma.client.accountIdentity.update({
+      where: { id: identity.id },
+      data: { credential: newHash },
+    });
+    // 密码已变：撤销该账户所有已签发 token（tokenVersion 自增），强制重新登录
+    await this.tokenIssuance.logout(accountId);
   }
 }

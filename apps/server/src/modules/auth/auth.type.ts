@@ -40,6 +40,15 @@ export class AdminMeType implements AdminMe {
   @Field(() => String)
   avatar!: string;
 
+  @Field(() => String)
+  email!: string;
+
+  @Field(() => String)
+  phone!: string;
+
+  @Field(() => String)
+  createdAt!: string;
+
   @Field(() => [String])
   roleCodes!: string[];
 
