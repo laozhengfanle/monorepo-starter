@@ -33,10 +33,26 @@ export type AdminMe = {
   __typename?: 'AdminMe';
   accountId: Scalars['ID']['output'];
   avatar: Scalars['String']['output'];
+  menus: Array<AdminMenuNode>;
   nickname: Scalars['String']['output'];
   permissions: Array<Scalars['String']['output']>;
   roleCodes: Array<Scalars['String']['output']>;
   username: Scalars['String']['output'];
+};
+
+export type AdminMenuNode = {
+  __typename?: 'AdminMenuNode';
+  children: Array<AdminMenuNode>;
+  code: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  enabled: Scalars['Boolean']['output'];
+  icon?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  parentId?: Maybe<Scalars['ID']['output']>;
+  path?: Maybe<Scalars['String']['output']>;
+  sort: Scalars['Int']['output'];
+  type: Scalars['String']['output'];
 };
 
 export type AdminRole = {
@@ -65,6 +81,16 @@ export type CreateAdminAccountInput = {
   username: Scalars['String']['input'];
 };
 
+export type CreateMenuInput = {
+  code: Scalars['String']['input'];
+  icon?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
+  parentId?: InputMaybe<Scalars['ID']['input']>;
+  path?: InputMaybe<Scalars['String']['input']>;
+  sort?: InputMaybe<Scalars['Int']['input']>;
+  type: Scalars['String']['input'];
+};
+
 export type CreateRoleInput = {
   code: Scalars['String']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
@@ -87,13 +113,16 @@ export type LoginInput = {
 export type Mutation = {
   __typename?: 'Mutation';
   createAdminAccount: AdminAccount;
+  createMenu: AdminMenuNode;
   createRole: AdminRole;
   createUser: User;
   deleteAdminAccount: AdminAccount;
+  deleteMenu: AdminMenuNode;
   deleteRole: AdminRole;
   deleteUser: User;
   login: AuthResult;
   updateAdminAccount: AdminAccount;
+  updateMenu: AdminMenuNode;
   updateRole: AdminRole;
   updateUser: User;
 };
@@ -101,6 +130,11 @@ export type Mutation = {
 
 export type MutationCreateAdminAccountArgs = {
   input: CreateAdminAccountInput;
+};
+
+
+export type MutationCreateMenuArgs = {
+  input: CreateMenuInput;
 };
 
 
@@ -115,6 +149,11 @@ export type MutationCreateUserArgs = {
 
 
 export type MutationDeleteAdminAccountArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeleteMenuArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -137,6 +176,12 @@ export type MutationLoginArgs = {
 export type MutationUpdateAdminAccountArgs = {
   id: Scalars['ID']['input'];
   input: UpdateAdminAccountInput;
+};
+
+
+export type MutationUpdateMenuArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateMenuInput;
 };
 
 
@@ -180,6 +225,7 @@ export type Query = {
   adminAccounts: PaginatedAdminAccounts;
   adminRoles: Array<AdminRole>;
   me: AdminMe;
+  menuTree: Array<AdminMenuNode>;
   permissionCodes: Array<PermissionCode>;
   user?: Maybe<User>;
   users: PaginatedUsers;
@@ -207,6 +253,16 @@ export type UpdateAdminAccountInput = {
   enabled?: InputMaybe<Scalars['Boolean']['input']>;
   nickname?: InputMaybe<Scalars['String']['input']>;
   roleCodes?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type UpdateMenuInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  icon?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  parentId?: InputMaybe<Scalars['ID']['input']>;
+  path?: InputMaybe<Scalars['String']['input']>;
+  sort?: InputMaybe<Scalars['Int']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateRoleInput = {
@@ -279,6 +335,35 @@ export type DeleteAdminAccountMutationVariables = Exact<{
 
 export type DeleteAdminAccountMutation = { __typename?: 'Mutation', deleteAdminAccount: { __typename?: 'AdminAccount', accountId: string } };
 
+export type MenuNodeFieldsFragment = { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string };
+
+export type MenuTreeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MenuTreeQuery = { __typename?: 'Query', menuTree: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string }> }> }> }> }> };
+
+export type CreateMenuMutationVariables = Exact<{
+  input: CreateMenuInput;
+}>;
+
+
+export type CreateMenuMutation = { __typename?: 'Mutation', createMenu: { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string } };
+
+export type UpdateMenuMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateMenuInput;
+}>;
+
+
+export type UpdateMenuMutation = { __typename?: 'Mutation', updateMenu: { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, createdAt: string } };
+
+export type DeleteMenuMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteMenuMutation = { __typename?: 'Mutation', deleteMenu: { __typename?: 'AdminMenuNode', id: string } };
+
 export type AdminRoleListQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -341,7 +426,20 @@ export type DeleteUserMutationVariables = Exact<{
 
 export type DeleteUserMutation = { __typename?: 'Mutation', deleteUser: { __typename?: 'User', id: string } };
 
-
+export const MenuNodeFieldsFragmentDoc = gql`
+    fragment MenuNodeFields on AdminMenuNode {
+  id
+  parentId
+  name
+  code
+  type
+  path
+  icon
+  sort
+  enabled
+  createdAt
+}
+    `;
 export const AdminAccountsDocument = gql`
     query AdminAccounts($page: Int, $pageSize: Int) {
   adminAccounts(page: $page, pageSize: $pageSize) {
@@ -552,6 +650,160 @@ export function useDeleteAdminAccountMutation(baseOptions?: Apollo.MutationHookO
 export type DeleteAdminAccountMutationHookResult = ReturnType<typeof useDeleteAdminAccountMutation>;
 export type DeleteAdminAccountMutationResult = Apollo.MutationResult<DeleteAdminAccountMutation>;
 export type DeleteAdminAccountMutationOptions = Apollo.BaseMutationOptions<DeleteAdminAccountMutation, DeleteAdminAccountMutationVariables>;
+export const MenuTreeDocument = gql`
+    query MenuTree {
+  menuTree {
+    ...MenuNodeFields
+    children {
+      ...MenuNodeFields
+      children {
+        ...MenuNodeFields
+        children {
+          ...MenuNodeFields
+          children {
+            ...MenuNodeFields
+          }
+        }
+      }
+    }
+  }
+}
+    ${MenuNodeFieldsFragmentDoc}`;
+
+/**
+ * __useMenuTreeQuery__
+ *
+ * To run a query within a React component, call `useMenuTreeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMenuTreeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMenuTreeQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMenuTreeQuery(baseOptions?: Apollo.QueryHookOptions<MenuTreeQuery, MenuTreeQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MenuTreeQuery, MenuTreeQueryVariables>(MenuTreeDocument, options);
+      }
+export function useMenuTreeLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MenuTreeQuery, MenuTreeQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MenuTreeQuery, MenuTreeQueryVariables>(MenuTreeDocument, options);
+        }
+// @ts-ignore
+export function useMenuTreeSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<MenuTreeQuery, MenuTreeQueryVariables>): Apollo.UseSuspenseQueryResult<MenuTreeQuery, MenuTreeQueryVariables>;
+export function useMenuTreeSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MenuTreeQuery, MenuTreeQueryVariables>): Apollo.UseSuspenseQueryResult<MenuTreeQuery | undefined, MenuTreeQueryVariables>;
+export function useMenuTreeSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MenuTreeQuery, MenuTreeQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<MenuTreeQuery, MenuTreeQueryVariables>(MenuTreeDocument, options);
+        }
+export type MenuTreeQueryHookResult = ReturnType<typeof useMenuTreeQuery>;
+export type MenuTreeLazyQueryHookResult = ReturnType<typeof useMenuTreeLazyQuery>;
+export type MenuTreeSuspenseQueryHookResult = ReturnType<typeof useMenuTreeSuspenseQuery>;
+export type MenuTreeQueryResult = Apollo.QueryResult<MenuTreeQuery, MenuTreeQueryVariables>;
+export const CreateMenuDocument = gql`
+    mutation CreateMenu($input: CreateMenuInput!) {
+  createMenu(input: $input) {
+    ...MenuNodeFields
+  }
+}
+    ${MenuNodeFieldsFragmentDoc}`;
+export type CreateMenuMutationFn = Apollo.MutationFunction<CreateMenuMutation, CreateMenuMutationVariables>;
+
+/**
+ * __useCreateMenuMutation__
+ *
+ * To run a mutation, you first call `useCreateMenuMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateMenuMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createMenuMutation, { data, loading, error }] = useCreateMenuMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateMenuMutation(baseOptions?: Apollo.MutationHookOptions<CreateMenuMutation, CreateMenuMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateMenuMutation, CreateMenuMutationVariables>(CreateMenuDocument, options);
+      }
+export type CreateMenuMutationHookResult = ReturnType<typeof useCreateMenuMutation>;
+export type CreateMenuMutationResult = Apollo.MutationResult<CreateMenuMutation>;
+export type CreateMenuMutationOptions = Apollo.BaseMutationOptions<CreateMenuMutation, CreateMenuMutationVariables>;
+export const UpdateMenuDocument = gql`
+    mutation UpdateMenu($id: ID!, $input: UpdateMenuInput!) {
+  updateMenu(id: $id, input: $input) {
+    ...MenuNodeFields
+  }
+}
+    ${MenuNodeFieldsFragmentDoc}`;
+export type UpdateMenuMutationFn = Apollo.MutationFunction<UpdateMenuMutation, UpdateMenuMutationVariables>;
+
+/**
+ * __useUpdateMenuMutation__
+ *
+ * To run a mutation, you first call `useUpdateMenuMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateMenuMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateMenuMutation, { data, loading, error }] = useUpdateMenuMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateMenuMutation(baseOptions?: Apollo.MutationHookOptions<UpdateMenuMutation, UpdateMenuMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateMenuMutation, UpdateMenuMutationVariables>(UpdateMenuDocument, options);
+      }
+export type UpdateMenuMutationHookResult = ReturnType<typeof useUpdateMenuMutation>;
+export type UpdateMenuMutationResult = Apollo.MutationResult<UpdateMenuMutation>;
+export type UpdateMenuMutationOptions = Apollo.BaseMutationOptions<UpdateMenuMutation, UpdateMenuMutationVariables>;
+export const DeleteMenuDocument = gql`
+    mutation DeleteMenu($id: ID!) {
+  deleteMenu(id: $id) {
+    id
+  }
+}
+    `;
+export type DeleteMenuMutationFn = Apollo.MutationFunction<DeleteMenuMutation, DeleteMenuMutationVariables>;
+
+/**
+ * __useDeleteMenuMutation__
+ *
+ * To run a mutation, you first call `useDeleteMenuMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteMenuMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteMenuMutation, { data, loading, error }] = useDeleteMenuMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteMenuMutation(baseOptions?: Apollo.MutationHookOptions<DeleteMenuMutation, DeleteMenuMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteMenuMutation, DeleteMenuMutationVariables>(DeleteMenuDocument, options);
+      }
+export type DeleteMenuMutationHookResult = ReturnType<typeof useDeleteMenuMutation>;
+export type DeleteMenuMutationResult = Apollo.MutationResult<DeleteMenuMutation>;
+export type DeleteMenuMutationOptions = Apollo.BaseMutationOptions<DeleteMenuMutation, DeleteMenuMutationVariables>;
 export const AdminRoleListDocument = gql`
     query AdminRoleList {
   adminRoles {

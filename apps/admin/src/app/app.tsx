@@ -1,17 +1,26 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApolloProvider } from '@apollo/client';
 import { Button, ConfigProvider, Menu, Space, Typography } from 'antd';
-import { DashboardOutlined, LogoutOutlined, SafetyOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import type { ItemType } from 'antd/es/menu/interface';
+import {
+  AppstoreOutlined,
+  DashboardOutlined,
+  FileOutlined,
+  LogoutOutlined,
+  MenuOutlined,
+  SafetyOutlined,
+  SettingOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import type { ReactNode } from 'react';
 import { useLocation, useNavigate, Route, Routes } from 'react-router-dom';
 import { AdminLayout, themeConfig } from '@starter/ui';
-import { DashboardPage } from '../features/dashboard/pages/dashboard-page';
-import { UsersPage } from '../features/users/pages/users-page';
-import { AdminAccountsPage } from '../features/admin-accounts/pages/admin-accounts-page';
-import { AdminRolesPage } from '../features/admin-roles/pages/admin-roles-page';
+import type { AdminMenuNode } from '@starter/api-client';
 import { LoginPage } from '../features/auth/pages/login-page';
 import { AuthProvider, useAuth } from './auth/auth-context.js';
-import { usePermission } from './auth/use-permission.js';
 import { ProtectedRoute } from './auth/protected-route.js';
+import { APP_ROUTES, RouteGuard } from './route-registry.js';
 import { apolloClient } from './apollo-client';
 import './app.css';
 
@@ -21,13 +30,43 @@ const queryClient = new QueryClient({
   },
 });
 
-/** 侧栏导航：按权限动态显隐，与路由一一对应 */
+/** 后端菜单图标名 → antd 图标组件（与菜单管理页 ICON_OPTIONS 保持一致） */
+const ICON_MAP: Record<string, ReactNode> = {
+  DashboardOutlined: <DashboardOutlined />,
+  TeamOutlined: <TeamOutlined />,
+  UserOutlined: <UserOutlined />,
+  SafetyOutlined: <SafetyOutlined />,
+  MenuOutlined: <MenuOutlined />,
+  SettingOutlined: <SettingOutlined />,
+  FileOutlined: <FileOutlined />,
+  AppstoreOutlined: <AppstoreOutlined />,
+};
+
+/** 菜单树节点 → antd Menu item（按钮不进侧栏；目录渲染为子菜单） */
+function toMenuItem(node: AdminMenuNode): ItemType {
+  const children = node.children.filter((c) => c.type !== 'button');
+  const icon = node.icon ? ICON_MAP[node.icon] : undefined;
+  if (children.length > 0) {
+    return {
+      key: node.path ?? node.code,
+      icon,
+      label: node.name,
+      children: children.map(toMenuItem),
+    };
+  }
+  return { key: node.path ?? node.code, icon, label: node.name };
+}
+
+/** 侧栏导航：菜单来自后端 me.menus（已按权限裁剪），不再硬编码 */
 function AppMenu(): React.JSX.Element {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const canViewUsers = usePermission('user:list');
-  const canViewAccounts = usePermission('account:list');
-  const canViewRoles = usePermission('role:list');
+
+  const items: ItemType[] = [
+    { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
+    ...(user?.menus ?? []).map(toMenuItem),
+  ];
 
   return (
     <Menu
@@ -35,18 +74,7 @@ function AppMenu(): React.JSX.Element {
       mode="inline"
       selectedKeys={[location.pathname]}
       onClick={({ key }) => navigate(key)}
-      items={[
-        { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
-        ...(canViewUsers
-          ? [{ key: '/users', icon: <TeamOutlined />, label: '用户管理' }]
-          : []),
-        ...(canViewAccounts
-          ? [{ key: '/admin/accounts', icon: <UserOutlined />, label: '账户管理' }]
-          : []),
-        ...(canViewRoles
-          ? [{ key: '/admin/roles', icon: <SafetyOutlined />, label: '角色权限' }]
-          : []),
-      ]}
+      items={items}
     />
   );
 }
@@ -85,10 +113,21 @@ export function App() {
                   <ProtectedRoute>
                     <AdminLayout title="monorepo-starter" menu={<AppMenu />} headerRight={<HeaderActions />}>
                       <Routes>
-                        <Route path="/" element={<DashboardPage />} />
-                        <Route path="/users" element={<UsersPage />} />
-                        <Route path="/admin/accounts" element={<AdminAccountsPage />} />
-                        <Route path="/admin/roles" element={<AdminRolesPage />} />
+                        {APP_ROUTES.map((route) => (
+                          <Route
+                            key={route.path}
+                            path={route.path}
+                            element={
+                              <RouteGuard permission={route.permission}>{route.element}</RouteGuard>
+                            }
+                          />
+                        ))}
+                        <Route
+                          path="*"
+                          element={
+                            <Typography.Text type="secondary">页面不存在或无权访问</Typography.Text>
+                          }
+                        />
                       </Routes>
                     </AdminLayout>
                   </ProtectedRoute>

@@ -97,12 +97,12 @@ export class AdminRoleResolver {
     return this.adminRoleService.list();
   }
 
-  /** 全部权限点（分配角色权限用） */
+  /** 全部权限点（分配角色权限用；目录非权限点，仅 menu/button） */
   @Query(() => [PermissionCodeType])
   @RequirePermission('role:list')
   async permissionCodes(): Promise<PermissionCodeType[]> {
     return this.prisma.client.adminMenu.findMany({
-      where: { enabled: true },
+      where: { enabled: true, type: { in: ['menu', 'button'] } },
       orderBy: { sort: 'asc' },
     });
   }

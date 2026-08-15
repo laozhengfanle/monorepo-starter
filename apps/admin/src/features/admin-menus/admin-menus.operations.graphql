@@ -1,0 +1,48 @@
+fragment MenuNodeFields on AdminMenuNode {
+  id
+  parentId
+  name
+  code
+  type
+  path
+  icon
+  sort
+  enabled
+  createdAt
+}
+
+query MenuTree {
+  menuTree {
+    ...MenuNodeFields
+    children {
+      ...MenuNodeFields
+      children {
+        ...MenuNodeFields
+        children {
+          ...MenuNodeFields
+          children {
+            ...MenuNodeFields
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation CreateMenu($input: CreateMenuInput!) {
+  createMenu(input: $input) {
+    ...MenuNodeFields
+  }
+}
+
+mutation UpdateMenu($id: ID!, $input: UpdateMenuInput!) {
+  updateMenu(id: $id, input: $input) {
+    ...MenuNodeFields
+  }
+}
+
+mutation DeleteMenu($id: ID!) {
+  deleteMenu(id: $id) {
+    id
+  }
+}

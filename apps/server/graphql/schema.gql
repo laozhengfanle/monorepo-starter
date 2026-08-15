@@ -16,10 +16,25 @@ type AdminAccount {
 type AdminMe {
   accountId: ID!
   avatar: String!
+  menus: [AdminMenuNode!]!
   nickname: String!
   permissions: [String!]!
   roleCodes: [String!]!
   username: String!
+}
+
+type AdminMenuNode {
+  children: [AdminMenuNode!]!
+  code: String!
+  createdAt: String!
+  enabled: Boolean!
+  icon: String
+  id: ID!
+  name: String!
+  parentId: ID
+  path: String
+  sort: Int!
+  type: String!
 }
 
 type AdminRole {
@@ -46,6 +61,16 @@ input CreateAdminAccountInput {
   username: String!
 }
 
+input CreateMenuInput {
+  code: String!
+  icon: String
+  name: String!
+  parentId: ID
+  path: String
+  sort: Int
+  type: String!
+}
+
 input CreateRoleInput {
   code: String!
   description: String
@@ -67,13 +92,16 @@ input LoginInput {
 
 type Mutation {
   createAdminAccount(input: CreateAdminAccountInput!): AdminAccount!
+  createMenu(input: CreateMenuInput!): AdminMenuNode!
   createRole(input: CreateRoleInput!): AdminRole!
   createUser(input: CreateUserInput!): User!
   deleteAdminAccount(id: ID!): AdminAccount!
+  deleteMenu(id: ID!): AdminMenuNode!
   deleteRole(id: ID!): AdminRole!
   deleteUser(id: ID!): User!
   login(input: LoginInput!): AuthResult!
   updateAdminAccount(id: ID!, input: UpdateAdminAccountInput!): AdminAccount!
+  updateMenu(id: ID!, input: UpdateMenuInput!): AdminMenuNode!
   updateRole(id: ID!, input: UpdateRoleInput!): AdminRole!
   updateUser(id: ID!, input: UpdateUserInput!): User!
 }
@@ -103,6 +131,7 @@ type Query {
   adminAccounts(page: Int = 1, pageSize: Int = 20): PaginatedAdminAccounts!
   adminRoles: [AdminRole!]!
   me: AdminMe!
+  menuTree: [AdminMenuNode!]!
   permissionCodes: [PermissionCode!]!
   user(id: ID!): User
   users(page: Int = 1, pageSize: Int = 20): PaginatedUsers!
@@ -113,6 +142,16 @@ input UpdateAdminAccountInput {
   enabled: Boolean
   nickname: String
   roleCodes: [String!]
+}
+
+input UpdateMenuInput {
+  enabled: Boolean
+  icon: String
+  name: String
+  parentId: ID
+  path: String
+  sort: Int
+  type: String
 }
 
 input UpdateRoleInput {

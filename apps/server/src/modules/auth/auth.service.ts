@@ -10,6 +10,7 @@ import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AuditService, AUDIT_ACTIONS } from './audit.service.js';
 import { LoginLockService } from './login-lock.service.js';
 import { TokenIssuanceService, type IssuedTokens } from './token-issuance.service.js';
+import { buildMenuTree } from '../admin-menu/menu-tree.util.js';
 
 const INVALID_CREDENTIALS = 'INVALID_CREDENTIALS';
 const ACCOUNT_DISABLED = 'ACCOUNT_DISABLED';
@@ -117,7 +118,7 @@ export class AuthService {
     await this.audit.write({ accountId, action: AUDIT_ACTIONS.LOGOUT, ip, userAgent });
   }
 
-  /** 当前登录账户信息（profile + 角色） */
+  /** 当前登录账户信息（profile + 角色 + 权限点 + 可访问菜单树） */
   async me(accountId: string): Promise<AdminMe> {
     const account = await this.prisma.client.account.findUnique({
       where: { id: accountId },
@@ -137,20 +138,29 @@ export class AuthService {
       select: { identifier: true },
     });
 
+    const isSuperAdmin = account.adminRoles.some((r) => r.role.code === 'super_admin');
+    // 聚合权限点：角色 → roleMenus → menu.code（去重排序）
+    const permissionSet = new Set(
+      account.adminRoles.flatMap((r) =>
+        r.role.roleMenus.filter((rm) => rm.menu.enabled).map((rm) => rm.menu.code),
+      ),
+    );
+    // 菜单树：与权限同一张表；超管全量下发，其余按权限裁剪（目录经祖先链自动保留）。
+    // 侧栏只需 directory + menu（按钮权限点在 permissions 数组里，不进树）
+    const menuRows = await this.prisma.client.adminMenu.findMany({
+      where: { enabled: true, type: { in: ['directory', 'menu'] } },
+      orderBy: { sort: 'asc' },
+    });
+    const menus = buildMenuTree(menuRows, isSuperAdmin ? null : permissionSet);
+
     return {
       accountId: account.id,
       username: identity?.identifier ?? '',
       nickname: account.adminProfile?.nickname ?? '',
       avatar: account.adminProfile?.avatar ?? '',
       roleCodes: account.adminRoles.map((r) => r.role.code).sort(),
-      // 聚合权限点：角色 → roleMenus → menu.code（去重排序）
-      permissions: [
-        ...new Set(
-          account.adminRoles.flatMap((r) =>
-            r.role.roleMenus.filter((rm) => rm.menu.enabled).map((rm) => rm.menu.code),
-          ),
-        ),
-      ].sort(),
+      permissions: [...permissionSet].sort(),
+      menus,
     };
   }
 }

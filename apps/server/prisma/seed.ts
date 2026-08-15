@@ -94,40 +94,142 @@ async function main(): Promise<void> {
     console.log('root 账户已存在，跳过');
   }
 
-  // ── 3. 权限点种子（user/account CRUD 权限）+ 绑定到 super_admin ──
-  const permissionSeeds = [
-    { code: 'user:list', name: '用户列表', type: 'menu' },
-    { code: 'user:create', name: '新建用户', type: 'button' },
-    { code: 'user:update', name: '编辑用户', type: 'button' },
-    { code: 'user:delete', name: '删除用户', type: 'button' },
-    { code: 'account:list', name: '账户列表', type: 'menu' },
-    { code: 'account:create', name: '新建账户', type: 'button' },
-    { code: 'account:update', name: '编辑账户', type: 'button' },
-    { code: 'account:delete', name: '删除账户', type: 'button' },
-    { code: 'role:list', name: '角色列表', type: 'menu' },
-    { code: 'role:create', name: '新建角色', type: 'button' },
-    { code: 'role:update', name: '编辑角色', type: 'button' },
-    { code: 'role:delete', name: '删除角色', type: 'button' },
+  // ── 3. 菜单树种子（目录 → 菜单 → 按钮）+ 绑定到 super_admin ──
+  // 权限点 = admin_menu 里的 menu/button 行（code 即 permissionCode）；
+  // 目录（directory）无业务权限，仅用于前端菜单分组，占位编码 user-center 之类。
+  type MenuSeed = {
+    code: string;
+    name: string;
+    type: 'directory' | 'menu' | 'button';
+    path?: string;
+    icon?: string;
+    sort: number;
+    children?: MenuSeed[];
+  };
+
+  const MENU_TREE: MenuSeed[] = [
+    {
+      code: 'user-center',
+      name: '用户中心',
+      type: 'directory',
+      icon: 'TeamOutlined',
+      sort: 10,
+      children: [
+        {
+          code: 'user:list',
+          name: '用户管理',
+          type: 'menu',
+          path: '/users',
+          icon: 'TeamOutlined',
+          sort: 1,
+          children: [
+            { code: 'user:create', name: '新建用户', type: 'button', sort: 1 },
+            { code: 'user:update', name: '编辑用户', type: 'button', sort: 2 },
+            { code: 'user:delete', name: '删除用户', type: 'button', sort: 3 },
+          ],
+        },
+      ],
+    },
+    {
+      code: 'permission-center',
+      name: '权限中心',
+      type: 'directory',
+      icon: 'SafetyOutlined',
+      sort: 20,
+      children: [
+        {
+          code: 'account:list',
+          name: '账户管理',
+          type: 'menu',
+          path: '/admin/accounts',
+          icon: 'UserOutlined',
+          sort: 1,
+          children: [
+            { code: 'account:create', name: '新建账户', type: 'button', sort: 1 },
+            { code: 'account:update', name: '编辑账户', type: 'button', sort: 2 },
+            { code: 'account:delete', name: '删除账户', type: 'button', sort: 3 },
+          ],
+        },
+        {
+          code: 'role:list',
+          name: '角色权限',
+          type: 'menu',
+          path: '/admin/roles',
+          icon: 'SafetyOutlined',
+          sort: 2,
+          children: [
+            { code: 'role:create', name: '新建角色', type: 'button', sort: 1 },
+            { code: 'role:update', name: '编辑角色', type: 'button', sort: 2 },
+            { code: 'role:delete', name: '删除角色', type: 'button', sort: 3 },
+          ],
+        },
+        {
+          code: 'menu:list',
+          name: '菜单管理',
+          type: 'menu',
+          path: '/admin/menus',
+          icon: 'MenuOutlined',
+          sort: 3,
+          children: [
+            { code: 'menu:create', name: '新建菜单', type: 'button', sort: 1 },
+            { code: 'menu:update', name: '编辑菜单', type: 'button', sort: 2 },
+            { code: 'menu:delete', name: '删除菜单', type: 'button', sort: 3 },
+          ],
+        },
+      ],
+    },
   ];
-  const superAdminRole = await prisma.adminRole.findUnique({ where: { code: 'super_admin' } });
-  if (superAdminRole) {
-    for (const perm of permissionSeeds) {
-      const menu = await prisma.adminMenu.upsert({
-        where: { code: perm.code },
-        update: {},
-        create: { id: newId(), code: perm.code, name: perm.name, type: perm.type },
+
+  /** 递归 upsert 菜单树并绑定角色（幂等：按 code 对齐 name/type/path/icon/sort/parentId） */
+  async function upsertMenuTree(
+    db: PrismaClient,
+    roleId: string,
+    nodes: MenuSeed[],
+    parentId: string | null,
+  ): Promise<number> {
+    let count = 0;
+    for (const node of nodes) {
+      const menu = await db.adminMenu.upsert({
+        where: { code: node.code },
+        update: {
+          name: node.name,
+          type: node.type,
+          path: node.path ?? null,
+          icon: node.icon ?? null,
+          sort: node.sort,
+          parentId,
+        },
+        create: {
+          id: newId(),
+          code: node.code,
+          name: node.name,
+          type: node.type,
+          path: node.path ?? null,
+          icon: node.icon ?? null,
+          sort: node.sort,
+          parentId,
+        },
       });
-      // 角色-权限绑定（幂等）
-      const bound = await prisma.adminRoleMenu.findUnique({
-        where: { roleId_menuId: { roleId: superAdminRole.id, menuId: menu.id } },
+      const bound = await db.adminRoleMenu.findUnique({
+        where: { roleId_menuId: { roleId, menuId: menu.id } },
       });
       if (!bound) {
-        await prisma.adminRoleMenu.create({
-          data: { id: newId(), roleId: superAdminRole.id, menuId: menu.id },
+        await db.adminRoleMenu.create({
+          data: { id: newId(), roleId, menuId: menu.id },
         });
       }
+      count += 1;
+      if (node.children?.length) {
+        count += await upsertMenuTree(db, roleId, node.children, menu.id);
+      }
     }
-    console.log(`✅ 已绑定 super_admin 的 ${permissionSeeds.length} 个权限点`);
+    return count;
+  }
+
+  const superAdminRole = await prisma.adminRole.findUnique({ where: { code: 'super_admin' } });
+  if (superAdminRole) {
+    const boundCount = await upsertMenuTree(prisma, superAdminRole.id, MENU_TREE, null);
+    console.log(`✅ 已对齐菜单树并绑定 super_admin 的 ${boundCount} 个菜单/权限点`);
   }
 
   await pool.end();

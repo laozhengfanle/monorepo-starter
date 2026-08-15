@@ -17,6 +17,8 @@ export {
   UpdateAdminAccountSchema,
   CreateRoleSchema,
   UpdateRoleSchema,
+  CreateMenuSchema,
+  UpdateMenuSchema,
 } from '@starter/contracts';
 export type {
   AdminMe,
@@ -30,4 +32,9 @@ export type {
   PermissionCode,
   CreateRoleInput,
   UpdateRoleInput,
+  AdminMenu,
+  AdminMenuNode,
+  MenuType,
+  CreateMenuInput,
+  UpdateMenuInput,
 } from '@starter/contracts';

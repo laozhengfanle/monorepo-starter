@@ -1,5 +1,6 @@
 import { Field, ID, InputType, Int, ObjectType } from '@nestjs/graphql';
 import type { AdminMe, AuthResult, LoginInput } from '@starter/contracts';
+import { AdminMenuNodeType } from '../admin-menu/admin-menu.type.js';
 
 /** 登录入参（GraphQL 薄壳，implements 对齐 zod） */
 @InputType('LoginInput')
@@ -44,4 +45,7 @@ export class AdminMeType implements AdminMe {
 
   @Field(() => [String])
   permissions!: string[];
+
+  @Field(() => [AdminMenuNodeType])
+  menus!: AdminMenuNodeType[];
 }

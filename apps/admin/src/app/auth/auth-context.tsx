@@ -10,6 +10,8 @@ interface AuthContextValue {
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** 重新拉取当前用户（菜单/权限变更后刷新侧栏） */
+  refreshMe: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -52,8 +54,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshMe = useCallback(async () => {
+    const token = authStorage.getAccessToken();
+    if (!token) {
+      return;
+    }
+    const me = await fetchMe(token);
+    setUser(me);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshMe }}>
       {children}
     </AuthContext.Provider>
   );

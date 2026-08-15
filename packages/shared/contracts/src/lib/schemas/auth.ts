@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AdminMenuNodeSchema } from './admin-menu.js';
 
 /** 登录请求（管理端：用户名 + 密码） */
 export const LoginSchema = z.object({
@@ -36,6 +37,8 @@ export const AdminMeSchema = z.object({
   roleCodes: z.array(z.string()),
   /** 聚合的权限点列表（角色 → AdminMenu.code），如 ['user:create'] */
   permissions: z.array(z.string()),
+  /** 可访问的菜单树（侧栏渲染；按 sort 升序，已裁剪无权限分支） */
+  menus: z.array(AdminMenuNodeSchema),
 });
 
 export type AdminMe = z.infer<typeof AdminMeSchema>;
