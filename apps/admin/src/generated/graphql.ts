@@ -396,6 +396,26 @@ export type DeleteRoleMutationVariables = Exact<{
 
 export type DeleteRoleMutation = { __typename?: 'Mutation', deleteRole: { __typename?: 'AdminRole', id: string } };
 
+export type DashboardUsersTotalQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DashboardUsersTotalQuery = { __typename?: 'Query', users: { __typename?: 'PaginatedUsers', total: number } };
+
+export type DashboardAccountsTotalQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DashboardAccountsTotalQuery = { __typename?: 'Query', adminAccounts: { __typename?: 'PaginatedAdminAccounts', total: number } };
+
+export type DashboardRolesTotalQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DashboardRolesTotalQuery = { __typename?: 'Query', adminRoles: Array<{ __typename?: 'AdminRole', id: string }> };
+
+export type DashboardRecentUsersQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DashboardRecentUsersQuery = { __typename?: 'Query', users: { __typename?: 'PaginatedUsers', items: Array<{ __typename?: 'User', id: string, username: string, email: string, role: UserRole, status: UserStatus, createdAt: string }> } };
+
 export type UsersQueryVariables = Exact<{
   page?: InputMaybe<Scalars['Int']['input']>;
   pageSize?: InputMaybe<Scalars['Int']['input']>;
@@ -1007,6 +1027,181 @@ export function useDeleteRoleMutation(baseOptions?: Apollo.MutationHookOptions<D
 export type DeleteRoleMutationHookResult = ReturnType<typeof useDeleteRoleMutation>;
 export type DeleteRoleMutationResult = Apollo.MutationResult<DeleteRoleMutation>;
 export type DeleteRoleMutationOptions = Apollo.BaseMutationOptions<DeleteRoleMutation, DeleteRoleMutationVariables>;
+export const DashboardUsersTotalDocument = gql`
+    query DashboardUsersTotal {
+  users(page: 1, pageSize: 1) {
+    total
+  }
+}
+    `;
+
+/**
+ * __useDashboardUsersTotalQuery__
+ *
+ * To run a query within a React component, call `useDashboardUsersTotalQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardUsersTotalQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardUsersTotalQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDashboardUsersTotalQuery(baseOptions?: Apollo.QueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>(DashboardUsersTotalDocument, options);
+      }
+export function useDashboardUsersTotalLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>(DashboardUsersTotalDocument, options);
+        }
+// @ts-ignore
+export function useDashboardUsersTotalSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>;
+export function useDashboardUsersTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardUsersTotalQuery | undefined, DashboardUsersTotalQueryVariables>;
+export function useDashboardUsersTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>(DashboardUsersTotalDocument, options);
+        }
+export type DashboardUsersTotalQueryHookResult = ReturnType<typeof useDashboardUsersTotalQuery>;
+export type DashboardUsersTotalLazyQueryHookResult = ReturnType<typeof useDashboardUsersTotalLazyQuery>;
+export type DashboardUsersTotalSuspenseQueryHookResult = ReturnType<typeof useDashboardUsersTotalSuspenseQuery>;
+export type DashboardUsersTotalQueryResult = Apollo.QueryResult<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>;
+export const DashboardAccountsTotalDocument = gql`
+    query DashboardAccountsTotal {
+  adminAccounts(page: 1, pageSize: 1) {
+    total
+  }
+}
+    `;
+
+/**
+ * __useDashboardAccountsTotalQuery__
+ *
+ * To run a query within a React component, call `useDashboardAccountsTotalQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardAccountsTotalQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardAccountsTotalQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDashboardAccountsTotalQuery(baseOptions?: Apollo.QueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>(DashboardAccountsTotalDocument, options);
+      }
+export function useDashboardAccountsTotalLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>(DashboardAccountsTotalDocument, options);
+        }
+// @ts-ignore
+export function useDashboardAccountsTotalSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>;
+export function useDashboardAccountsTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardAccountsTotalQuery | undefined, DashboardAccountsTotalQueryVariables>;
+export function useDashboardAccountsTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>(DashboardAccountsTotalDocument, options);
+        }
+export type DashboardAccountsTotalQueryHookResult = ReturnType<typeof useDashboardAccountsTotalQuery>;
+export type DashboardAccountsTotalLazyQueryHookResult = ReturnType<typeof useDashboardAccountsTotalLazyQuery>;
+export type DashboardAccountsTotalSuspenseQueryHookResult = ReturnType<typeof useDashboardAccountsTotalSuspenseQuery>;
+export type DashboardAccountsTotalQueryResult = Apollo.QueryResult<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>;
+export const DashboardRolesTotalDocument = gql`
+    query DashboardRolesTotal {
+  adminRoles {
+    id
+  }
+}
+    `;
+
+/**
+ * __useDashboardRolesTotalQuery__
+ *
+ * To run a query within a React component, call `useDashboardRolesTotalQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardRolesTotalQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardRolesTotalQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDashboardRolesTotalQuery(baseOptions?: Apollo.QueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>(DashboardRolesTotalDocument, options);
+      }
+export function useDashboardRolesTotalLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>(DashboardRolesTotalDocument, options);
+        }
+// @ts-ignore
+export function useDashboardRolesTotalSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>;
+export function useDashboardRolesTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardRolesTotalQuery | undefined, DashboardRolesTotalQueryVariables>;
+export function useDashboardRolesTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>(DashboardRolesTotalDocument, options);
+        }
+export type DashboardRolesTotalQueryHookResult = ReturnType<typeof useDashboardRolesTotalQuery>;
+export type DashboardRolesTotalLazyQueryHookResult = ReturnType<typeof useDashboardRolesTotalLazyQuery>;
+export type DashboardRolesTotalSuspenseQueryHookResult = ReturnType<typeof useDashboardRolesTotalSuspenseQuery>;
+export type DashboardRolesTotalQueryResult = Apollo.QueryResult<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>;
+export const DashboardRecentUsersDocument = gql`
+    query DashboardRecentUsers {
+  users(page: 1, pageSize: 5) {
+    items {
+      id
+      username
+      email
+      role
+      status
+      createdAt
+    }
+  }
+}
+    `;
+
+/**
+ * __useDashboardRecentUsersQuery__
+ *
+ * To run a query within a React component, call `useDashboardRecentUsersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardRecentUsersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardRecentUsersQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDashboardRecentUsersQuery(baseOptions?: Apollo.QueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>(DashboardRecentUsersDocument, options);
+      }
+export function useDashboardRecentUsersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>(DashboardRecentUsersDocument, options);
+        }
+// @ts-ignore
+export function useDashboardRecentUsersSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>;
+export function useDashboardRecentUsersSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardRecentUsersQuery | undefined, DashboardRecentUsersQueryVariables>;
+export function useDashboardRecentUsersSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>(DashboardRecentUsersDocument, options);
+        }
+export type DashboardRecentUsersQueryHookResult = ReturnType<typeof useDashboardRecentUsersQuery>;
+export type DashboardRecentUsersLazyQueryHookResult = ReturnType<typeof useDashboardRecentUsersLazyQuery>;
+export type DashboardRecentUsersSuspenseQueryHookResult = ReturnType<typeof useDashboardRecentUsersSuspenseQuery>;
+export type DashboardRecentUsersQueryResult = Apollo.QueryResult<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>;
 export const UsersDocument = gql`
     query Users($page: Int, $pageSize: Int) {
   users(page: $page, pageSize: $pageSize) {

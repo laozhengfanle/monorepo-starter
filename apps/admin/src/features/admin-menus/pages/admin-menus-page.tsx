@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
+  Checkbox,
+  Dropdown,
   Form,
   Input,
   InputNumber,
@@ -18,12 +20,18 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined } from '@ant-design/icons';
+import {
+  DeliveredProcedureOutlined,
+  FilterOutlined,
+  PlusOutlined,
+  RedoOutlined,
+} from '@ant-design/icons';
 import { ApolloError } from '@apollo/client';
 import { CreateMenuSchema, UpdateMenuSchema } from '@starter/api-client';
-import { PageHeader } from '@starter/ui';
+
 import type { MenuType } from '@starter/api-client';
 import { usePermission } from '../../../app/auth/use-permission.js';
+import { downloadBlob, toCSV } from '../../../shared/utils/export.js';
 import { useAuth } from '../../../app/auth/auth-context.js';
 import {
   useMenuTreeQuery,
@@ -132,6 +140,9 @@ function toTreeSelectData(
 export function AdminMenusPage(): React.JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
+    () => new Set(['name', 'code', 'type', 'path', 'icon', 'sort', 'enabled', 'actions']),
+  );
   const [form] = Form.useForm();
   const menuType = Form.useWatch('type', form) as MenuType | undefined;
 
@@ -234,7 +245,7 @@ export function AdminMenusPage(): React.JSX.Element {
   }
   const parentOptions = toTreeSelectData(tree, parentAllowedTypes);
 
-  const columns: ColumnsType<MenuRowItem> = [
+  const fullColumns: ColumnsType<MenuRowItem> = [
     { title: '名称', dataIndex: 'name', key: 'name' },
     { title: '编码', dataIndex: 'code', key: 'code' },
     {
@@ -284,21 +295,91 @@ export function AdminMenusPage(): React.JSX.Element {
     },
   ];
 
+  const toggleColumn = (key: string): void => {
+    setVisibleKeys((prev) => {
+      if (prev.has(key)) {
+        if (prev.size <= 1) {
+          void message.warning('至少保留一列');
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      }
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  };
+
+  const columnMenuItems = fullColumns.map((c) => ({
+    key: c.key as string,
+    label: (
+      <Checkbox
+        checked={visibleKeys.has(c.key as string)}
+        disabled={c.key === 'actions'}
+        onClick={(e) => e.stopPropagation()}
+        onChange={() => toggleColumn(c.key as string)}
+      >
+        {String(c.title)}
+      </Checkbox>
+    ),
+  }));
+
+  // 列过滤开销极小，直接计算（避免 fullColumns 引用变化导致的 useMemo 抖动）
+  const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
+
+  // 树形数据扁平化（导出用）
+  const flattenTree = (nodes: MenuRowItem[], acc: MenuRowItem[] = []): MenuRowItem[] => {
+    for (const n of nodes) {
+      acc.push(n);
+      if (n.children?.length) flattenTree(n.children, acc);
+    }
+    return acc;
+  };
+
+  const handleExport = (): void => {
+    const exportCols = fullColumns.filter((c) => visibleKeys.has(c.key as string) && c.key !== 'actions');
+    const header = exportCols.map((c) => String(c.title));
+    const rows: (string | number | boolean | null | undefined)[][] = [
+      header,
+      ...flattenTree(tree).map((n) =>
+        exportCols.map((c) => {
+          if (c.key === 'enabled') return n.enabled ? '正常' : '禁用';
+          if (c.key === 'type') return TYPE_LABELS[n.type] ?? n.type;
+          const dataIdx = (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
+          const v = (n as unknown as Record<string, unknown>)[dataIdx];
+          return (v as string | number | boolean | null | undefined) ?? '';
+        }),
+      ),
+    ];
+    const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
+    downloadBlob(toCSV(rows), `菜单管理_${ts}.csv`, 'text/csv;charset=utf-8;');
+    void message.success(`已导出 ${flattenTree(tree).length} 条`);
+  };
+
   return (
     <div>
-      <PageHeader
-        title="菜单管理"
-        description="目录 → 菜单（有路由）→ 按钮（权限点），与角色权限联动"
+      <Card
+        title="菜单树"
         extra={
-          canCreate ? (
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-              新建菜单
-            </Button>
-          ) : undefined
+          <Space size="small">
+            {canCreate && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+                新建菜单
+              </Button>
+            )}
+            <Dropdown
+              trigger={['click']}
+              menu={{ items: columnMenuItems, onClick: (info) => info.domEvent.stopPropagation() }}
+            >
+              <Button icon={<FilterOutlined />} aria-label="列控制" />
+            </Dropdown>
+            <Button icon={<DeliveredProcedureOutlined />} onClick={handleExport} aria-label="导出 CSV" />
+            <Button icon={<RedoOutlined />} onClick={() => void refreshList()} aria-label="刷新" />
+          </Space>
         }
-      />
-
-      <Card>
+      >
       <Table<MenuRowItem>
         rowKey="id"
         columns={columns}

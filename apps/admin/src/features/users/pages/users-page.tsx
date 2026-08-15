@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Button,
   Card,
+  Checkbox,
+  Dropdown,
   Form,
   Input,
   Modal,
@@ -13,7 +15,13 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined } from '@ant-design/icons';
+import {
+  DeliveredProcedureOutlined,
+  FilterOutlined,
+  PlusOutlined,
+  RedoOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import { ApolloError } from '@apollo/client';
 import {
   CreateUserSchema,
@@ -21,7 +29,7 @@ import {
   userRoleSchema,
   userStatusSchema,
 } from '@starter/api-client';
-import { PageHeader, StatusTag } from '@starter/ui';
+import { StatusTag } from '@starter/ui';
 import {
   useUsersQuery,
   useCreateUserMutation,
@@ -36,6 +44,7 @@ import type {
   UpdateUserInput,
 } from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
+import { downloadBlob, toCSV } from '../../../shared/utils/export.js';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -71,7 +80,12 @@ export function UsersPage(): React.JSX.Element {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [keyword, setKeyword] = useState('');
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
+    () => new Set(['username', 'email', 'role', 'status', 'actions']),
+  );
   const [form] = Form.useForm();
+  const [searchForm] = Form.useForm();
 
   // 按钮级权限控制（与后端 @RequirePermission 的 permissionCode 对应）
   const canCreate = usePermission('user:create');
@@ -83,8 +97,15 @@ export function UsersPage(): React.JSX.Element {
   const [updateUser, { loading: updateLoading }] = useUpdateUserMutation();
   const [deleteUser, { loading: deleteLoading }] = useDeleteUserMutation();
 
-  const users = data?.users.items ?? [];
+  const users = useMemo(() => data?.users.items ?? [], [data?.users]);
   const total = data?.users.total ?? 0;
+  const filteredUsers = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return users;
+    return users.filter(
+      (u) => u.username.toLowerCase().includes(kw) || u.email.toLowerCase().includes(kw),
+    );
+  }, [users, keyword]);
 
   const refreshList = async (): Promise<void> => {
     await refetch({ page, pageSize });
@@ -145,7 +166,7 @@ export function UsersPage(): React.JSX.Element {
     }
   };
 
-  const columns: ColumnsType<User> = [
+  const fullColumns: ColumnsType<User> = [
     { title: '用户名', dataIndex: 'username', key: 'username' },
     { title: '邮箱', dataIndex: 'email', key: 'email' },
     {
@@ -186,25 +207,118 @@ export function UsersPage(): React.JSX.Element {
     },
   ];
 
+  const toggleColumn = (key: string): void => {
+    setVisibleKeys((prev) => {
+      if (prev.has(key)) {
+        if (prev.size <= 1) {
+          void message.warning('至少保留一列');
+          return prev;
+        }
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      }
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  };
+
+  const columnMenuItems = fullColumns.map((c) => ({
+    key: c.key as string,
+    label: (
+      <Checkbox
+        checked={visibleKeys.has(c.key as string)}
+        disabled={c.key === 'actions'}
+        onClick={(e) => e.stopPropagation()}
+        onChange={() => toggleColumn(c.key as string)}
+      >
+        {String(c.title)}
+      </Checkbox>
+    ),
+  }));
+
+  // 列过滤开销极小，直接计算（避免 fullColumns 引用变化导致的 useMemo 抖动）
+  const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
+
+  const handleExport = (): void => {
+    const exportCols = fullColumns.filter((c) => visibleKeys.has(c.key as string) && c.key !== 'actions');
+    const header = exportCols.map((c) => String(c.title));
+    const rows: (string | number | boolean | null | undefined)[][] = [
+      header,
+      ...filteredUsers.map((u) =>
+        exportCols.map((c) => {
+          const dataIdx = (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
+          const v = (u as unknown as Record<string, unknown>)[dataIdx];
+          return (v as string | number | boolean | null | undefined) ?? '';
+        }),
+      ),
+    ];
+    const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
+    downloadBlob(toCSV(rows), `用户管理_${ts}.csv`, 'text/csv;charset=utf-8;');
+    void message.success(`已导出 ${filteredUsers.length} 条`);
+  };
+
   return (
     <div>
-      <PageHeader
-        title="用户管理"
-        description="演示模块：用户 CRUD（GraphQL + REST 双协议示例）"
-        extra={
-          canCreate ? (
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-              新建用户
-            </Button>
-          ) : undefined
-        }
-      />
+      {/* 搜索卡 */}
+      <Card style={{ marginBottom: 16 }}>
+        <Form
+          form={searchForm}
+          layout="inline"
+          onFinish={(values: { keyword?: string }) => setKeyword(values.keyword ?? '')}
+        >
+          <Form.Item name="keyword" style={{ marginBottom: 0 }}>
+            <Input
+              allowClear
+              prefix={<SearchOutlined />}
+              placeholder="按用户名 / 邮箱搜索"
+              style={{ width: 280 }}
+            />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Space>
+              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+                查询
+              </Button>
+              <Button
+                onClick={() => {
+                  searchForm.resetFields();
+                  setKeyword('');
+                }}
+              >
+                重置
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
 
-      <Card>
+      {/* 表格卡：标题 + 工具条（新建 / 列控制 / 导出 / 刷新） */}
+      <Card
+        title="用户列表"
+        extra={
+          <Space size="small">
+            {canCreate && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+                新建用户
+              </Button>
+            )}
+            <Dropdown
+              trigger={['click']}
+              menu={{ items: columnMenuItems, onClick: (info) => info.domEvent.stopPropagation() }}
+            >
+              <Button icon={<FilterOutlined />} aria-label="列控制" />
+            </Dropdown>
+            <Button icon={<DeliveredProcedureOutlined />} onClick={handleExport} aria-label="导出 CSV" />
+            <Button icon={<RedoOutlined />} onClick={() => void refreshList()} aria-label="刷新" />
+          </Space>
+        }
+      >
         <Table<User>
           rowKey="id"
           columns={columns}
-          dataSource={users}
+          dataSource={filteredUsers}
           loading={loading}
           locale={{ emptyText: '暂无数据' }}
           pagination={{

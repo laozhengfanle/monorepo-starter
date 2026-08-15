@@ -8,7 +8,7 @@ import {
   SunOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Button, Dropdown, Layout, Space, Typography, theme } from 'antd';
+import { Avatar, Button, Dropdown, Input, Layout, Space, Typography, theme } from 'antd';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +16,7 @@ import { useAuth } from '../auth/auth-context.js';
 import { useTheme } from '../providers/theme-provider.js';
 import { useFullscreen } from '../hooks/use-fullscreen.js';
 import { SettingsDrawer } from '../../features/settings/settings-drawer.js';
+import heroPng from '../../assets/hero.png';
 
 const { Header } = Layout;
 
@@ -74,26 +75,12 @@ export function LayoutHeader(): React.JSX.Element {
       }}
     >
       <div className="flex items-center gap-2" style={{ lineHeight: 'normal' }}>
-        <span
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: token.borderRadius,
-            background: token.colorPrimary,
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 15,
-          }}
-        >
-          MS
-        </span>
+        <img src={heroPng} alt="logo" className="h-8" />
         <span style={{ fontSize: 16, fontWeight: 600 }}>monorepo-starter</span>
       </div>
 
       <Space size={4}>
+        <Input.Search placeholder="搜索" allowClear style={{ width: 220 }} />
         <Dropdown
           trigger={['hover']}
           arrow
