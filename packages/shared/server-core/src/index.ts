@@ -6,3 +6,4 @@ export * from './lib/swagger.setup.js';
 export * from './lib/zod-args.pipe.js';
 export * from './dto/users.dto.js';
 export * from './dto/health.dto.js';
+export * from './dto/admin-account.dto.js';

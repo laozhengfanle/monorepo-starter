@@ -4,9 +4,11 @@ import { type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import express from 'express';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { existsSync, mkdirSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
@@ -17,6 +19,9 @@ import {
 import { AppModule } from './app/app.module.js';
 
 export const DEFAULT_PORT = 3301;
+
+/** 上传文件静态目录（与 upload.controller 的 UPLOAD_DIR 一致） */
+const UPLOAD_DIR = path.resolve(process.env['UPLOAD_DIR'] ?? 'uploads');
 
 /** 默认放行 admin 开发地址；生产环境通过 CORS_ORIGINS 显式配置 */
 const DEFAULT_CORS_ORIGINS = ['http://localhost:3302'];
@@ -49,6 +54,11 @@ export async function createApp(): Promise<INestApplication> {
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
+  // 上传文件静态访问：/uploads/{storedName}
+  if (!existsSync(UPLOAD_DIR)) {
+    mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+  app.use('/uploads', express.static(UPLOAD_DIR));
   app.useGlobalPipes(new ZodValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({ origin: corsOriginsFromEnv() });

@@ -4,3 +4,5 @@ export * from './lib/schemas/common.js';
 export * from './lib/schemas/users.js';
 export * from './lib/schemas/health.js';
 export * from './lib/schemas/auth.js';
+export * from './lib/schemas/admin-account.js';
+export * from './lib/schemas/upload.js';

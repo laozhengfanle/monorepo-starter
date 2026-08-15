@@ -1,0 +1,53 @@
+query AdminAccounts($page: Int, $pageSize: Int) {
+  adminAccounts(page: $page, pageSize: $pageSize) {
+    items {
+      accountId
+      username
+      nickname
+      email
+      avatar
+      enabled
+      roleCodes
+      createdAt
+    }
+    total
+    page
+    pageSize
+  }
+}
+
+query AdminRoles {
+  adminRoles {
+    id
+    code
+    name
+  }
+}
+
+mutation CreateAdminAccount($input: CreateAdminAccountInput!) {
+  createAdminAccount(input: $input) {
+    accountId
+    username
+    nickname
+    email
+    enabled
+    roleCodes
+  }
+}
+
+mutation UpdateAdminAccount($id: ID!, $input: UpdateAdminAccountInput!) {
+  updateAdminAccount(id: $id, input: $input) {
+    accountId
+    username
+    nickname
+    email
+    enabled
+    roleCodes
+  }
+}
+
+mutation DeleteAdminAccount($id: ID!) {
+  deleteAdminAccount(id: $id) {
+    accountId
+  }
+}

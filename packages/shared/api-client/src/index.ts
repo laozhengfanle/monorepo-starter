@@ -13,5 +13,15 @@ export {
   userStatusSchema,
   LoginSchema,
   RefreshSchema,
+  CreateAdminAccountSchema,
+  UpdateAdminAccountSchema,
 } from '@starter/contracts';
-export type { AdminMe, AuthResult, LoginInput, RefreshInput } from '@starter/contracts';
+export type {
+  AdminMe,
+  AuthResult,
+  LoginInput,
+  RefreshInput,
+  AdminAccount,
+  CreateAdminAccountInput,
+  UpdateAdminAccountInput,
+} from '@starter/contracts';

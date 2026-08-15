@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { makeCounterProvider } from '@willsoto/nestjs-prometheus';
 import { AuditService } from './audit.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthResolver } from './auth.resolver.js';
@@ -45,6 +46,8 @@ import { TokenIssuanceService } from './token-issuance.service.js';
     TokenIssuanceService,
     LoginLockService,
     AuditService,
+    // 业务指标：登录成功计数（AuthService 注入后 inc）
+    makeCounterProvider({ name: 'auth_login_success_total', help: '登录成功次数' }),
   ],
   exports: [JwtModule, JwtAuthGuard, PermissionGuard, TokenBlacklistService],
 })

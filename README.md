@@ -98,3 +98,9 @@ pnpm exec nx g @nx/react:lib my-lib --directory=packages/shared/my-lib   # 生�
 - [x] 认证增强（双 token access+refresh、tokenVersion 撤销、jti 黑名单、登录锁定、审计日志）
 - [x] 权限控制（AdminMenu permissionCode + PermissionGuard + @RequirePermission，super_admin 绕过）
 - [x] 前端认证接入（登录页 + AuthContext + 路由守卫 + Apollo 认证 header + header 用户/登出）
+- [x] 管理端账户管理（Account CRUD + 角色分配，REST+GraphQL，权限 account:*）
+- [x] 限流（@nestjs/throttler，全局 100/分 + 登录 5/分 + GraphQL 兼容守卫）
+- [x] 健康检查完善（@nestjs/terminus，/health/readiness：DB + 内存探活）
+- [x] 文件上传（Multer 本地磁盘 + UploadFile 元数据 + 静态访问 + 10MB 限制）
+- [x] WebSocket（socket.io 网关 + 握手 JWT 鉴权 + 示例事件）
+- [x] 监控（Prometheus /metrics + 登录计数业务指标）

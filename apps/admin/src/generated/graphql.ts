@@ -17,6 +17,50 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+export type AdminAccount = {
+  __typename?: 'AdminAccount';
+  accountId: Scalars['ID']['output'];
+  avatar: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  email: Scalars['String']['output'];
+  enabled: Scalars['Boolean']['output'];
+  nickname: Scalars['String']['output'];
+  roleCodes: Array<Scalars['String']['output']>;
+  username: Scalars['String']['output'];
+};
+
+export type AdminMe = {
+  __typename?: 'AdminMe';
+  accountId: Scalars['ID']['output'];
+  avatar: Scalars['String']['output'];
+  nickname: Scalars['String']['output'];
+  permissions: Array<Scalars['String']['output']>;
+  roleCodes: Array<Scalars['String']['output']>;
+  username: Scalars['String']['output'];
+};
+
+export type AdminRole = {
+  __typename?: 'AdminRole';
+  code: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type AuthResult = {
+  __typename?: 'AuthResult';
+  accessToken: Scalars['String']['output'];
+  expiresIn: Scalars['Int']['output'];
+  refreshToken: Scalars['String']['output'];
+};
+
+export type CreateAdminAccountInput = {
+  email?: InputMaybe<Scalars['String']['input']>;
+  nickname?: InputMaybe<Scalars['String']['input']>;
+  password: Scalars['String']['input'];
+  roleCodes: Array<Scalars['String']['input']>;
+  username: Scalars['String']['input'];
+};
+
 export type CreateUserInput = {
   email: Scalars['String']['input'];
   role?: InputMaybe<UserRole>;
@@ -24,11 +68,25 @@ export type CreateUserInput = {
   username: Scalars['String']['input'];
 };
 
+export type LoginInput = {
+  password: Scalars['String']['input'];
+  username: Scalars['String']['input'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
+  createAdminAccount: AdminAccount;
   createUser: User;
+  deleteAdminAccount: AdminAccount;
   deleteUser: User;
+  login: AuthResult;
+  updateAdminAccount: AdminAccount;
   updateUser: User;
+};
+
+
+export type MutationCreateAdminAccountArgs = {
+  input: CreateAdminAccountInput;
 };
 
 
@@ -37,14 +95,38 @@ export type MutationCreateUserArgs = {
 };
 
 
+export type MutationDeleteAdminAccountArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationDeleteUserArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationLoginArgs = {
+  input: LoginInput;
+};
+
+
+export type MutationUpdateAdminAccountArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateAdminAccountInput;
 };
 
 
 export type MutationUpdateUserArgs = {
   id: Scalars['ID']['input'];
   input: UpdateUserInput;
+};
+
+export type PaginatedAdminAccounts = {
+  __typename?: 'PaginatedAdminAccounts';
+  items: Array<AdminAccount>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
 };
 
 export type PaginatedUsers = {
@@ -57,8 +139,17 @@ export type PaginatedUsers = {
 
 export type Query = {
   __typename?: 'Query';
+  adminAccounts: PaginatedAdminAccounts;
+  adminRoles: Array<AdminRole>;
+  me: AdminMe;
   user?: Maybe<User>;
   users: PaginatedUsers;
+};
+
+
+export type QueryAdminAccountsArgs = {
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -70,6 +161,13 @@ export type QueryUserArgs = {
 export type QueryUsersArgs = {
   page?: InputMaybe<Scalars['Int']['input']>;
   pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateAdminAccountInput = {
+  email?: InputMaybe<Scalars['String']['input']>;
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  nickname?: InputMaybe<Scalars['String']['input']>;
+  roleCodes?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type UpdateUserInput = {
@@ -99,6 +197,41 @@ export enum UserStatus {
   Disabled = 'disabled',
   Locked = 'locked'
 }
+
+export type AdminAccountsQueryVariables = Exact<{
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type AdminAccountsQuery = { __typename?: 'Query', adminAccounts: { __typename?: 'PaginatedAdminAccounts', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'AdminAccount', accountId: string, username: string, nickname: string, email: string, avatar: string, enabled: boolean, roleCodes: Array<string>, createdAt: string }> } };
+
+export type AdminRolesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AdminRolesQuery = { __typename?: 'Query', adminRoles: Array<{ __typename?: 'AdminRole', id: string, code: string, name: string }> };
+
+export type CreateAdminAccountMutationVariables = Exact<{
+  input: CreateAdminAccountInput;
+}>;
+
+
+export type CreateAdminAccountMutation = { __typename?: 'Mutation', createAdminAccount: { __typename?: 'AdminAccount', accountId: string, username: string, nickname: string, email: string, enabled: boolean, roleCodes: Array<string> } };
+
+export type UpdateAdminAccountMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateAdminAccountInput;
+}>;
+
+
+export type UpdateAdminAccountMutation = { __typename?: 'Mutation', updateAdminAccount: { __typename?: 'AdminAccount', accountId: string, username: string, nickname: string, email: string, enabled: boolean, roleCodes: Array<string> } };
+
+export type DeleteAdminAccountMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteAdminAccountMutation = { __typename?: 'Mutation', deleteAdminAccount: { __typename?: 'AdminAccount', accountId: string } };
 
 export type UsersQueryVariables = Exact<{
   page?: InputMaybe<Scalars['Int']['input']>;
@@ -131,6 +264,216 @@ export type DeleteUserMutationVariables = Exact<{
 export type DeleteUserMutation = { __typename?: 'Mutation', deleteUser: { __typename?: 'User', id: string } };
 
 
+export const AdminAccountsDocument = gql`
+    query AdminAccounts($page: Int, $pageSize: Int) {
+  adminAccounts(page: $page, pageSize: $pageSize) {
+    items {
+      accountId
+      username
+      nickname
+      email
+      avatar
+      enabled
+      roleCodes
+      createdAt
+    }
+    total
+    page
+    pageSize
+  }
+}
+    `;
+
+/**
+ * __useAdminAccountsQuery__
+ *
+ * To run a query within a React component, call `useAdminAccountsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAdminAccountsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAdminAccountsQuery({
+ *   variables: {
+ *      page: // value for 'page'
+ *      pageSize: // value for 'pageSize'
+ *   },
+ * });
+ */
+export function useAdminAccountsQuery(baseOptions?: Apollo.QueryHookOptions<AdminAccountsQuery, AdminAccountsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AdminAccountsQuery, AdminAccountsQueryVariables>(AdminAccountsDocument, options);
+      }
+export function useAdminAccountsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AdminAccountsQuery, AdminAccountsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AdminAccountsQuery, AdminAccountsQueryVariables>(AdminAccountsDocument, options);
+        }
+// @ts-ignore
+export function useAdminAccountsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<AdminAccountsQuery, AdminAccountsQueryVariables>): Apollo.UseSuspenseQueryResult<AdminAccountsQuery, AdminAccountsQueryVariables>;
+export function useAdminAccountsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AdminAccountsQuery, AdminAccountsQueryVariables>): Apollo.UseSuspenseQueryResult<AdminAccountsQuery | undefined, AdminAccountsQueryVariables>;
+export function useAdminAccountsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AdminAccountsQuery, AdminAccountsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<AdminAccountsQuery, AdminAccountsQueryVariables>(AdminAccountsDocument, options);
+        }
+export type AdminAccountsQueryHookResult = ReturnType<typeof useAdminAccountsQuery>;
+export type AdminAccountsLazyQueryHookResult = ReturnType<typeof useAdminAccountsLazyQuery>;
+export type AdminAccountsSuspenseQueryHookResult = ReturnType<typeof useAdminAccountsSuspenseQuery>;
+export type AdminAccountsQueryResult = Apollo.QueryResult<AdminAccountsQuery, AdminAccountsQueryVariables>;
+export const AdminRolesDocument = gql`
+    query AdminRoles {
+  adminRoles {
+    id
+    code
+    name
+  }
+}
+    `;
+
+/**
+ * __useAdminRolesQuery__
+ *
+ * To run a query within a React component, call `useAdminRolesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAdminRolesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAdminRolesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useAdminRolesQuery(baseOptions?: Apollo.QueryHookOptions<AdminRolesQuery, AdminRolesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AdminRolesQuery, AdminRolesQueryVariables>(AdminRolesDocument, options);
+      }
+export function useAdminRolesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AdminRolesQuery, AdminRolesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AdminRolesQuery, AdminRolesQueryVariables>(AdminRolesDocument, options);
+        }
+// @ts-ignore
+export function useAdminRolesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<AdminRolesQuery, AdminRolesQueryVariables>): Apollo.UseSuspenseQueryResult<AdminRolesQuery, AdminRolesQueryVariables>;
+export function useAdminRolesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AdminRolesQuery, AdminRolesQueryVariables>): Apollo.UseSuspenseQueryResult<AdminRolesQuery | undefined, AdminRolesQueryVariables>;
+export function useAdminRolesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AdminRolesQuery, AdminRolesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<AdminRolesQuery, AdminRolesQueryVariables>(AdminRolesDocument, options);
+        }
+export type AdminRolesQueryHookResult = ReturnType<typeof useAdminRolesQuery>;
+export type AdminRolesLazyQueryHookResult = ReturnType<typeof useAdminRolesLazyQuery>;
+export type AdminRolesSuspenseQueryHookResult = ReturnType<typeof useAdminRolesSuspenseQuery>;
+export type AdminRolesQueryResult = Apollo.QueryResult<AdminRolesQuery, AdminRolesQueryVariables>;
+export const CreateAdminAccountDocument = gql`
+    mutation CreateAdminAccount($input: CreateAdminAccountInput!) {
+  createAdminAccount(input: $input) {
+    accountId
+    username
+    nickname
+    email
+    enabled
+    roleCodes
+  }
+}
+    `;
+export type CreateAdminAccountMutationFn = Apollo.MutationFunction<CreateAdminAccountMutation, CreateAdminAccountMutationVariables>;
+
+/**
+ * __useCreateAdminAccountMutation__
+ *
+ * To run a mutation, you first call `useCreateAdminAccountMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateAdminAccountMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createAdminAccountMutation, { data, loading, error }] = useCreateAdminAccountMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateAdminAccountMutation(baseOptions?: Apollo.MutationHookOptions<CreateAdminAccountMutation, CreateAdminAccountMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateAdminAccountMutation, CreateAdminAccountMutationVariables>(CreateAdminAccountDocument, options);
+      }
+export type CreateAdminAccountMutationHookResult = ReturnType<typeof useCreateAdminAccountMutation>;
+export type CreateAdminAccountMutationResult = Apollo.MutationResult<CreateAdminAccountMutation>;
+export type CreateAdminAccountMutationOptions = Apollo.BaseMutationOptions<CreateAdminAccountMutation, CreateAdminAccountMutationVariables>;
+export const UpdateAdminAccountDocument = gql`
+    mutation UpdateAdminAccount($id: ID!, $input: UpdateAdminAccountInput!) {
+  updateAdminAccount(id: $id, input: $input) {
+    accountId
+    username
+    nickname
+    email
+    enabled
+    roleCodes
+  }
+}
+    `;
+export type UpdateAdminAccountMutationFn = Apollo.MutationFunction<UpdateAdminAccountMutation, UpdateAdminAccountMutationVariables>;
+
+/**
+ * __useUpdateAdminAccountMutation__
+ *
+ * To run a mutation, you first call `useUpdateAdminAccountMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateAdminAccountMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateAdminAccountMutation, { data, loading, error }] = useUpdateAdminAccountMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateAdminAccountMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAdminAccountMutation, UpdateAdminAccountMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateAdminAccountMutation, UpdateAdminAccountMutationVariables>(UpdateAdminAccountDocument, options);
+      }
+export type UpdateAdminAccountMutationHookResult = ReturnType<typeof useUpdateAdminAccountMutation>;
+export type UpdateAdminAccountMutationResult = Apollo.MutationResult<UpdateAdminAccountMutation>;
+export type UpdateAdminAccountMutationOptions = Apollo.BaseMutationOptions<UpdateAdminAccountMutation, UpdateAdminAccountMutationVariables>;
+export const DeleteAdminAccountDocument = gql`
+    mutation DeleteAdminAccount($id: ID!) {
+  deleteAdminAccount(id: $id) {
+    accountId
+  }
+}
+    `;
+export type DeleteAdminAccountMutationFn = Apollo.MutationFunction<DeleteAdminAccountMutation, DeleteAdminAccountMutationVariables>;
+
+/**
+ * __useDeleteAdminAccountMutation__
+ *
+ * To run a mutation, you first call `useDeleteAdminAccountMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteAdminAccountMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteAdminAccountMutation, { data, loading, error }] = useDeleteAdminAccountMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteAdminAccountMutation(baseOptions?: Apollo.MutationHookOptions<DeleteAdminAccountMutation, DeleteAdminAccountMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteAdminAccountMutation, DeleteAdminAccountMutationVariables>(DeleteAdminAccountDocument, options);
+      }
+export type DeleteAdminAccountMutationHookResult = ReturnType<typeof useDeleteAdminAccountMutation>;
+export type DeleteAdminAccountMutationResult = Apollo.MutationResult<DeleteAdminAccountMutation>;
+export type DeleteAdminAccountMutationOptions = Apollo.BaseMutationOptions<DeleteAdminAccountMutation, DeleteAdminAccountMutationVariables>;
 export const UsersDocument = gql`
     query Users($page: Int, $pageSize: Int) {
   users(page: $page, pageSize: $pageSize) {

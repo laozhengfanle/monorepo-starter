@@ -27,6 +27,13 @@
     "@nestjs/jwt": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
+    "@nestjs/throttler": "catalog:",
+    "@nestjs/terminus": "catalog:",
+    "@nestjs/websockets": "catalog:",
+    "@willsoto/nestjs-prometheus": "catalog:",
+    "prom-client": "catalog:",
+    "@nestjs/platform-socket.io": "catalog:",
+    "socket.io": "catalog:",
     "@ant-design/icons": "catalog:",
     "@tanstack/react-query": "catalog:",
     "antd": "catalog:",
@@ -44,7 +51,8 @@
     "react-router-dom": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "multer": "catalog:"
   },
   "devDependencies": {
     "@babel/core": "catalog:",
@@ -77,6 +85,7 @@
     "@types/compression": "catalog:",
     "@types/cookie-parser": "catalog:",
     "@types/express": "catalog:",
+    "@types/multer": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

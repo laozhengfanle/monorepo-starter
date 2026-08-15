@@ -128,6 +128,13 @@
     "@nestjs/jwt": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
+    "@nestjs/throttler": "catalog:",
+    "@nestjs/terminus": "catalog:",
+    "@nestjs/websockets": "catalog:",
+    "@willsoto/nestjs-prometheus": "catalog:",
+    "prom-client": "catalog:",
+    "@nestjs/platform-socket.io": "catalog:",
+    "socket.io": "catalog:",
     "@prisma/adapter-pg": "catalog:",
     "@prisma/client": "catalog:",
     "@starter/server-core": "workspace:*",
@@ -148,16 +155,19 @@
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "tslib": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "multer": "catalog:"
   },
   "devDependencies": {
     "@nestjs/testing": "catalog:",
     "@types/bcrypt": "catalog:",
     "@types/ioredis": "catalog:",
+    "@types/multer": "catalog:",
     "@types/express": "catalog:",
     "@types/pg": "catalog:",
     "@types/pino-http": "catalog:",
     "prisma": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "socket.io-client": "catalog:"
   }
 }

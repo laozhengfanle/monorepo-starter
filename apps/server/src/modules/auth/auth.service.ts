@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { BizException } from '@starter/server-core';
 import { LoginSchema } from '@starter/contracts';
 import type { AdminMe, LoginInput } from '@starter/contracts';
 import bcrypt from 'bcrypt';
+import type { Counter } from 'prom-client';
 import type { Request } from 'express';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AuditService, AUDIT_ACTIONS } from './audit.service.js';
@@ -36,6 +38,8 @@ export class AuthService {
     private readonly tokenIssuance: TokenIssuanceService,
     private readonly loginLock: LoginLockService,
     private readonly audit: AuditService,
+    @InjectMetric('auth_login_success_total')
+    private readonly loginSuccessCounter: Counter<string>,
   ) {}
 
   async adminLogin(input: LoginInput, req: Request): Promise<IssuedTokens> {
@@ -94,6 +98,8 @@ export class AuthService {
       ip,
       userAgent,
     });
+    // Prometheus 业务指标：登录成功计数
+    this.loginSuccessCounter.inc();
 
     // 签发双 token（access + refresh，payload 带 tokenVersion + jti）
     return this.tokenIssuance.issueTokens(identity.accountId, identity.account.userType);

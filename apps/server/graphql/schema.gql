@@ -2,6 +2,17 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AdminAccount {
+  accountId: ID!
+  avatar: String!
+  createdAt: String!
+  email: String!
+  enabled: Boolean!
+  nickname: String!
+  roleCodes: [String!]!
+  username: String!
+}
+
 type AdminMe {
   accountId: ID!
   avatar: String!
@@ -11,10 +22,24 @@ type AdminMe {
   username: String!
 }
 
+type AdminRole {
+  code: String!
+  id: ID!
+  name: String!
+}
+
 type AuthResult {
   accessToken: String!
   expiresIn: Int!
   refreshToken: String!
+}
+
+input CreateAdminAccountInput {
+  email: String
+  nickname: String
+  password: String!
+  roleCodes: [String!]!
+  username: String!
 }
 
 input CreateUserInput {
@@ -30,10 +55,20 @@ input LoginInput {
 }
 
 type Mutation {
+  createAdminAccount(input: CreateAdminAccountInput!): AdminAccount!
   createUser(input: CreateUserInput!): User!
+  deleteAdminAccount(id: ID!): AdminAccount!
   deleteUser(id: ID!): User!
   login(input: LoginInput!): AuthResult!
+  updateAdminAccount(id: ID!, input: UpdateAdminAccountInput!): AdminAccount!
   updateUser(id: ID!, input: UpdateUserInput!): User!
+}
+
+type PaginatedAdminAccounts {
+  items: [AdminAccount!]!
+  page: Int!
+  pageSize: Int!
+  total: Int!
 }
 
 type PaginatedUsers {
@@ -44,9 +79,18 @@ type PaginatedUsers {
 }
 
 type Query {
+  adminAccounts(page: Int = 1, pageSize: Int = 20): PaginatedAdminAccounts!
+  adminRoles: [AdminRole!]!
   me: AdminMe!
   user(id: ID!): User
   users(page: Int = 1, pageSize: Int = 20): PaginatedUsers!
+}
+
+input UpdateAdminAccountInput {
+  email: String
+  enabled: Boolean
+  nickname: String
+  roleCodes: [String!]
 }
 
 input UpdateUserInput {

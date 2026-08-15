@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApolloProvider } from '@apollo/client';
 import { Button, ConfigProvider, Menu, Space, Typography } from 'antd';
-import { DashboardOutlined, LogoutOutlined, TeamOutlined } from '@ant-design/icons';
+import { DashboardOutlined, LogoutOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate, Route, Routes } from 'react-router-dom';
 import { AdminLayout, themeConfig } from '@starter/ui';
 import { DashboardPage } from '../features/dashboard/pages/dashboard-page';
 import { UsersPage } from '../features/users/pages/users-page';
+import { AdminAccountsPage } from '../features/admin-accounts/pages/admin-accounts-page';
 import { LoginPage } from '../features/auth/pages/login-page';
 import { AuthProvider, useAuth } from './auth/auth-context.js';
 import { ProtectedRoute } from './auth/protected-route.js';
@@ -32,6 +33,7 @@ function AppMenu(): React.JSX.Element {
       items={[
         { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
         { key: '/users', icon: <TeamOutlined />, label: '用户管理' },
+        { key: '/admin/accounts', icon: <UserOutlined />, label: '账户管理' },
       ]}
     />
   );
@@ -73,6 +75,7 @@ export function App() {
                       <Routes>
                         <Route path="/" element={<DashboardPage />} />
                         <Route path="/users" element={<UsersPage />} />
+                        <Route path="/admin/accounts" element={<AdminAccountsPage />} />
                       </Routes>
                     </AdminLayout>
                   </ProtectedRoute>

@@ -28,6 +28,7 @@ model Account {
   adminRoles   AdminAccountRole[]
   tokenRevocations TokenRevocation[]
   auditLogs        AuditLog[]
+  uploadFiles      UploadFile[]
 
   @@index([userType])
   @@map("account")
@@ -173,6 +174,31 @@ model AuditLog {
   @@index([resourceType, resourceId])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+// ============================================================
+// 文件上传（阶段 3）：本地磁盘存储 + 元数据记录
+// ============================================================
+
+/// 上传文件元数据表
+model UploadFile {
+  id           String    @id @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  originalName String    @map("original_name") @db.VarChar(255)
+  /// 磁盘上的存储名（UUIDv7 + 扩展名，防冲突）
+  storedName   String    @map("stored_name") @db.VarChar(255)
+  mimeType     String    @map("mime_type") @db.VarChar(100)
+  size         BigInt
+  /// 可访问 URL（/uploads/{storedName}）
+  url          String    @db.VarChar(500)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId])
+  @@index([createdAt])
+  @@map("upload_file")
 }
 
 // ============================================================

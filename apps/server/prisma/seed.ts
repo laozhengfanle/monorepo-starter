@@ -94,16 +94,20 @@ async function main(): Promise<void> {
     console.log('root 账户已存在，跳过');
   }
 
-  // ── 3. 权限点种子（user 模块 CRUD 权限）+ 绑定到 super_admin ──
-  const userPermissions = [
+  // ── 3. 权限点种子（user/account CRUD 权限）+ 绑定到 super_admin ──
+  const permissionSeeds = [
     { code: 'user:list', name: '用户列表', type: 'menu' },
     { code: 'user:create', name: '新建用户', type: 'button' },
     { code: 'user:update', name: '编辑用户', type: 'button' },
     { code: 'user:delete', name: '删除用户', type: 'button' },
+    { code: 'account:list', name: '账户列表', type: 'menu' },
+    { code: 'account:create', name: '新建账户', type: 'button' },
+    { code: 'account:update', name: '编辑账户', type: 'button' },
+    { code: 'account:delete', name: '删除账户', type: 'button' },
   ];
   const superAdminRole = await prisma.adminRole.findUnique({ where: { code: 'super_admin' } });
   if (superAdminRole) {
-    for (const perm of userPermissions) {
+    for (const perm of permissionSeeds) {
       const menu = await prisma.adminMenu.upsert({
         where: { code: perm.code },
         update: {},
@@ -119,7 +123,7 @@ async function main(): Promise<void> {
         });
       }
     }
-    console.log('✅ 已绑定 super_admin 的 user 权限点');
+    console.log(`✅ 已绑定 super_admin 的 ${permissionSeeds.length} 个权限点`);
   }
 
   await pool.end();

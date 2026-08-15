@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { AdminMe, LoginInput, RefreshInput } from '@starter/contracts';
 import type { Request } from 'express';
 import { CurrentUser } from './current-user.decorator.js';
@@ -10,7 +11,7 @@ import type { IssuedTokens } from './token-issuance.service.js';
 
 /**
  * 认证 REST 端点（阶段 3 增强）：
- * - POST /auth/login：用户名+密码 → 双 token（含登录锁定 + 审计）
+ * - POST /auth/login：用户名+密码 → 双 token（含登录锁定 + 审计），IP 限流 5 次/分钟
  * - POST /auth/refresh：refresh token → 新双 token
  * - POST /auth/logout：撤销账号所有 token（需 JWT）
  * - GET /auth/me：当前账户信息（需 JWT）
@@ -21,6 +22,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  // 登录端点单独收紧：按 IP 5 次/分钟（防爆破，与账号级 LoginLock 互补）
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOkResponse({ description: '登录成功返回双 token' })
   login(@Body() body: LoginInput, @Req() req: Request): Promise<IssuedTokens> {
     return this.authService.adminLogin(body, req);
