@@ -1,6 +1,6 @@
 {
   "name": "@starter/source",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "license": "MIT",
   "packageManager": "pnpm@11.21.0",
   "engines": {
