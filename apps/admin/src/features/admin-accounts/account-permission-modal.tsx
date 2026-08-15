@@ -111,7 +111,6 @@ export function AccountPermissionModal({
             <Button
               size="small"
               type={state === 'grant' ? 'primary' : 'default'}
-              ghost={state !== 'grant'}
               onClick={(e) => {
                 e.stopPropagation();
                 toggleOverride(menuId, 'grant');
@@ -123,7 +122,6 @@ export function AccountPermissionModal({
               size="small"
               type={state === 'deny' ? 'primary' : 'default'}
               danger={state === 'deny'}
-              ghost={state !== 'deny'}
               onClick={(e) => {
                 e.stopPropagation();
                 toggleOverride(menuId, 'deny');
