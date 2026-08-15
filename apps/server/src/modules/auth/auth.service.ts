@@ -15,6 +15,7 @@ import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AuditService, AUDIT_ACTIONS } from './audit.service.js';
 import { LoginLockService } from './login-lock.service.js';
 import { TokenIssuanceService, type IssuedTokens } from './token-issuance.service.js';
+import { TurnstileService } from '../turnstile/turnstile.service.js';
 import { buildMenuTree } from '../admin-menu/menu-tree.util.js';
 
 const INVALID_CREDENTIALS = 'INVALID_CREDENTIALS';
@@ -44,6 +45,7 @@ export class AuthService {
     private readonly tokenIssuance: TokenIssuanceService,
     private readonly loginLock: LoginLockService,
     private readonly audit: AuditService,
+    private readonly turnstile: TurnstileService,
     @InjectMetric('auth_login_success_total')
     private readonly loginSuccessCounter: Counter<string>,
   ) {}
@@ -51,6 +53,9 @@ export class AuthService {
   async adminLogin(input: LoginInput, req: Request): Promise<IssuedTokens> {
     const data = LoginSchema.parse(input);
     const { ip, userAgent } = clientInfo(req);
+
+    // Turnstile 人机验证（未启用时自动跳过）
+    await this.turnstile.verify(data.turnstileToken, ip);
 
     const identity = await this.prisma.client.accountIdentity.findUnique({
       where: {

@@ -224,6 +224,27 @@ model UploadFile {
 }
 
 // ============================================================
+// 系统配置（阶段 4）：key-value JSON 键值存储，支撑后台设置/存储驱动/Turnstile 等
+// ============================================================
+
+/// 系统配置项 — 一行一个 key，value 为 JSON 对象（后台设置 settings / storage.driver / turnstile.config 等）
+model SystemConfig {
+  id        String    @id @db.Uuid
+  /// 配置键（业务主键），如 settings / storage.driver / turnstile.config
+  key       String    @unique @db.VarChar(100)
+  /// 配置值（JSON 对象）
+  value     Json
+  remark    String?   @db.VarChar(255)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  /// 软删除时间戳（查询过滤 deletedAt:null）
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("system_config")
+}
+
+// ============================================================
 // 业务演示（阶段 1 保留）：User CRUD
 // ============================================================
 

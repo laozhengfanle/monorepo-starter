@@ -14,6 +14,10 @@ import { AdminRoleModule } from '../modules/admin-role/admin-role.module.js';
 import { AdminMenuModule } from '../modules/admin-menu/admin-menu.module.js';
 import { UploadModule } from '../modules/upload/upload.module.js';
 import { WsModule } from '../modules/ws/ws.module.js';
+import { SystemConfigModule } from '../modules/system-config/system-config.module.js';
+import { AuditLogModule } from '../modules/audit-log/audit-log.module.js';
+import { CacheAdminModule } from '../modules/cache-admin/cache-admin.module.js';
+import { TurnstileModule } from '../modules/turnstile/turnstile.module.js';
 import { validateEnv } from '../config/env.validation.js';
 import { HealthModule } from '../health/health.module.js';
 import { UsersModule } from '../users/users.module.js';
@@ -42,6 +46,10 @@ import { UsersModule } from '../users/users.module.js';
     AdminMenuModule,
     UploadModule,
     WsModule,
+    SystemConfigModule,
+    AuditLogModule,
+    CacheAdminModule,
+    TurnstileModule,
     HealthModule,
     UsersModule,
   ],

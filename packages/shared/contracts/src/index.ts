@@ -8,3 +8,6 @@ export * from './lib/schemas/admin-account.js';
 export * from './lib/schemas/admin-role.js';
 export * from './lib/schemas/admin-menu.js';
 export * from './lib/schemas/upload.js';
+export * from './lib/schemas/system-config.js';
+export * from './lib/schemas/audit-log.js';
+export * from './lib/schemas/cache-admin.js';

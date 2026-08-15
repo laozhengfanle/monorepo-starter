@@ -7,6 +7,10 @@ import { AdminMenusPage } from '../features/admin-menus/pages/admin-menus-page';
 import { ProfilePage } from '../features/account/profile-page';
 import { AccountSettingsPage } from '../features/account/settings-page';
 import { SystemSettingsPage } from '../features/system/pages/system-settings-page';
+import { AuditLogsPage } from '../features/system/pages/audit-logs-page';
+import { StorageDriverPage } from '../features/system/pages/storage-driver-page';
+import { CacheAdminPage } from '../features/system/pages/cache-admin-page';
+import { TurnstilePage } from '../features/system/pages/turnstile-page';
 import { usePermission } from './auth/use-permission.js';
 
 /**
@@ -26,7 +30,11 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/admin/accounts', element: <AdminAccountsPage />, permission: 'account:list' },
   { path: '/admin/roles', element: <AdminRolesPage />, permission: 'role:list' },
   { path: '/admin/menus', element: <AdminMenusPage />, permission: 'menu:list' },
-  { path: '/admin/settings', element: <SystemSettingsPage />, permission: 'config:admin' },
+  { path: '/admin/settings', element: <SystemSettingsPage />, permission: 'config:admin:view' },
+  { path: '/admin/audit-logs', element: <AuditLogsPage />, permission: 'config:audit:view' },
+  { path: '/admin/storage', element: <StorageDriverPage />, permission: 'config:file:view' },
+  { path: '/admin/cache', element: <CacheAdminPage />, permission: 'config:cache:view' },
+  { path: '/admin/turnstile', element: <TurnstilePage />, permission: 'config:turnstile:view' },
   // 个人中心：登录即可访问，不进菜单表（对标老项目静态路由）
   { path: '/account/profile', element: <ProfilePage /> },
   { path: '/account/settings', element: <AccountSettingsPage /> },

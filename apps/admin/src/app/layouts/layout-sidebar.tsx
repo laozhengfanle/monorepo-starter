@@ -3,11 +3,15 @@ import {
   DashboardOutlined,
   DeleteOutlined,
   FileOutlined,
+  FileTextOutlined,
+  FolderOutlined,
   GlobalOutlined,
   MenuOutlined,
+  SafetyCertificateOutlined,
   SafetyOutlined,
   SettingOutlined,
   TeamOutlined,
+  ThunderboltOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu, theme } from 'antd';
@@ -35,6 +39,10 @@ const iconMap: Record<string, ReactNode> = {
   FileOutlined: <FileOutlined />,
   AppstoreOutlined: <AppstoreOutlined />,
   GlobalOutlined: <GlobalOutlined />,
+  FileTextOutlined: <FileTextOutlined />,
+  FolderOutlined: <FolderOutlined />,
+  ThunderboltOutlined: <ThunderboltOutlined />,
+  SafetyCertificateOutlined: <SafetyCertificateOutlined />,
 };
 
 function resolveIcon(icon?: string | null): ReactNode {

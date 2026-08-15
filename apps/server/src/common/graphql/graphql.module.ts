@@ -4,6 +4,7 @@ import { ApolloDriver, type ApolloDriverConfig } from '@nestjs/apollo';
 import { unwrapResolverError } from '@apollo/server/errors';
 import type { Request, Response } from 'express';
 import { join } from 'node:path';
+import { JsonScalar } from './json.scalar.js';
 
 /**
  * GraphQL 模块（应用级，Code-First 模式）。
@@ -48,5 +49,6 @@ import { join } from 'node:path';
       },
     }),
   ],
+  providers: [JsonScalar],
 })
 export class GraphQLModule {}

@@ -91,6 +91,10 @@ const ICON_OPTIONS = [
   { value: 'AppstoreOutlined', label: 'AppstoreOutlined（应用）' },
   { value: 'DeleteOutlined', label: 'DeleteOutlined（删除）' },
   { value: 'GlobalOutlined', label: 'GlobalOutlined（全局）' },
+  { value: 'FileTextOutlined', label: 'FileTextOutlined（文本）' },
+  { value: 'FolderOutlined', label: 'FolderOutlined（文件夹）' },
+  { value: 'ThunderboltOutlined', label: 'ThunderboltOutlined（闪电）' },
+  { value: 'SafetyCertificateOutlined', label: 'SafetyCertificateOutlined（证书）' },
 ];
 
 /** GraphQL 错误 → 用户提示 */

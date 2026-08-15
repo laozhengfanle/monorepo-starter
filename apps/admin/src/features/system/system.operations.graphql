@@ -1,0 +1,132 @@
+fragment SystemConfigFields on SystemConfig {
+  id
+  key
+  value
+  remark
+  updatedBy
+  createdAt
+  updatedAt
+}
+
+query AdminConfigs {
+  adminConfigs {
+    ...SystemConfigFields
+  }
+}
+
+mutation BatchUpdateConfigs($input: BatchUpdateConfigsInput!) {
+  batchUpdateConfigs(input: $input) {
+    ...SystemConfigFields
+  }
+}
+
+fragment AuditLogFields on AuditLogItem {
+  id
+  accountId
+  accountUsername
+  action
+  resourceType
+  resourceId
+  detail
+  ip
+  userAgent
+  createdAt
+}
+
+query AdminLogs(
+  $page: Int
+  $pageSize: Int
+  $action: String
+  $resourceType: String
+  $startDate: String
+  $endDate: String
+) {
+  adminLogs(
+    page: $page
+    pageSize: $pageSize
+    action: $action
+    resourceType: $resourceType
+    startDate: $startDate
+    endDate: $endDate
+  ) {
+    items {
+      ...AuditLogFields
+    }
+    total
+    page
+    pageSize
+  }
+}
+
+query ExportAuditLogs(
+  $action: String
+  $resourceType: String
+  $startDate: String
+  $endDate: String
+) {
+  exportAuditLogs(
+    action: $action
+    resourceType: $resourceType
+    startDate: $startDate
+    endDate: $endDate
+  ) {
+    ...AuditLogFields
+  }
+}
+
+mutation ClearAuditLogs {
+  clearAuditLogs {
+    deletedCount
+  }
+}
+
+mutation DeleteAuditLog($id: ID!) {
+  deleteAuditLog(id: $id)
+}
+
+fragment CacheKeyFields on CacheKey {
+  key
+  type
+  ttl
+  value
+  size
+}
+
+query CacheKeys($pattern: String, $offset: Int, $limit: Int) {
+  cacheKeys(pattern: $pattern, offset: $offset, limit: $limit) {
+    ...CacheKeyFields
+  }
+}
+
+query CacheKeyTotal($pattern: String) {
+  cacheKeyTotal(pattern: $pattern)
+}
+
+query CacheKey($key: String!) {
+  cacheKey(key: $key) {
+    ...CacheKeyFields
+  }
+}
+
+query CacheStats {
+  cacheStats {
+    usedMemory
+    hitRate
+    uptime
+  }
+}
+
+mutation DeleteCacheKey($key: String!) {
+  deleteCacheKey(key: $key)
+}
+
+mutation DeleteCacheKeys($keys: [String!]!) {
+  deleteCacheKeys(keys: $keys) {
+    deletedCount
+    keys
+  }
+}
+
+mutation ClearCacheByPattern($pattern: String!) {
+  clearCacheByPattern(pattern: $pattern)
+}

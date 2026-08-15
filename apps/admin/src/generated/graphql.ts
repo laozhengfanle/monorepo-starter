@@ -15,6 +15,8 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
+  /** 任意 JSON 值（对象 / 数组 / 字符串 / 数字 / 布尔 / null） */
+  JSON: { input: any; output: any; }
 };
 
 export type AdminAccount = {
@@ -71,11 +73,55 @@ export type AdminRole = {
   permissionCodes: Array<Scalars['String']['output']>;
 };
 
+export type AuditLogItem = {
+  __typename?: 'AuditLogItem';
+  accountId?: Maybe<Scalars['String']['output']>;
+  accountUsername?: Maybe<Scalars['String']['output']>;
+  action: Scalars['String']['output'];
+  createdAt: Scalars['String']['output'];
+  detail?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  ip?: Maybe<Scalars['String']['output']>;
+  resourceId?: Maybe<Scalars['String']['output']>;
+  resourceType?: Maybe<Scalars['String']['output']>;
+  userAgent?: Maybe<Scalars['String']['output']>;
+};
+
 export type AuthResult = {
   __typename?: 'AuthResult';
   accessToken: Scalars['String']['output'];
   expiresIn: Scalars['Int']['output'];
   refreshToken: Scalars['String']['output'];
+};
+
+export type BatchUpdateConfigsInput = {
+  updates: Array<ConfigUpdateItemInput>;
+};
+
+export type CacheKey = {
+  __typename?: 'CacheKey';
+  key: Scalars['String']['output'];
+  size: Scalars['Int']['output'];
+  ttl: Scalars['Int']['output'];
+  type: Scalars['String']['output'];
+  value?: Maybe<Scalars['String']['output']>;
+};
+
+export type CacheStats = {
+  __typename?: 'CacheStats';
+  hitRate: Scalars['String']['output'];
+  uptime: Scalars['String']['output'];
+  usedMemory: Scalars['String']['output'];
+};
+
+export type ClearAuditLogsResult = {
+  __typename?: 'ClearAuditLogsResult';
+  deletedCount: Scalars['Int']['output'];
+};
+
+export type ConfigUpdateItemInput = {
+  key: Scalars['String']['input'];
+  value: Scalars['JSON']['input'];
 };
 
 export type CreateAdminAccountInput = {
@@ -111,6 +157,12 @@ export type CreateUserInput = {
   username: Scalars['String']['input'];
 };
 
+export type DeleteCacheKeysResult = {
+  __typename?: 'DeleteCacheKeysResult';
+  deletedCount: Scalars['Int']['output'];
+  keys: Array<Scalars['String']['output']>;
+};
+
 export type LoginInput = {
   password: Scalars['String']['input'];
   username: Scalars['String']['input'];
@@ -118,11 +170,17 @@ export type LoginInput = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  batchUpdateConfigs: Array<SystemConfig>;
+  clearAuditLogs: ClearAuditLogsResult;
+  clearCacheByPattern: Scalars['Int']['output'];
   createAdminAccount: AdminAccount;
   createMenu: AdminMenuNode;
   createRole: AdminRole;
   createUser: User;
   deleteAdminAccount: AdminAccount;
+  deleteAuditLog: Scalars['Boolean']['output'];
+  deleteCacheKey: Scalars['Boolean']['output'];
+  deleteCacheKeys: DeleteCacheKeysResult;
   deleteMenu: AdminMenuNode;
   deleteRole: AdminRole;
   deleteUser: User;
@@ -131,6 +189,16 @@ export type Mutation = {
   updateMenu: AdminMenuNode;
   updateRole: AdminRole;
   updateUser: User;
+};
+
+
+export type MutationBatchUpdateConfigsArgs = {
+  input: BatchUpdateConfigsInput;
+};
+
+
+export type MutationClearCacheByPatternArgs = {
+  pattern: Scalars['String']['input'];
 };
 
 
@@ -156,6 +224,21 @@ export type MutationCreateUserArgs = {
 
 export type MutationDeleteAdminAccountArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeleteAuditLogArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeleteCacheKeyArgs = {
+  key: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteCacheKeysArgs = {
+  keys: Array<Scalars['String']['input']>;
 };
 
 
@@ -210,6 +293,14 @@ export type PaginatedAdminAccounts = {
   total: Scalars['Int']['output'];
 };
 
+export type PaginatedAuditLogs = {
+  __typename?: 'PaginatedAuditLogs';
+  items: Array<AuditLogItem>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+};
+
 export type PaginatedUsers = {
   __typename?: 'PaginatedUsers';
   items: Array<User>;
@@ -229,7 +320,14 @@ export type PermissionCode = {
 export type Query = {
   __typename?: 'Query';
   adminAccounts: PaginatedAdminAccounts;
+  adminConfigs: Array<SystemConfig>;
+  adminLogs: PaginatedAuditLogs;
   adminRoles: Array<AdminRole>;
+  cacheKey: CacheKey;
+  cacheKeyTotal: Scalars['Int']['output'];
+  cacheKeys: Array<CacheKey>;
+  cacheStats: CacheStats;
+  exportAuditLogs: Array<AuditLogItem>;
   me: AdminMe;
   menuTree: Array<AdminMenuNode>;
   permissionCodes: Array<PermissionCode>;
@@ -245,6 +343,41 @@ export type QueryAdminAccountsArgs = {
 };
 
 
+export type QueryAdminLogsArgs = {
+  action?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  resourceType?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryCacheKeyArgs = {
+  key: Scalars['String']['input'];
+};
+
+
+export type QueryCacheKeyTotalArgs = {
+  pattern?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryCacheKeysArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  pattern?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryExportAuditLogsArgs = {
+  action?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  resourceType?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type QueryUserArgs = {
   id: Scalars['ID']['input'];
 };
@@ -253,6 +386,17 @@ export type QueryUserArgs = {
 export type QueryUsersArgs = {
   page?: InputMaybe<Scalars['Int']['input']>;
   pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type SystemConfig = {
+  __typename?: 'SystemConfig';
+  createdAt: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  key: Scalars['String']['output'];
+  remark?: Maybe<Scalars['String']['output']>;
+  updatedAt: Scalars['String']['output'];
+  updatedBy?: Maybe<Scalars['String']['output']>;
+  value: Scalars['JSON']['output'];
 };
 
 export type UpdateAdminAccountInput = {
@@ -425,6 +569,107 @@ export type DashboardRecentUsersQueryVariables = Exact<{ [key: string]: never; }
 
 export type DashboardRecentUsersQuery = { __typename?: 'Query', users: { __typename?: 'PaginatedUsers', items: Array<{ __typename?: 'User', id: string, username: string, email: string, role: UserRole, status: UserStatus, createdAt: string }> } };
 
+export type SystemConfigFieldsFragment = { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string };
+
+export type AdminConfigsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AdminConfigsQuery = { __typename?: 'Query', adminConfigs: Array<{ __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string }> };
+
+export type BatchUpdateConfigsMutationVariables = Exact<{
+  input: BatchUpdateConfigsInput;
+}>;
+
+
+export type BatchUpdateConfigsMutation = { __typename?: 'Mutation', batchUpdateConfigs: Array<{ __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string }> };
+
+export type AuditLogFieldsFragment = { __typename?: 'AuditLogItem', id: string, accountId?: string | null, accountUsername?: string | null, action: string, resourceType?: string | null, resourceId?: string | null, detail?: string | null, ip?: string | null, userAgent?: string | null, createdAt: string };
+
+export type AdminLogsQueryVariables = Exact<{
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  action?: InputMaybe<Scalars['String']['input']>;
+  resourceType?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type AdminLogsQuery = { __typename?: 'Query', adminLogs: { __typename?: 'PaginatedAuditLogs', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'AuditLogItem', id: string, accountId?: string | null, accountUsername?: string | null, action: string, resourceType?: string | null, resourceId?: string | null, detail?: string | null, ip?: string | null, userAgent?: string | null, createdAt: string }> } };
+
+export type ExportAuditLogsQueryVariables = Exact<{
+  action?: InputMaybe<Scalars['String']['input']>;
+  resourceType?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type ExportAuditLogsQuery = { __typename?: 'Query', exportAuditLogs: Array<{ __typename?: 'AuditLogItem', id: string, accountId?: string | null, accountUsername?: string | null, action: string, resourceType?: string | null, resourceId?: string | null, detail?: string | null, ip?: string | null, userAgent?: string | null, createdAt: string }> };
+
+export type ClearAuditLogsMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ClearAuditLogsMutation = { __typename?: 'Mutation', clearAuditLogs: { __typename?: 'ClearAuditLogsResult', deletedCount: number } };
+
+export type DeleteAuditLogMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteAuditLogMutation = { __typename?: 'Mutation', deleteAuditLog: boolean };
+
+export type CacheKeyFieldsFragment = { __typename?: 'CacheKey', key: string, type: string, ttl: number, value?: string | null, size: number };
+
+export type CacheKeysQueryVariables = Exact<{
+  pattern?: InputMaybe<Scalars['String']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type CacheKeysQuery = { __typename?: 'Query', cacheKeys: Array<{ __typename?: 'CacheKey', key: string, type: string, ttl: number, value?: string | null, size: number }> };
+
+export type CacheKeyTotalQueryVariables = Exact<{
+  pattern?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type CacheKeyTotalQuery = { __typename?: 'Query', cacheKeyTotal: number };
+
+export type CacheKeyQueryVariables = Exact<{
+  key: Scalars['String']['input'];
+}>;
+
+
+export type CacheKeyQuery = { __typename?: 'Query', cacheKey: { __typename?: 'CacheKey', key: string, type: string, ttl: number, value?: string | null, size: number } };
+
+export type CacheStatsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type CacheStatsQuery = { __typename?: 'Query', cacheStats: { __typename?: 'CacheStats', usedMemory: string, hitRate: string, uptime: string } };
+
+export type DeleteCacheKeyMutationVariables = Exact<{
+  key: Scalars['String']['input'];
+}>;
+
+
+export type DeleteCacheKeyMutation = { __typename?: 'Mutation', deleteCacheKey: boolean };
+
+export type DeleteCacheKeysMutationVariables = Exact<{
+  keys: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
+
+
+export type DeleteCacheKeysMutation = { __typename?: 'Mutation', deleteCacheKeys: { __typename?: 'DeleteCacheKeysResult', deletedCount: number, keys: Array<string> } };
+
+export type ClearCacheByPatternMutationVariables = Exact<{
+  pattern: Scalars['String']['input'];
+}>;
+
+
+export type ClearCacheByPatternMutation = { __typename?: 'Mutation', clearCacheByPattern: number };
+
 export type UsersQueryVariables = Exact<{
   page?: InputMaybe<Scalars['Int']['input']>;
   pageSize?: InputMaybe<Scalars['Int']['input']>;
@@ -468,6 +713,40 @@ export const MenuNodeFieldsFragmentDoc = gql`
   enabled
   visible
   createdAt
+}
+    `;
+export const SystemConfigFieldsFragmentDoc = gql`
+    fragment SystemConfigFields on SystemConfig {
+  id
+  key
+  value
+  remark
+  updatedBy
+  createdAt
+  updatedAt
+}
+    `;
+export const AuditLogFieldsFragmentDoc = gql`
+    fragment AuditLogFields on AuditLogItem {
+  id
+  accountId
+  accountUsername
+  action
+  resourceType
+  resourceId
+  detail
+  ip
+  userAgent
+  createdAt
+}
+    `;
+export const CacheKeyFieldsFragmentDoc = gql`
+    fragment CacheKeyFields on CacheKey {
+  key
+  type
+  ttl
+  value
+  size
 }
     `;
 export const AdminAccountsDocument = gql`
@@ -1214,6 +1493,524 @@ export type DashboardRecentUsersQueryHookResult = ReturnType<typeof useDashboard
 export type DashboardRecentUsersLazyQueryHookResult = ReturnType<typeof useDashboardRecentUsersLazyQuery>;
 export type DashboardRecentUsersSuspenseQueryHookResult = ReturnType<typeof useDashboardRecentUsersSuspenseQuery>;
 export type DashboardRecentUsersQueryResult = Apollo.QueryResult<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>;
+export const AdminConfigsDocument = gql`
+    query AdminConfigs {
+  adminConfigs {
+    ...SystemConfigFields
+  }
+}
+    ${SystemConfigFieldsFragmentDoc}`;
+
+/**
+ * __useAdminConfigsQuery__
+ *
+ * To run a query within a React component, call `useAdminConfigsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAdminConfigsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAdminConfigsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useAdminConfigsQuery(baseOptions?: Apollo.QueryHookOptions<AdminConfigsQuery, AdminConfigsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AdminConfigsQuery, AdminConfigsQueryVariables>(AdminConfigsDocument, options);
+      }
+export function useAdminConfigsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AdminConfigsQuery, AdminConfigsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AdminConfigsQuery, AdminConfigsQueryVariables>(AdminConfigsDocument, options);
+        }
+// @ts-ignore
+export function useAdminConfigsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<AdminConfigsQuery, AdminConfigsQueryVariables>): Apollo.UseSuspenseQueryResult<AdminConfigsQuery, AdminConfigsQueryVariables>;
+export function useAdminConfigsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AdminConfigsQuery, AdminConfigsQueryVariables>): Apollo.UseSuspenseQueryResult<AdminConfigsQuery | undefined, AdminConfigsQueryVariables>;
+export function useAdminConfigsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AdminConfigsQuery, AdminConfigsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<AdminConfigsQuery, AdminConfigsQueryVariables>(AdminConfigsDocument, options);
+        }
+export type AdminConfigsQueryHookResult = ReturnType<typeof useAdminConfigsQuery>;
+export type AdminConfigsLazyQueryHookResult = ReturnType<typeof useAdminConfigsLazyQuery>;
+export type AdminConfigsSuspenseQueryHookResult = ReturnType<typeof useAdminConfigsSuspenseQuery>;
+export type AdminConfigsQueryResult = Apollo.QueryResult<AdminConfigsQuery, AdminConfigsQueryVariables>;
+export const BatchUpdateConfigsDocument = gql`
+    mutation BatchUpdateConfigs($input: BatchUpdateConfigsInput!) {
+  batchUpdateConfigs(input: $input) {
+    ...SystemConfigFields
+  }
+}
+    ${SystemConfigFieldsFragmentDoc}`;
+export type BatchUpdateConfigsMutationFn = Apollo.MutationFunction<BatchUpdateConfigsMutation, BatchUpdateConfigsMutationVariables>;
+
+/**
+ * __useBatchUpdateConfigsMutation__
+ *
+ * To run a mutation, you first call `useBatchUpdateConfigsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useBatchUpdateConfigsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [batchUpdateConfigsMutation, { data, loading, error }] = useBatchUpdateConfigsMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useBatchUpdateConfigsMutation(baseOptions?: Apollo.MutationHookOptions<BatchUpdateConfigsMutation, BatchUpdateConfigsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<BatchUpdateConfigsMutation, BatchUpdateConfigsMutationVariables>(BatchUpdateConfigsDocument, options);
+      }
+export type BatchUpdateConfigsMutationHookResult = ReturnType<typeof useBatchUpdateConfigsMutation>;
+export type BatchUpdateConfigsMutationResult = Apollo.MutationResult<BatchUpdateConfigsMutation>;
+export type BatchUpdateConfigsMutationOptions = Apollo.BaseMutationOptions<BatchUpdateConfigsMutation, BatchUpdateConfigsMutationVariables>;
+export const AdminLogsDocument = gql`
+    query AdminLogs($page: Int, $pageSize: Int, $action: String, $resourceType: String, $startDate: String, $endDate: String) {
+  adminLogs(
+    page: $page
+    pageSize: $pageSize
+    action: $action
+    resourceType: $resourceType
+    startDate: $startDate
+    endDate: $endDate
+  ) {
+    items {
+      ...AuditLogFields
+    }
+    total
+    page
+    pageSize
+  }
+}
+    ${AuditLogFieldsFragmentDoc}`;
+
+/**
+ * __useAdminLogsQuery__
+ *
+ * To run a query within a React component, call `useAdminLogsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAdminLogsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAdminLogsQuery({
+ *   variables: {
+ *      page: // value for 'page'
+ *      pageSize: // value for 'pageSize'
+ *      action: // value for 'action'
+ *      resourceType: // value for 'resourceType'
+ *      startDate: // value for 'startDate'
+ *      endDate: // value for 'endDate'
+ *   },
+ * });
+ */
+export function useAdminLogsQuery(baseOptions?: Apollo.QueryHookOptions<AdminLogsQuery, AdminLogsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AdminLogsQuery, AdminLogsQueryVariables>(AdminLogsDocument, options);
+      }
+export function useAdminLogsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AdminLogsQuery, AdminLogsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AdminLogsQuery, AdminLogsQueryVariables>(AdminLogsDocument, options);
+        }
+// @ts-ignore
+export function useAdminLogsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<AdminLogsQuery, AdminLogsQueryVariables>): Apollo.UseSuspenseQueryResult<AdminLogsQuery, AdminLogsQueryVariables>;
+export function useAdminLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AdminLogsQuery, AdminLogsQueryVariables>): Apollo.UseSuspenseQueryResult<AdminLogsQuery | undefined, AdminLogsQueryVariables>;
+export function useAdminLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AdminLogsQuery, AdminLogsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<AdminLogsQuery, AdminLogsQueryVariables>(AdminLogsDocument, options);
+        }
+export type AdminLogsQueryHookResult = ReturnType<typeof useAdminLogsQuery>;
+export type AdminLogsLazyQueryHookResult = ReturnType<typeof useAdminLogsLazyQuery>;
+export type AdminLogsSuspenseQueryHookResult = ReturnType<typeof useAdminLogsSuspenseQuery>;
+export type AdminLogsQueryResult = Apollo.QueryResult<AdminLogsQuery, AdminLogsQueryVariables>;
+export const ExportAuditLogsDocument = gql`
+    query ExportAuditLogs($action: String, $resourceType: String, $startDate: String, $endDate: String) {
+  exportAuditLogs(
+    action: $action
+    resourceType: $resourceType
+    startDate: $startDate
+    endDate: $endDate
+  ) {
+    ...AuditLogFields
+  }
+}
+    ${AuditLogFieldsFragmentDoc}`;
+
+/**
+ * __useExportAuditLogsQuery__
+ *
+ * To run a query within a React component, call `useExportAuditLogsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useExportAuditLogsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useExportAuditLogsQuery({
+ *   variables: {
+ *      action: // value for 'action'
+ *      resourceType: // value for 'resourceType'
+ *      startDate: // value for 'startDate'
+ *      endDate: // value for 'endDate'
+ *   },
+ * });
+ */
+export function useExportAuditLogsQuery(baseOptions?: Apollo.QueryHookOptions<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>(ExportAuditLogsDocument, options);
+      }
+export function useExportAuditLogsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>(ExportAuditLogsDocument, options);
+        }
+// @ts-ignore
+export function useExportAuditLogsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>): Apollo.UseSuspenseQueryResult<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>;
+export function useExportAuditLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>): Apollo.UseSuspenseQueryResult<ExportAuditLogsQuery | undefined, ExportAuditLogsQueryVariables>;
+export function useExportAuditLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>(ExportAuditLogsDocument, options);
+        }
+export type ExportAuditLogsQueryHookResult = ReturnType<typeof useExportAuditLogsQuery>;
+export type ExportAuditLogsLazyQueryHookResult = ReturnType<typeof useExportAuditLogsLazyQuery>;
+export type ExportAuditLogsSuspenseQueryHookResult = ReturnType<typeof useExportAuditLogsSuspenseQuery>;
+export type ExportAuditLogsQueryResult = Apollo.QueryResult<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>;
+export const ClearAuditLogsDocument = gql`
+    mutation ClearAuditLogs {
+  clearAuditLogs {
+    deletedCount
+  }
+}
+    `;
+export type ClearAuditLogsMutationFn = Apollo.MutationFunction<ClearAuditLogsMutation, ClearAuditLogsMutationVariables>;
+
+/**
+ * __useClearAuditLogsMutation__
+ *
+ * To run a mutation, you first call `useClearAuditLogsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearAuditLogsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [clearAuditLogsMutation, { data, loading, error }] = useClearAuditLogsMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useClearAuditLogsMutation(baseOptions?: Apollo.MutationHookOptions<ClearAuditLogsMutation, ClearAuditLogsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ClearAuditLogsMutation, ClearAuditLogsMutationVariables>(ClearAuditLogsDocument, options);
+      }
+export type ClearAuditLogsMutationHookResult = ReturnType<typeof useClearAuditLogsMutation>;
+export type ClearAuditLogsMutationResult = Apollo.MutationResult<ClearAuditLogsMutation>;
+export type ClearAuditLogsMutationOptions = Apollo.BaseMutationOptions<ClearAuditLogsMutation, ClearAuditLogsMutationVariables>;
+export const DeleteAuditLogDocument = gql`
+    mutation DeleteAuditLog($id: ID!) {
+  deleteAuditLog(id: $id)
+}
+    `;
+export type DeleteAuditLogMutationFn = Apollo.MutationFunction<DeleteAuditLogMutation, DeleteAuditLogMutationVariables>;
+
+/**
+ * __useDeleteAuditLogMutation__
+ *
+ * To run a mutation, you first call `useDeleteAuditLogMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteAuditLogMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteAuditLogMutation, { data, loading, error }] = useDeleteAuditLogMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteAuditLogMutation(baseOptions?: Apollo.MutationHookOptions<DeleteAuditLogMutation, DeleteAuditLogMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteAuditLogMutation, DeleteAuditLogMutationVariables>(DeleteAuditLogDocument, options);
+      }
+export type DeleteAuditLogMutationHookResult = ReturnType<typeof useDeleteAuditLogMutation>;
+export type DeleteAuditLogMutationResult = Apollo.MutationResult<DeleteAuditLogMutation>;
+export type DeleteAuditLogMutationOptions = Apollo.BaseMutationOptions<DeleteAuditLogMutation, DeleteAuditLogMutationVariables>;
+export const CacheKeysDocument = gql`
+    query CacheKeys($pattern: String, $offset: Int, $limit: Int) {
+  cacheKeys(pattern: $pattern, offset: $offset, limit: $limit) {
+    ...CacheKeyFields
+  }
+}
+    ${CacheKeyFieldsFragmentDoc}`;
+
+/**
+ * __useCacheKeysQuery__
+ *
+ * To run a query within a React component, call `useCacheKeysQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCacheKeysQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCacheKeysQuery({
+ *   variables: {
+ *      pattern: // value for 'pattern'
+ *      offset: // value for 'offset'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useCacheKeysQuery(baseOptions?: Apollo.QueryHookOptions<CacheKeysQuery, CacheKeysQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CacheKeysQuery, CacheKeysQueryVariables>(CacheKeysDocument, options);
+      }
+export function useCacheKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CacheKeysQuery, CacheKeysQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CacheKeysQuery, CacheKeysQueryVariables>(CacheKeysDocument, options);
+        }
+// @ts-ignore
+export function useCacheKeysSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CacheKeysQuery, CacheKeysQueryVariables>): Apollo.UseSuspenseQueryResult<CacheKeysQuery, CacheKeysQueryVariables>;
+export function useCacheKeysSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CacheKeysQuery, CacheKeysQueryVariables>): Apollo.UseSuspenseQueryResult<CacheKeysQuery | undefined, CacheKeysQueryVariables>;
+export function useCacheKeysSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CacheKeysQuery, CacheKeysQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CacheKeysQuery, CacheKeysQueryVariables>(CacheKeysDocument, options);
+        }
+export type CacheKeysQueryHookResult = ReturnType<typeof useCacheKeysQuery>;
+export type CacheKeysLazyQueryHookResult = ReturnType<typeof useCacheKeysLazyQuery>;
+export type CacheKeysSuspenseQueryHookResult = ReturnType<typeof useCacheKeysSuspenseQuery>;
+export type CacheKeysQueryResult = Apollo.QueryResult<CacheKeysQuery, CacheKeysQueryVariables>;
+export const CacheKeyTotalDocument = gql`
+    query CacheKeyTotal($pattern: String) {
+  cacheKeyTotal(pattern: $pattern)
+}
+    `;
+
+/**
+ * __useCacheKeyTotalQuery__
+ *
+ * To run a query within a React component, call `useCacheKeyTotalQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCacheKeyTotalQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCacheKeyTotalQuery({
+ *   variables: {
+ *      pattern: // value for 'pattern'
+ *   },
+ * });
+ */
+export function useCacheKeyTotalQuery(baseOptions?: Apollo.QueryHookOptions<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>(CacheKeyTotalDocument, options);
+      }
+export function useCacheKeyTotalLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>(CacheKeyTotalDocument, options);
+        }
+// @ts-ignore
+export function useCacheKeyTotalSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>): Apollo.UseSuspenseQueryResult<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>;
+export function useCacheKeyTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>): Apollo.UseSuspenseQueryResult<CacheKeyTotalQuery | undefined, CacheKeyTotalQueryVariables>;
+export function useCacheKeyTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>(CacheKeyTotalDocument, options);
+        }
+export type CacheKeyTotalQueryHookResult = ReturnType<typeof useCacheKeyTotalQuery>;
+export type CacheKeyTotalLazyQueryHookResult = ReturnType<typeof useCacheKeyTotalLazyQuery>;
+export type CacheKeyTotalSuspenseQueryHookResult = ReturnType<typeof useCacheKeyTotalSuspenseQuery>;
+export type CacheKeyTotalQueryResult = Apollo.QueryResult<CacheKeyTotalQuery, CacheKeyTotalQueryVariables>;
+export const CacheKeyDocument = gql`
+    query CacheKey($key: String!) {
+  cacheKey(key: $key) {
+    ...CacheKeyFields
+  }
+}
+    ${CacheKeyFieldsFragmentDoc}`;
+
+/**
+ * __useCacheKeyQuery__
+ *
+ * To run a query within a React component, call `useCacheKeyQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCacheKeyQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCacheKeyQuery({
+ *   variables: {
+ *      key: // value for 'key'
+ *   },
+ * });
+ */
+export function useCacheKeyQuery(baseOptions: Apollo.QueryHookOptions<CacheKeyQuery, CacheKeyQueryVariables> & ({ variables: CacheKeyQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CacheKeyQuery, CacheKeyQueryVariables>(CacheKeyDocument, options);
+      }
+export function useCacheKeyLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CacheKeyQuery, CacheKeyQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CacheKeyQuery, CacheKeyQueryVariables>(CacheKeyDocument, options);
+        }
+// @ts-ignore
+export function useCacheKeySuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CacheKeyQuery, CacheKeyQueryVariables>): Apollo.UseSuspenseQueryResult<CacheKeyQuery, CacheKeyQueryVariables>;
+export function useCacheKeySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CacheKeyQuery, CacheKeyQueryVariables>): Apollo.UseSuspenseQueryResult<CacheKeyQuery | undefined, CacheKeyQueryVariables>;
+export function useCacheKeySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CacheKeyQuery, CacheKeyQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CacheKeyQuery, CacheKeyQueryVariables>(CacheKeyDocument, options);
+        }
+export type CacheKeyQueryHookResult = ReturnType<typeof useCacheKeyQuery>;
+export type CacheKeyLazyQueryHookResult = ReturnType<typeof useCacheKeyLazyQuery>;
+export type CacheKeySuspenseQueryHookResult = ReturnType<typeof useCacheKeySuspenseQuery>;
+export type CacheKeyQueryResult = Apollo.QueryResult<CacheKeyQuery, CacheKeyQueryVariables>;
+export const CacheStatsDocument = gql`
+    query CacheStats {
+  cacheStats {
+    usedMemory
+    hitRate
+    uptime
+  }
+}
+    `;
+
+/**
+ * __useCacheStatsQuery__
+ *
+ * To run a query within a React component, call `useCacheStatsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCacheStatsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCacheStatsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useCacheStatsQuery(baseOptions?: Apollo.QueryHookOptions<CacheStatsQuery, CacheStatsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CacheStatsQuery, CacheStatsQueryVariables>(CacheStatsDocument, options);
+      }
+export function useCacheStatsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CacheStatsQuery, CacheStatsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CacheStatsQuery, CacheStatsQueryVariables>(CacheStatsDocument, options);
+        }
+// @ts-ignore
+export function useCacheStatsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CacheStatsQuery, CacheStatsQueryVariables>): Apollo.UseSuspenseQueryResult<CacheStatsQuery, CacheStatsQueryVariables>;
+export function useCacheStatsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CacheStatsQuery, CacheStatsQueryVariables>): Apollo.UseSuspenseQueryResult<CacheStatsQuery | undefined, CacheStatsQueryVariables>;
+export function useCacheStatsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CacheStatsQuery, CacheStatsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CacheStatsQuery, CacheStatsQueryVariables>(CacheStatsDocument, options);
+        }
+export type CacheStatsQueryHookResult = ReturnType<typeof useCacheStatsQuery>;
+export type CacheStatsLazyQueryHookResult = ReturnType<typeof useCacheStatsLazyQuery>;
+export type CacheStatsSuspenseQueryHookResult = ReturnType<typeof useCacheStatsSuspenseQuery>;
+export type CacheStatsQueryResult = Apollo.QueryResult<CacheStatsQuery, CacheStatsQueryVariables>;
+export const DeleteCacheKeyDocument = gql`
+    mutation DeleteCacheKey($key: String!) {
+  deleteCacheKey(key: $key)
+}
+    `;
+export type DeleteCacheKeyMutationFn = Apollo.MutationFunction<DeleteCacheKeyMutation, DeleteCacheKeyMutationVariables>;
+
+/**
+ * __useDeleteCacheKeyMutation__
+ *
+ * To run a mutation, you first call `useDeleteCacheKeyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteCacheKeyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteCacheKeyMutation, { data, loading, error }] = useDeleteCacheKeyMutation({
+ *   variables: {
+ *      key: // value for 'key'
+ *   },
+ * });
+ */
+export function useDeleteCacheKeyMutation(baseOptions?: Apollo.MutationHookOptions<DeleteCacheKeyMutation, DeleteCacheKeyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteCacheKeyMutation, DeleteCacheKeyMutationVariables>(DeleteCacheKeyDocument, options);
+      }
+export type DeleteCacheKeyMutationHookResult = ReturnType<typeof useDeleteCacheKeyMutation>;
+export type DeleteCacheKeyMutationResult = Apollo.MutationResult<DeleteCacheKeyMutation>;
+export type DeleteCacheKeyMutationOptions = Apollo.BaseMutationOptions<DeleteCacheKeyMutation, DeleteCacheKeyMutationVariables>;
+export const DeleteCacheKeysDocument = gql`
+    mutation DeleteCacheKeys($keys: [String!]!) {
+  deleteCacheKeys(keys: $keys) {
+    deletedCount
+    keys
+  }
+}
+    `;
+export type DeleteCacheKeysMutationFn = Apollo.MutationFunction<DeleteCacheKeysMutation, DeleteCacheKeysMutationVariables>;
+
+/**
+ * __useDeleteCacheKeysMutation__
+ *
+ * To run a mutation, you first call `useDeleteCacheKeysMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteCacheKeysMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteCacheKeysMutation, { data, loading, error }] = useDeleteCacheKeysMutation({
+ *   variables: {
+ *      keys: // value for 'keys'
+ *   },
+ * });
+ */
+export function useDeleteCacheKeysMutation(baseOptions?: Apollo.MutationHookOptions<DeleteCacheKeysMutation, DeleteCacheKeysMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteCacheKeysMutation, DeleteCacheKeysMutationVariables>(DeleteCacheKeysDocument, options);
+      }
+export type DeleteCacheKeysMutationHookResult = ReturnType<typeof useDeleteCacheKeysMutation>;
+export type DeleteCacheKeysMutationResult = Apollo.MutationResult<DeleteCacheKeysMutation>;
+export type DeleteCacheKeysMutationOptions = Apollo.BaseMutationOptions<DeleteCacheKeysMutation, DeleteCacheKeysMutationVariables>;
+export const ClearCacheByPatternDocument = gql`
+    mutation ClearCacheByPattern($pattern: String!) {
+  clearCacheByPattern(pattern: $pattern)
+}
+    `;
+export type ClearCacheByPatternMutationFn = Apollo.MutationFunction<ClearCacheByPatternMutation, ClearCacheByPatternMutationVariables>;
+
+/**
+ * __useClearCacheByPatternMutation__
+ *
+ * To run a mutation, you first call `useClearCacheByPatternMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearCacheByPatternMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [clearCacheByPatternMutation, { data, loading, error }] = useClearCacheByPatternMutation({
+ *   variables: {
+ *      pattern: // value for 'pattern'
+ *   },
+ * });
+ */
+export function useClearCacheByPatternMutation(baseOptions?: Apollo.MutationHookOptions<ClearCacheByPatternMutation, ClearCacheByPatternMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ClearCacheByPatternMutation, ClearCacheByPatternMutationVariables>(ClearCacheByPatternDocument, options);
+      }
+export type ClearCacheByPatternMutationHookResult = ReturnType<typeof useClearCacheByPatternMutation>;
+export type ClearCacheByPatternMutationResult = Apollo.MutationResult<ClearCacheByPatternMutation>;
+export type ClearCacheByPatternMutationOptions = Apollo.BaseMutationOptions<ClearCacheByPatternMutation, ClearCacheByPatternMutationVariables>;
 export const UsersDocument = gql`
     query Users($page: Int, $pageSize: Int) {
   users(page: $page, pageSize: $pageSize) {

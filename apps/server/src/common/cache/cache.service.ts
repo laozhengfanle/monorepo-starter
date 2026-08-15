@@ -1,11 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import { CACHE_SERVICE_TOKEN, type ICacheService } from './cache.interface.js';
+import { CACHE_SERVICE_TOKEN, type CacheStatsInfo, type ICacheService } from './cache.interface.js';
+
+/** 通配符模式 → 正则（* → .*，其余转义） */
+function patternToRegex(pattern: string): RegExp {
+  return new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+}
 
 /** 内存后端（Redis 不可用时的降级实现） */
 class MemoryCacheBackend implements ICacheService {
   private readonly store = new Map<string, { value: unknown; expiresAt: number }>();
+  /** 创建时间戳（uptime 统计用） */
+  private readonly createdAt = Date.now();
 
   private isExpired(key: string): boolean {
     const entry = this.store.get(key);
@@ -34,7 +41,7 @@ class MemoryCacheBackend implements ICacheService {
   }
 
   async delByPattern(pattern: string): Promise<void> {
-    const regex = new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+    const regex = patternToRegex(pattern);
     for (const key of this.store.keys()) {
       if (regex.test(key)) {
         this.store.delete(key);
@@ -51,6 +58,35 @@ class MemoryCacheBackend implements ICacheService {
 
   async exists(key: string): Promise<boolean> {
     return !this.isExpired(key) && this.store.has(key);
+  }
+
+  async scanKeys(pattern: string): Promise<string[]> {
+    const regex = patternToRegex(pattern);
+    return [...this.store.keys()].filter((key) => regex.test(key));
+  }
+
+  async getKeyType(_key: string): Promise<string> {
+    return 'string';
+  }
+
+  async ttl(key: string): Promise<number> {
+    const entry = this.store.get(key);
+    if (!entry || this.isExpired(key)) {
+      return -2;
+    }
+    if (entry.expiresAt === Infinity) {
+      return -1;
+    }
+    return Math.max(0, Math.ceil((entry.expiresAt - Date.now()) / 1000));
+  }
+
+  async getStats(): Promise<CacheStatsInfo> {
+    const seconds = Math.floor((Date.now() - this.createdAt) / 1000);
+    return {
+      usedMemory: `${this.store.size} 条`,
+      hitRate: '—',
+      uptime: formatUptime(seconds),
+    };
   }
 }
 
@@ -102,6 +138,65 @@ class RedisCacheBackend implements ICacheService {
   async exists(key: string): Promise<boolean> {
     return (await this.client.exists(key)) === 1;
   }
+
+  async scanKeys(pattern: string): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = '0';
+    do {
+      // SCAN 游标 + MATCH + COUNT（禁用 KEYS *，避免阻塞生产 Redis）
+      const [nextCursor, batch] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      keys.push(...batch);
+    } while (cursor !== '0');
+    return [...new Set(keys)];
+  }
+
+  async getKeyType(key: string): Promise<string> {
+    return this.client.type(key);
+  }
+
+  async ttl(key: string): Promise<number> {
+    return this.client.ttl(key);
+  }
+
+  async getStats(): Promise<CacheStatsInfo> {
+    const info = await this.client.info('stats');
+    const usedMemoryRaw = await this.client.info('memory');
+    const serverRaw = await this.client.info('server');
+
+    const parse = (section: string, field: string): string => {
+      const match = section.match(new RegExp(`^${field}:(.*)$`, 'm'));
+      return match ? match[1]!.trim() : '';
+    };
+
+    const hits = Number(parse(info, 'keyspace_hits')) || 0;
+    const misses = Number(parse(info, 'keyspace_misses')) || 0;
+    const hitRate = hits + misses > 0 ? ((hits / (hits + misses)) * 100).toFixed(2) + '%' : '—';
+    const uptimeSeconds = Number(parse(serverRaw, 'uptime_in_seconds')) || 0;
+    return {
+      usedMemory: formatBytes(Number(parse(usedMemoryRaw, 'used_memory')) || 0),
+      hitRate,
+      uptime: formatUptime(uptimeSeconds),
+    };
+  }
+}
+
+/** 字节数 → 人类可读（如 "1.23 MB"） */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+/** 秒数 → 人类可读（如 "3 天 5 小时"） */
+function formatUptime(seconds: number): string {
+  if (seconds < 60) return `${seconds} 秒`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时`;
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  return hours > 0 ? `${days} 天 ${hours} 小时` : `${days} 天`;
 }
 
 /**
@@ -158,6 +253,22 @@ export class CacheService implements ICacheService {
 
   exists(key: string): Promise<boolean> {
     return this.backend.exists(key);
+  }
+
+  scanKeys(pattern: string): Promise<string[]> {
+    return this.backend.scanKeys(pattern);
+  }
+
+  getKeyType(key: string): Promise<string> {
+    return this.backend.getKeyType(key);
+  }
+
+  ttl(key: string): Promise<number> {
+    return this.backend.ttl(key);
+  }
+
+  getStats(): Promise<CacheStatsInfo> {
+    return this.backend.getStats();
   }
 }
 

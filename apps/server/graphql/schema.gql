@@ -52,10 +52,50 @@ type AdminRole {
   permissionCodes: [String!]!
 }
 
+type AuditLogItem {
+  accountId: String
+  accountUsername: String
+  action: String!
+  createdAt: String!
+  detail: String
+  id: ID!
+  ip: String
+  resourceId: String
+  resourceType: String
+  userAgent: String
+}
+
 type AuthResult {
   accessToken: String!
   expiresIn: Int!
   refreshToken: String!
+}
+
+input BatchUpdateConfigsInput {
+  updates: [ConfigUpdateItemInput!]!
+}
+
+type CacheKey {
+  key: String!
+  size: Int!
+  ttl: Int!
+  type: String!
+  value: String
+}
+
+type CacheStats {
+  hitRate: String!
+  uptime: String!
+  usedMemory: String!
+}
+
+type ClearAuditLogsResult {
+  deletedCount: Int!
+}
+
+input ConfigUpdateItemInput {
+  key: String!
+  value: JSON!
 }
 
 input CreateAdminAccountInput {
@@ -91,17 +131,31 @@ input CreateUserInput {
   username: String!
 }
 
+type DeleteCacheKeysResult {
+  deletedCount: Int!
+  keys: [String!]!
+}
+
+"""任意 JSON 值（对象 / 数组 / 字符串 / 数字 / 布尔 / null）"""
+scalar JSON
+
 input LoginInput {
   password: String!
   username: String!
 }
 
 type Mutation {
+  batchUpdateConfigs(input: BatchUpdateConfigsInput!): [SystemConfig!]!
+  clearAuditLogs: ClearAuditLogsResult!
+  clearCacheByPattern(pattern: String!): Int!
   createAdminAccount(input: CreateAdminAccountInput!): AdminAccount!
   createMenu(input: CreateMenuInput!): AdminMenuNode!
   createRole(input: CreateRoleInput!): AdminRole!
   createUser(input: CreateUserInput!): User!
   deleteAdminAccount(id: ID!): AdminAccount!
+  deleteAuditLog(id: ID!): Boolean!
+  deleteCacheKey(key: String!): Boolean!
+  deleteCacheKeys(keys: [String!]!): DeleteCacheKeysResult!
   deleteMenu(id: ID!): AdminMenuNode!
   deleteRole(id: ID!): AdminRole!
   deleteUser(id: ID!): User!
@@ -114,6 +168,13 @@ type Mutation {
 
 type PaginatedAdminAccounts {
   items: [AdminAccount!]!
+  page: Int!
+  pageSize: Int!
+  total: Int!
+}
+
+type PaginatedAuditLogs {
+  items: [AuditLogItem!]!
   page: Int!
   pageSize: Int!
   total: Int!
@@ -135,12 +196,29 @@ type PermissionCode {
 
 type Query {
   adminAccounts(includeDeleted: Boolean = false, page: Int = 1, pageSize: Int = 20): PaginatedAdminAccounts!
+  adminConfigs: [SystemConfig!]!
+  adminLogs(action: String, endDate: String, page: Int = 1, pageSize: Int = 20, resourceType: String, startDate: String): PaginatedAuditLogs!
   adminRoles: [AdminRole!]!
+  cacheKey(key: String!): CacheKey!
+  cacheKeyTotal(pattern: String = "*"): Int!
+  cacheKeys(limit: Int = 50, offset: Int = 0, pattern: String = "*"): [CacheKey!]!
+  cacheStats: CacheStats!
+  exportAuditLogs(action: String, endDate: String, resourceType: String, startDate: String): [AuditLogItem!]!
   me: AdminMe!
   menuTree: [AdminMenuNode!]!
   permissionCodes: [PermissionCode!]!
   user(id: ID!): User
   users(page: Int = 1, pageSize: Int = 20): PaginatedUsers!
+}
+
+type SystemConfig {
+  createdAt: String!
+  id: ID!
+  key: String!
+  remark: String
+  updatedAt: String!
+  updatedBy: String
+  value: JSON!
 }
 
 input UpdateAdminAccountInput {

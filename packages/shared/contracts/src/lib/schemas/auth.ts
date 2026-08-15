@@ -5,6 +5,8 @@ import { AdminMenuNodeSchema } from './admin-menu.js';
 export const LoginSchema = z.object({
   username: z.string().min(1, '用户名不能为空').max(50, '用户名最多 50 个字符'),
   password: z.string().min(8, '密码至少 8 位').max(100, '密码最多 100 个字符'),
+  /** Cloudflare Turnstile 人机验证 token（启用 Turnstile 时必填） */
+  turnstileToken: z.string().optional(),
 });
 
 export type LoginInput = z.input<typeof LoginSchema>;

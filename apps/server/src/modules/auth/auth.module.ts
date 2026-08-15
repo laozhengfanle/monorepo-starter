@@ -11,6 +11,7 @@ import { LoginLockService } from './login-lock.service.js';
 import { PermissionGuard } from './permission.guard.js';
 import { TokenBlacklistService } from './token-blacklist.service.js';
 import { TokenIssuanceService } from './token-issuance.service.js';
+import { TurnstileModule } from '../turnstile/turnstile.module.js';
 
 /**
  * 认证模块（阶段 3 增强）：
@@ -35,6 +36,8 @@ import { TokenIssuanceService } from './token-issuance.service.js';
         },
       }),
     }),
+    // TurnstileService（登录端点人机验证前置校验）
+    TurnstileModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -49,6 +52,6 @@ import { TokenIssuanceService } from './token-issuance.service.js';
     // 业务指标：登录成功计数（AuthService 注入后 inc）
     makeCounterProvider({ name: 'auth_login_success_total', help: '登录成功次数' }),
   ],
-  exports: [JwtModule, JwtAuthGuard, PermissionGuard, TokenBlacklistService],
+  exports: [JwtModule, JwtAuthGuard, PermissionGuard, TokenBlacklistService, AuditService],
 })
 export class AuthModule {}

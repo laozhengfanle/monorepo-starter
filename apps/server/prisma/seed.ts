@@ -159,7 +159,8 @@ async function main(): Promise<void> {
       ],
     },
     {
-      // 系统设置（对标老项目 配置中心/系统设置）：后台设置占位页
+      // 系统设置（对标老项目 配置中心/系统设置）：
+      // 后台设置/审计日志/文件存储/缓存管理/Turnstile（短信/邮件/OAuth 明确不做）
       code: 'system-center',
       name: '系统设置',
       type: 'directory',
@@ -167,12 +168,58 @@ async function main(): Promise<void> {
       sort: 20,
       children: [
         {
-          code: 'config:admin',
+          code: 'config:admin:view',
           name: '后台设置',
           type: 'menu',
           path: '/admin/settings',
           icon: 'SettingOutlined',
           sort: 1,
+          children: [
+            { code: 'config:admin:update', name: '编辑配置', type: 'button', sort: 1 },
+          ],
+        },
+        {
+          code: 'config:audit:view',
+          name: '审计日志',
+          type: 'menu',
+          path: '/admin/audit-logs',
+          icon: 'FileTextOutlined',
+          sort: 2,
+          children: [
+            { code: 'config:audit:export', name: '导出日志', type: 'button', sort: 1 },
+            { code: 'config:audit:clear', name: '清空日志', type: 'button', sort: 2 },
+            { code: 'config:audit:delete', name: '删除日志', type: 'button', sort: 3 },
+          ],
+        },
+        {
+          code: 'config:file:view',
+          name: '文件存储',
+          type: 'menu',
+          path: '/admin/storage',
+          icon: 'FolderOutlined',
+          sort: 3,
+        },
+        {
+          code: 'config:cache:view',
+          name: '缓存管理',
+          type: 'menu',
+          path: '/admin/cache',
+          icon: 'ThunderboltOutlined',
+          sort: 4,
+          children: [
+            { code: 'config:cache:delete', name: '清理缓存', type: 'button', sort: 1 },
+          ],
+        },
+        {
+          code: 'config:turnstile:view',
+          name: 'Turnstile',
+          type: 'menu',
+          path: '/admin/turnstile',
+          icon: 'SafetyCertificateOutlined',
+          sort: 5,
+          children: [
+            { code: 'config:turnstile:update', name: '编辑配置', type: 'button', sort: 1 },
+          ],
         },
       ],
     },
@@ -346,6 +393,57 @@ async function main(): Promise<void> {
     console.log('✅ 已创建软删除演示账号 deleted_demo（在「显示已删除」视图可见）');
   }
 
+  // ── 4.6 系统配置默认值（system_config，key-value JSON） ──
+  // 后台设置 settings / 文件存储 storage.driver / Turnstile turnstile.config（幂等 upsert）
+  const DEFAULT_CONFIGS = [
+    {
+      key: 'settings',
+      value: {
+        name: 'monorepo-starter',
+        logo: '',
+        footerText: '© zhengbo',
+        passwordMinLength: 8,
+        loginFailThreshold: 5,
+        lockDuration: 30,
+        passwordComplexity: 'medium',
+        watermarkContent: '{{username}} {{date}}',
+        keepAliveMax: 10,
+        requestTimeout: 10000,
+      },
+    },
+    {
+      key: 'storage.driver',
+      // 与页面读取字段一致：local 模式用 localPath（老项目 localDir/localPath 不一致的坑已统一）
+      value: { driver: 'local', localPath: './uploads', baseUrl: '/uploads' },
+    },
+    {
+      key: 'turnstile.config',
+      // Cloudflare 官方测试密钥（任何 token 都通过验证）；生产替换为真实密钥
+      value: {
+        enabled: false,
+        siteKey: '1x00000000000000000000AA',
+        secretKey: '1x0000000000000000000000000000000AA',
+      },
+    },
+  ];
+  for (const cfg of DEFAULT_CONFIGS) {
+    const existing = await prisma.systemConfig.findFirst({
+      where: { key: cfg.key, deletedAt: null },
+    });
+    if (!existing) {
+      await prisma.systemConfig.create({
+        data: {
+          id: newId(),
+          key: cfg.key,
+          value: cfg.value as never,
+          remark: null,
+          updatedBy: null,
+        },
+      });
+      console.log(`✅ 已创建系统配置 ${cfg.key}`);
+    }
+  }
+
   // ── 5. 清理旧菜单（老结构遗留）──
   // 对齐老项目：管理端无"用户中心"、无独立"回收站"菜单，
   // 软删除已集成到账户列表（显示已删除），权限点在隐藏的全局权限目录下。
@@ -356,6 +454,8 @@ async function main(): Promise<void> {
     'user-center', 'user:list', 'user:create', 'user:update', 'user:delete',
     // 独立回收站菜单（已废弃，软删除集成进账户列表）
     'recycle:list',
+    // 旧后台设置权限码 config:admin → 已升级为 config:admin:view
+    'config:admin',
   ];
   const legacyMenus = await prisma.adminMenu.findMany({
     where: { code: { in: LEGACY_MENU_CODES } },
