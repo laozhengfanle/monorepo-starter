@@ -8,7 +8,7 @@ import {
   SunOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Button, Dropdown, Input, Layout, Space, Typography, theme } from 'antd';
+import { App, Avatar, Button, Dropdown, Input, Layout, Space, Typography, theme } from 'antd';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +30,7 @@ const themeIconMap: Record<'system' | 'light' | 'dark', ReactNode> = {
 /** 顶栏：品牌 + 主题切换 + 全屏 + 偏好设置 + 用户下拉 */
 export function LayoutHeader(): React.JSX.Element {
   const { token } = theme.useToken();
+  const { notification } = App.useApp();
   const { mode, setMode } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -44,6 +45,10 @@ export function LayoutHeader(): React.JSX.Element {
 
   const handleLogout = async (): Promise<void> => {
     await logout();
+    notification.success({
+      title: '已退出登录',
+      description: '感谢使用，期待再次见面',
+    });
     navigate('/login', { replace: true });
   };
 

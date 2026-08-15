@@ -19,7 +19,7 @@ const TEST_ACCOUNTS = [
 export function LoginPage(): React.JSX.Element {
   const { login } = useAuth();
   const { token } = antdTheme.useToken();
-  const { message } = App.useApp();
+  const { message, notification } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -41,15 +41,23 @@ export function LoginPage(): React.JSX.Element {
     }
     submittingRef.current = true;
     setLoading(true);
+    let loggedIn = false;
     try {
       await login(parsed.data.username, parsed.data.password);
-      void message.success('登录成功');
+      loggedIn = true;
+      notification.success({
+        title: '登录成功',
+        description: `欢迎回来，${parsed.data.username}`,
+      });
       navigate(from, { replace: true });
     } catch {
       void message.error('用户名或密码错误');
     } finally {
-      submittingRef.current = false;
-      setLoading(false);
+      // 成功路径：页面即将卸载，保持 loading 禁用，避免跳转前按钮恢复可点
+      if (!loggedIn) {
+        submittingRef.current = false;
+        setLoading(false);
+      }
     }
   };
 
