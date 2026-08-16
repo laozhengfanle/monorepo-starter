@@ -111,6 +111,21 @@ catalog:
   '@types/multer': ^2.0.0
   multer: ^2.0.0
 
+  # ---- Git 工程规范（husky + commitlint + lint-staged） ----
+  husky: ^9.1.7
+  lint-staged: ^17.0.5
+  '@commitlint/cli': ^21.0.2
+  '@commitlint/config-conventional': ^21.0.2
+
+  # ---- 定时任务（@nestjs/schedule） ----
+  '@nestjs/schedule': ^6.1.3
+
+  # ---- GraphQL N+1 优化（dataloader） ----
+  dataloader: ^2.2.3
+
+  # ---- ERD 生成（Prisma 关系图，docs 工作流用） ----
+  prisma-erd-generator: ^2.4.3
+
   # ---- 后端（NestJS + Express） ----
   '@nestjs/common': ^11.0.0
   '@nestjs/core': ^11.0.0

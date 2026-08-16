@@ -14,7 +14,20 @@
     "typecheck": "nx run-many -t typecheck",
     "e2e": "nx run-many -t e2e",
     "generate:api": "nx run @starter/api-client:generate-api",
-    "bump": "node scripts/bump-version.mjs"
+    "bump": "node scripts/bump-version.mjs",
+    "prepare": "husky",
+    "db:studio": "nx run server:prisma-generate && cd apps/server && pnpm exec prisma studio",
+    "db:migrate": "cd apps/server && pnpm exec prisma migrate dev",
+    "db:deploy": "cd apps/server && pnpm exec prisma migrate deploy",
+    "db:seed": "cd apps/server && pnpm exec prisma db seed",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "erd:generate": "cd apps/server && pnpm exec prisma generate --generator erd"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs,json,md,css,yml,yaml}": "prettier --write",
+    "*.{ts,tsx}": "oxlint --fix",
+    "!pnpm-lock.yaml": []
   },
   "private": true,
   "dependencies": {
@@ -58,6 +71,8 @@
   "devDependencies": {
     "@babel/core": "catalog:",
     "@babel/preset-react": "catalog:",
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
     "@eslint/js": "catalog:",
     "@nestjs/schematics": "catalog:",
     "@nestjs/testing": "catalog:",
@@ -99,9 +114,11 @@
     "esbuild": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
+    "husky": "catalog:",
     "jiti": "catalog:",
     "jsdom": "catalog:",
     "jsonc-eslint-parser": "catalog:",
+    "lint-staged": "catalog:",
     "nx": "catalog:",
     "orval": "catalog:",
     "oxlint": "catalog:",
