@@ -10,9 +10,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Prometheus"
-        ]
+        "tags": ["Prometheus"]
       }
     },
     "/auth/login": {
@@ -24,9 +22,7 @@
             "description": "登录成功返回双 token"
           }
         },
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/auth/refresh": {
@@ -38,9 +34,7 @@
             "description": "刷新 access token"
           }
         },
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/auth/logout": {
@@ -52,9 +46,7 @@
             "description": "登出成功"
           }
         },
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/auth/me": {
@@ -66,9 +58,7 @@
             "description": "当前账户信息"
           }
         },
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       },
       "patch": {
         "operationId": "AuthController_updateSelf",
@@ -88,9 +78,7 @@
             "description": "更新当前账户资料（nickname/email/phone/avatar）"
           }
         },
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/auth/me/password": {
@@ -112,9 +100,7 @@
             "description": "修改密码（校验当前密码，成功后撤销全部 token）"
           }
         },
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/admin/accounts/{id}/restore": {
@@ -135,9 +121,7 @@
             "description": "恢复已软删账户"
           }
         },
-        "tags": [
-          "admin-accounts"
-        ]
+        "tags": ["admin-accounts"]
       }
     },
     "/admin/accounts/{id}/hard": {
@@ -158,9 +142,7 @@
             "description": "彻底删除（清级联表后硬删）"
           }
         },
-        "tags": [
-          "admin-accounts"
-        ]
+        "tags": ["admin-accounts"]
       }
     },
     "/admin/accounts/{id}/menus": {
@@ -181,9 +163,7 @@
             "description": "账户特例授权（覆盖 + 角色基线菜单）"
           }
         },
-        "tags": [
-          "admin-accounts"
-        ]
+        "tags": ["admin-accounts"]
       },
       "put": {
         "operationId": "AdminAccountController_saveAccountMenus",
@@ -212,9 +192,7 @@
             "description": "保存账户特例授权（全量覆盖）"
           }
         },
-        "tags": [
-          "admin-accounts"
-        ]
+        "tags": ["admin-accounts"]
       }
     },
     "/upload": {
@@ -226,9 +204,7 @@
             "description": "上传成功返回文件信息"
           }
         },
-        "tags": [
-          "upload"
-        ]
+        "tags": ["upload"]
       }
     },
     "/health": {
@@ -247,9 +223,19 @@
             }
           }
         },
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
+      }
+    },
+    "/health/liveness": {
+      "get": {
+        "operationId": "HealthController_liveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["health"]
       }
     },
     "/health/readiness": {
@@ -277,9 +263,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -294,9 +278,7 @@
                       "example": {},
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -315,9 +297,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -351,9 +331,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -373,9 +351,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -398,9 +374,7 @@
                       },
                       "additionalProperties": {
                         "type": "object",
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "properties": {
                           "status": {
                             "type": "string"
@@ -415,9 +389,7 @@
             }
           }
         },
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     }
   },
@@ -467,10 +439,7 @@
             "maxLength": 100
           }
         },
-        "required": [
-          "currentPassword",
-          "newPassword"
-        ]
+        "required": ["currentPassword", "newPassword"]
       },
       "SaveAccountMenusDto": {
         "type": "object",
@@ -487,16 +456,10 @@
                 },
                 "type": {
                   "type": "string",
-                  "enum": [
-                    "grant",
-                    "deny"
-                  ]
+                  "enum": ["grant", "deny"]
                 }
               },
-              "required": [
-                "menuId",
-                "type"
-              ]
+              "required": ["menuId", "type"]
             }
           }
         }
@@ -506,10 +469,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "ok",
-              "degraded"
-            ]
+            "enum": ["ok", "degraded"]
           },
           "service": {
             "type": "string",
@@ -520,11 +480,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "status",
-          "service",
-          "version"
-        ]
+        "required": ["status", "service", "version"]
       }
     }
   }

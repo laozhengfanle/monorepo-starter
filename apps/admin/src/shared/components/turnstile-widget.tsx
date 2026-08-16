@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Spin } from 'antd';
 
 /** Cloudflare Turnstile 脚本（explicit rendering，SPA 场景官方推荐） */
-const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+const TURNSTILE_SCRIPT_SRC =
+  'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 
 declare global {
   interface Window {
@@ -63,6 +64,9 @@ export function TurnstileWidget({
 }): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  // 用 ref 保存最新 onToken 回调，避免回调变化触发 widget 重建
+  const onTokenRef = useRef(onToken);
+  onTokenRef.current = onToken;
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
@@ -76,18 +80,18 @@ export function TurnstileWidget({
         // 容器内可能残留旧 widget（重建前清掉）
         containerRef.current.innerHTML = '';
         try {
-        widgetIdRef.current = window.turnstile.render(containerRef.current, {
-          sitekey: siteKey,
-          theme: dark === true ? 'dark' : dark === false ? 'light' : dark,
-          // 弹性宽度：自动适配容器宽度（min 300px，官方支持，与输入框等宽）
-          size: 'flexible',
-          callback: (token) => {
-            onToken(token);
-          },
-          'expired-callback': () => {
-            onToken('');
-          },
-        });
+          widgetIdRef.current = window.turnstile.render(containerRef.current, {
+            sitekey: siteKey,
+            theme: dark === true ? 'dark' : dark === false ? 'light' : dark,
+            // 弹性宽度：自动适配容器宽度（min 300px，官方支持，与输入框等宽）
+            size: 'flexible',
+            callback: (token) => {
+              onTokenRef.current(token);
+            },
+            'expired-callback': () => {
+              onTokenRef.current('');
+            },
+          });
         } catch (err) {
           console.error('Turnstile render failed:', err);
           setFailed(true);
@@ -108,14 +112,17 @@ export function TurnstileWidget({
         widgetIdRef.current = null;
       }
     };
-    // siteKey / dark 变化时重建
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // siteKey / dark 变化时重建（onToken 经 ref 引用，不进依赖数组）
   }, [siteKey, dark]);
 
   if (failed) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
-        <span style={{ fontSize: 12, color: '#999' }}>人机验证加载失败（不影响登录）</span>
+      <div
+        style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}
+      >
+        <span style={{ fontSize: 12, color: '#999' }}>
+          人机验证加载失败（不影响登录）
+        </span>
       </div>
     );
   }

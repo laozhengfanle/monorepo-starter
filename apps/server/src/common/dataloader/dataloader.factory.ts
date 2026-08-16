@@ -13,6 +13,12 @@ export interface DataLoaders {
 const NULL_PARENT_SENTINEL = '__NULL_PARENT__';
 
 /**
+ * 根菜单缓存键：调用方用 load(ROOT_MENU_KEY) 查根菜单。
+ * （DataLoader 不允许 null/undefined 作 key，统一用哨兵字符串）
+ */
+export const ROOT_MENU_KEY = NULL_PARENT_SENTINEL;
+
+/**
  * 通用 DataLoader 工厂：为单次 GraphQL 请求构建一组新的 DataLoader 实例
  * - 每个请求独立 → 避免 loader 跨请求缓存污染
  * - 业务层在 resolver/service 中通过 context.dataloaders.<name>.load(key) 使用
@@ -22,7 +28,7 @@ const NULL_PARENT_SENTINEL = '__NULL_PARENT__';
  */
 export function buildDataLoaders(prisma: PrismaService): DataLoaders {
   return {
-    /** 按 parentId 批量查子菜单（含 root） */
+    /** 按 parentId 批量查子菜单；load(ROOT_MENU_KEY) 表示根菜单 */
     menuChildrenByParentId: new DataLoader<string | null, unknown[]>(
       async (parentIds) => {
         const menus = await prisma.client.adminMenu.findMany({
@@ -31,7 +37,9 @@ export function buildDataLoaders(prisma: PrismaService): DataLoaders {
         // 单次查询全量菜单后在内存分组（菜单表通常 < 数百条，比 N 次 IN 查询更省）
         return parentIds.map((pid) =>
           menus.filter((m) =>
-            pid === null ? m.parentId === null : m.parentId === pid,
+            pid === ROOT_MENU_KEY || pid === null
+              ? m.parentId === null
+              : m.parentId === pid,
           ),
         );
       },
