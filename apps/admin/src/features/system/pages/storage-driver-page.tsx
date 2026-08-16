@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Alert, App, Button, Card, Form, Input, Select, Spin, Typography } from 'antd';
-import { useAdminConfigsQuery, useBatchUpdateConfigsMutation } from '../../../generated/graphql';
+import {
+  useBatchUpdateConfigsMutation,
+  useStorageConfigQuery,
+} from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
 
 const { Text } = Typography;
@@ -36,7 +39,7 @@ export function StorageDriverPage(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const canUpdate = usePermission('config:admin:update');
 
-  const { data } = useAdminConfigsQuery();
+  const { data } = useStorageConfigQuery();
   const [batchUpdate, { loading: saving }] = useBatchUpdateConfigsMutation();
 
   const driver = Form.useWatch('driver', form);
@@ -44,7 +47,7 @@ export function StorageDriverPage(): React.JSX.Element {
 
   useEffect(() => {
     if (!data) return;
-    const config = data.adminConfigs.find((c) => c.key === STORAGE_KEY);
+    const config = data.storageConfig;
     if (config) {
       const v = config.value as Record<string, unknown>;
       form.setFieldsValue({

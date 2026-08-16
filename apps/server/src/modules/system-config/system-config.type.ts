@@ -1,5 +1,10 @@
 import { Field, ID, InputType, ObjectType } from '@nestjs/graphql';
-import type { BatchUpdateConfigsInput, ConfigUpdateItem, SystemConfig } from '@starter/contracts';
+import type {
+  BatchUpdateConfigsInput,
+  ConfigUpdateItem,
+  SystemConfig,
+  UpdateConfigInput,
+} from '@starter/contracts';
 
 /** 系统配置项（管理端完整字段） */
 @ObjectType('SystemConfig')
@@ -42,4 +47,11 @@ export class ConfigUpdateItemInputType implements ConfigUpdateItem {
 export class BatchUpdateConfigsInputType implements BatchUpdateConfigsInput {
   @Field(() => [ConfigUpdateItemInputType])
   updates!: ConfigUpdateItemInputType[];
+}
+
+/** 更新单条配置入参（页面级写权限，如 updateTurnstileConfig） */
+@InputType('UpdateConfigInput')
+export class UpdateConfigInputType implements UpdateConfigInput {
+  @Field(() => Object)
+  value!: Record<string, unknown>;
 }

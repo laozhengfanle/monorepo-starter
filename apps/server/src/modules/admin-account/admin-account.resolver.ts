@@ -1,10 +1,12 @@
-import { Args, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Field, ID, InputType, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/contracts';
+import { AdminAccountQuerySchema, CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/contracts';
 import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthUser } from '../auth/auth.types.js';
 import { AdminAccountService } from './admin-account.service.js';
 import {
   AdminAccountType,
@@ -12,6 +14,47 @@ import {
   PaginatedAdminAccountsType,
   UpdateAdminAccountInputType,
 } from './admin-account.type.js';
+
+/** 账户列表查询参数（AdminAccountQuerySchema 解析后的输出形状） */
+type AdminAccountListQuery = {
+  page: number;
+  pageSize: number;
+  /** 按用户名模糊搜索 */
+  username?: string;
+  /** 按邮箱模糊搜索 */
+  email?: string;
+  /** 按角色编码精确筛选 */
+  roleCode?: string;
+  /** 状态筛选：true=正常 / false=禁用 */
+  enabled?: boolean;
+  /** 是否包含已软删记录 */
+  includeDeleted?: boolean;
+};
+
+/** 账户列表查询入参（GraphQL 薄壳；默认值与校验由 AdminAccountQuerySchema 兜底） */
+@InputType('AdminAccountQueryInput')
+class AdminAccountQueryInputType {
+  @Field(() => Int, { nullable: true })
+  page?: number;
+
+  @Field(() => Int, { nullable: true })
+  pageSize?: number;
+
+  @Field(() => String, { nullable: true })
+  username?: string;
+
+  @Field(() => String, { nullable: true })
+  email?: string;
+
+  @Field(() => String, { nullable: true })
+  roleCode?: string;
+
+  @Field(() => Boolean, { nullable: true })
+  enabled?: boolean;
+
+  @Field(() => Boolean, { nullable: true })
+  includeDeleted?: boolean;
+}
 
 /** 管理端账户 GraphQL Resolver：列表 + 创建/更新/删除（RBAC 保护）
  * 注：角色列表查询 adminRoles 由 AdminRoleModule 提供（role:list），
@@ -24,12 +67,10 @@ export class AdminAccountResolver {
   @Query(() => PaginatedAdminAccountsType)
   @RequirePermission('account:list')
   async adminAccounts(
-    @Args('page', { type: () => Int, nullable: true, defaultValue: 1 }) page: number,
-    @Args('pageSize', { type: () => Int, nullable: true, defaultValue: 20 }) pageSize: number,
-    @Args('includeDeleted', { type: () => Boolean, nullable: true, defaultValue: false })
-    includeDeleted?: boolean,
+    @Args('query', { type: () => AdminAccountQueryInputType }, new ZodArgsPipe(AdminAccountQuerySchema))
+    query: AdminAccountListQuery,
   ): Promise<PaginatedAdminAccountsType> {
-    const result = await this.adminAccountService.list({ page, pageSize, includeDeleted });
+    const result = await this.adminAccountService.list(query);
     return {
       items: result.items as AdminAccountType[],
       total: result.total,
@@ -43,8 +84,9 @@ export class AdminAccountResolver {
   async createAdminAccount(
     @Args('input', { type: () => CreateAdminAccountInputType }, new ZodArgsPipe(CreateAdminAccountSchema))
     input: CreateAdminAccountInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<AdminAccountType> {
-    return this.adminAccountService.create(input as never);
+    return this.adminAccountService.create(input as never, user.accountId);
   }
 
   @Mutation(() => AdminAccountType)
@@ -53,13 +95,17 @@ export class AdminAccountResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('input', { type: () => UpdateAdminAccountInputType }, new ZodArgsPipe(UpdateAdminAccountSchema))
     input: UpdateAdminAccountInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<AdminAccountType> {
-    return this.adminAccountService.update(id, input as never);
+    return this.adminAccountService.update(id, input as never, user.accountId);
   }
 
   @Mutation(() => AdminAccountType)
   @RequirePermission('account:delete')
-  async deleteAdminAccount(@Args('id', { type: () => ID }) id: string): Promise<AdminAccountType> {
-    return this.adminAccountService.remove(id);
+  async deleteAdminAccount(
+    @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<AdminAccountType> {
+    return this.adminAccountService.remove(id, user.accountId);
   }
 }

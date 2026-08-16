@@ -32,6 +32,16 @@ export type AdminAccount = {
   username: Scalars['String']['output'];
 };
 
+export type AdminAccountQueryInput = {
+  email?: InputMaybe<Scalars['String']['input']>;
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  roleCode?: InputMaybe<Scalars['String']['input']>;
+  username?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type AdminMe = {
   __typename?: 'AdminMe';
   accountId: Scalars['ID']['output'];
@@ -85,6 +95,15 @@ export type AuditLogItem = {
   resourceId?: Maybe<Scalars['String']['output']>;
   resourceType?: Maybe<Scalars['String']['output']>;
   userAgent?: Maybe<Scalars['String']['output']>;
+};
+
+export type AuditLogQueryInput = {
+  action?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  resourceType?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type AuthResult = {
@@ -167,13 +186,6 @@ export type CreateRoleInput = {
   permissionCodes?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
-export type CreateUserInput = {
-  email: Scalars['String']['input'];
-  role?: InputMaybe<UserRole>;
-  status?: InputMaybe<UserStatus>;
-  username: Scalars['String']['input'];
-};
-
 export type DeleteCacheKeysResult = {
   __typename?: 'DeleteCacheKeysResult';
   deletedCount: Scalars['Int']['output'];
@@ -195,7 +207,6 @@ export type Mutation = {
   createDictType: SysDictType;
   createMenu: AdminMenuNode;
   createRole: AdminRole;
-  createUser: User;
   deleteAdminAccount: AdminAccount;
   deleteAuditLog: Scalars['Boolean']['output'];
   deleteCacheKey: Scalars['Boolean']['output'];
@@ -204,14 +215,13 @@ export type Mutation = {
   deleteDictType: Scalars['Boolean']['output'];
   deleteMenu: AdminMenuNode;
   deleteRole: AdminRole;
-  deleteUser: User;
   login: AuthResult;
   updateAdminAccount: AdminAccount;
   updateDictItem: SysDictItem;
   updateDictType: SysDictType;
   updateMenu: AdminMenuNode;
   updateRole: AdminRole;
-  updateUser: User;
+  updateTurnstileConfig: SystemConfig;
 };
 
 
@@ -247,11 +257,6 @@ export type MutationCreateMenuArgs = {
 
 export type MutationCreateRoleArgs = {
   input: CreateRoleInput;
-};
-
-
-export type MutationCreateUserArgs = {
-  input: CreateUserInput;
 };
 
 
@@ -295,11 +300,6 @@ export type MutationDeleteRoleArgs = {
 };
 
 
-export type MutationDeleteUserArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
 export type MutationLoginArgs = {
   input: LoginInput;
 };
@@ -335,9 +335,8 @@ export type MutationUpdateRoleArgs = {
 };
 
 
-export type MutationUpdateUserArgs = {
-  id: Scalars['ID']['input'];
-  input: UpdateUserInput;
+export type MutationUpdateTurnstileConfigArgs = {
+  input: UpdateConfigInput;
 };
 
 export type PaginatedAdminAccounts = {
@@ -351,14 +350,6 @@ export type PaginatedAdminAccounts = {
 export type PaginatedAuditLogs = {
   __typename?: 'PaginatedAuditLogs';
   items: Array<AuditLogItem>;
-  page: Scalars['Int']['output'];
-  pageSize: Scalars['Int']['output'];
-  total: Scalars['Int']['output'];
-};
-
-export type PaginatedUsers = {
-  __typename?: 'PaginatedUsers';
-  items: Array<User>;
   page: Scalars['Int']['output'];
   pageSize: Scalars['Int']['output'];
   total: Scalars['Int']['output'];
@@ -386,26 +377,19 @@ export type Query = {
   me: AdminMe;
   menuTree: Array<AdminMenuNode>;
   permissionCodes: Array<PermissionCode>;
+  storageConfig?: Maybe<SystemConfig>;
   sysDictTypes: Array<SysDictType>;
-  user?: Maybe<User>;
-  users: PaginatedUsers;
+  turnstileConfig?: Maybe<SystemConfig>;
 };
 
 
 export type QueryAdminAccountsArgs = {
-  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  query: AdminAccountQueryInput;
 };
 
 
 export type QueryAdminLogsArgs = {
-  action?: InputMaybe<Scalars['String']['input']>;
-  endDate?: InputMaybe<Scalars['String']['input']>;
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-  resourceType?: InputMaybe<Scalars['String']['input']>;
-  startDate?: InputMaybe<Scalars['String']['input']>;
+  query: AuditLogQueryInput;
 };
 
 
@@ -427,21 +411,7 @@ export type QueryCacheKeysArgs = {
 
 
 export type QueryExportAuditLogsArgs = {
-  action?: InputMaybe<Scalars['String']['input']>;
-  endDate?: InputMaybe<Scalars['String']['input']>;
-  resourceType?: InputMaybe<Scalars['String']['input']>;
-  startDate?: InputMaybe<Scalars['String']['input']>;
-};
-
-
-export type QueryUserArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type QueryUsersArgs = {
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  query: AuditLogQueryInput;
 };
 
 export type SysDictItem = {
@@ -487,6 +457,10 @@ export type UpdateAdminAccountInput = {
   roleCodes?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type UpdateConfigInput = {
+  value: Scalars['JSON']['input'];
+};
+
 export type UpdateDictItemInput = {
   enabled?: InputMaybe<Scalars['Boolean']['input']>;
   label?: InputMaybe<Scalars['String']['input']>;
@@ -519,38 +493,8 @@ export type UpdateRoleInput = {
   permissionCodes?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
-export type UpdateUserInput = {
-  email?: InputMaybe<Scalars['String']['input']>;
-  role?: InputMaybe<UserRole>;
-  status?: InputMaybe<UserStatus>;
-  username?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type User = {
-  __typename?: 'User';
-  createdAt: Scalars['String']['output'];
-  email: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  role: UserRole;
-  status: UserStatus;
-  username: Scalars['String']['output'];
-};
-
-export enum UserRole {
-  Admin = 'admin',
-  Member = 'member'
-}
-
-export enum UserStatus {
-  Active = 'active',
-  Disabled = 'disabled',
-  Locked = 'locked'
-}
-
 export type AdminAccountsQueryVariables = Exact<{
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
+  query: AdminAccountQueryInput;
 }>;
 
 
@@ -644,11 +588,6 @@ export type DeleteRoleMutationVariables = Exact<{
 
 export type DeleteRoleMutation = { __typename?: 'Mutation', deleteRole: { __typename?: 'AdminRole', id: string } };
 
-export type DashboardUsersTotalQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type DashboardUsersTotalQuery = { __typename?: 'Query', users: { __typename?: 'PaginatedUsers', total: number } };
-
 export type DashboardAccountsTotalQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -658,11 +597,6 @@ export type DashboardRolesTotalQueryVariables = Exact<{ [key: string]: never; }>
 
 
 export type DashboardRolesTotalQuery = { __typename?: 'Query', adminRoles: Array<{ __typename?: 'AdminRole', id: string }> };
-
-export type DashboardRecentUsersQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type DashboardRecentUsersQuery = { __typename?: 'Query', users: { __typename?: 'PaginatedUsers', items: Array<{ __typename?: 'User', id: string, username: string, email: string, role: UserRole, status: UserStatus, createdAt: string }> } };
 
 export type SysDictItemFieldsFragment = { __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string };
 
@@ -734,22 +668,14 @@ export type BatchUpdateConfigsMutation = { __typename?: 'Mutation', batchUpdateC
 export type AuditLogFieldsFragment = { __typename?: 'AuditLogItem', id: string, accountId?: string | null, accountUsername?: string | null, action: string, resourceType?: string | null, resourceId?: string | null, detail?: string | null, ip?: string | null, userAgent?: string | null, createdAt: string };
 
 export type AdminLogsQueryVariables = Exact<{
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-  action?: InputMaybe<Scalars['String']['input']>;
-  resourceType?: InputMaybe<Scalars['String']['input']>;
-  startDate?: InputMaybe<Scalars['String']['input']>;
-  endDate?: InputMaybe<Scalars['String']['input']>;
+  query: AuditLogQueryInput;
 }>;
 
 
 export type AdminLogsQuery = { __typename?: 'Query', adminLogs: { __typename?: 'PaginatedAuditLogs', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'AuditLogItem', id: string, accountId?: string | null, accountUsername?: string | null, action: string, resourceType?: string | null, resourceId?: string | null, detail?: string | null, ip?: string | null, userAgent?: string | null, createdAt: string }> } };
 
 export type ExportAuditLogsQueryVariables = Exact<{
-  action?: InputMaybe<Scalars['String']['input']>;
-  resourceType?: InputMaybe<Scalars['String']['input']>;
-  startDate?: InputMaybe<Scalars['String']['input']>;
-  endDate?: InputMaybe<Scalars['String']['input']>;
+  query: AuditLogQueryInput;
 }>;
 
 
@@ -818,35 +744,22 @@ export type ClearCacheByPatternMutationVariables = Exact<{
 
 export type ClearCacheByPatternMutation = { __typename?: 'Mutation', clearCacheByPattern: number };
 
-export type UsersQueryVariables = Exact<{
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
+export type StorageConfigQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type StorageConfigQuery = { __typename?: 'Query', storageConfig?: { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string } | null };
+
+export type TurnstileConfigQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type TurnstileConfigQuery = { __typename?: 'Query', turnstileConfig?: { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string } | null };
+
+export type UpdateTurnstileConfigMutationVariables = Exact<{
+  input: UpdateConfigInput;
 }>;
 
 
-export type UsersQuery = { __typename?: 'Query', users: { __typename?: 'PaginatedUsers', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'User', id: string, username: string, email: string, role: UserRole, status: UserStatus, createdAt: string }> } };
-
-export type CreateUserMutationVariables = Exact<{
-  input: CreateUserInput;
-}>;
-
-
-export type CreateUserMutation = { __typename?: 'Mutation', createUser: { __typename?: 'User', id: string, username: string, email: string, role: UserRole, status: UserStatus, createdAt: string } };
-
-export type UpdateUserMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  input: UpdateUserInput;
-}>;
-
-
-export type UpdateUserMutation = { __typename?: 'Mutation', updateUser: { __typename?: 'User', id: string, username: string, email: string, role: UserRole, status: UserStatus, createdAt: string } };
-
-export type DeleteUserMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-}>;
-
-
-export type DeleteUserMutation = { __typename?: 'Mutation', deleteUser: { __typename?: 'User', id: string } };
+export type UpdateTurnstileConfigMutation = { __typename?: 'Mutation', updateTurnstileConfig: { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string } };
 
 export const MenuNodeFieldsFragmentDoc = gql`
     fragment MenuNodeFields on AdminMenuNode {
@@ -925,8 +838,8 @@ export const CacheKeyFieldsFragmentDoc = gql`
 }
     `;
 export const AdminAccountsDocument = gql`
-    query AdminAccounts($page: Int, $pageSize: Int, $includeDeleted: Boolean) {
-  adminAccounts(page: $page, pageSize: $pageSize, includeDeleted: $includeDeleted) {
+    query AdminAccounts($query: AdminAccountQueryInput!) {
+  adminAccounts(query: $query) {
     items {
       accountId
       username
@@ -957,13 +870,11 @@ export const AdminAccountsDocument = gql`
  * @example
  * const { data, loading, error } = useAdminAccountsQuery({
  *   variables: {
- *      page: // value for 'page'
- *      pageSize: // value for 'pageSize'
- *      includeDeleted: // value for 'includeDeleted'
+ *      query: // value for 'query'
  *   },
  * });
  */
-export function useAdminAccountsQuery(baseOptions?: Apollo.QueryHookOptions<AdminAccountsQuery, AdminAccountsQueryVariables>) {
+export function useAdminAccountsQuery(baseOptions: Apollo.QueryHookOptions<AdminAccountsQuery, AdminAccountsQueryVariables> & ({ variables: AdminAccountsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<AdminAccountsQuery, AdminAccountsQueryVariables>(AdminAccountsDocument, options);
       }
@@ -1493,51 +1404,9 @@ export function useDeleteRoleMutation(baseOptions?: Apollo.MutationHookOptions<D
 export type DeleteRoleMutationHookResult = ReturnType<typeof useDeleteRoleMutation>;
 export type DeleteRoleMutationResult = Apollo.MutationResult<DeleteRoleMutation>;
 export type DeleteRoleMutationOptions = Apollo.BaseMutationOptions<DeleteRoleMutation, DeleteRoleMutationVariables>;
-export const DashboardUsersTotalDocument = gql`
-    query DashboardUsersTotal {
-  users(page: 1, pageSize: 1) {
-    total
-  }
-}
-    `;
-
-/**
- * __useDashboardUsersTotalQuery__
- *
- * To run a query within a React component, call `useDashboardUsersTotalQuery` and pass it any options that fit your needs.
- * When your component renders, `useDashboardUsersTotalQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDashboardUsersTotalQuery({
- *   variables: {
- *   },
- * });
- */
-export function useDashboardUsersTotalQuery(baseOptions?: Apollo.QueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>(DashboardUsersTotalDocument, options);
-      }
-export function useDashboardUsersTotalLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>(DashboardUsersTotalDocument, options);
-        }
-// @ts-ignore
-export function useDashboardUsersTotalSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>;
-export function useDashboardUsersTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardUsersTotalQuery | undefined, DashboardUsersTotalQueryVariables>;
-export function useDashboardUsersTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>) {
-          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>(DashboardUsersTotalDocument, options);
-        }
-export type DashboardUsersTotalQueryHookResult = ReturnType<typeof useDashboardUsersTotalQuery>;
-export type DashboardUsersTotalLazyQueryHookResult = ReturnType<typeof useDashboardUsersTotalLazyQuery>;
-export type DashboardUsersTotalSuspenseQueryHookResult = ReturnType<typeof useDashboardUsersTotalSuspenseQuery>;
-export type DashboardUsersTotalQueryResult = Apollo.QueryResult<DashboardUsersTotalQuery, DashboardUsersTotalQueryVariables>;
 export const DashboardAccountsTotalDocument = gql`
     query DashboardAccountsTotal {
-  adminAccounts(page: 1, pageSize: 1) {
+  adminAccounts(query: {page: 1, pageSize: 1}) {
     total
   }
 }
@@ -1619,55 +1488,6 @@ export type DashboardRolesTotalQueryHookResult = ReturnType<typeof useDashboardR
 export type DashboardRolesTotalLazyQueryHookResult = ReturnType<typeof useDashboardRolesTotalLazyQuery>;
 export type DashboardRolesTotalSuspenseQueryHookResult = ReturnType<typeof useDashboardRolesTotalSuspenseQuery>;
 export type DashboardRolesTotalQueryResult = Apollo.QueryResult<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>;
-export const DashboardRecentUsersDocument = gql`
-    query DashboardRecentUsers {
-  users(page: 1, pageSize: 5) {
-    items {
-      id
-      username
-      email
-      role
-      status
-      createdAt
-    }
-  }
-}
-    `;
-
-/**
- * __useDashboardRecentUsersQuery__
- *
- * To run a query within a React component, call `useDashboardRecentUsersQuery` and pass it any options that fit your needs.
- * When your component renders, `useDashboardRecentUsersQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDashboardRecentUsersQuery({
- *   variables: {
- *   },
- * });
- */
-export function useDashboardRecentUsersQuery(baseOptions?: Apollo.QueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>(DashboardRecentUsersDocument, options);
-      }
-export function useDashboardRecentUsersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>(DashboardRecentUsersDocument, options);
-        }
-// @ts-ignore
-export function useDashboardRecentUsersSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>;
-export function useDashboardRecentUsersSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardRecentUsersQuery | undefined, DashboardRecentUsersQueryVariables>;
-export function useDashboardRecentUsersSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>) {
-          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>(DashboardRecentUsersDocument, options);
-        }
-export type DashboardRecentUsersQueryHookResult = ReturnType<typeof useDashboardRecentUsersQuery>;
-export type DashboardRecentUsersLazyQueryHookResult = ReturnType<typeof useDashboardRecentUsersLazyQuery>;
-export type DashboardRecentUsersSuspenseQueryHookResult = ReturnType<typeof useDashboardRecentUsersSuspenseQuery>;
-export type DashboardRecentUsersQueryResult = Apollo.QueryResult<DashboardRecentUsersQuery, DashboardRecentUsersQueryVariables>;
 export const SysDictTypesDocument = gql`
     query SysDictTypes {
   sysDictTypes {
@@ -1982,15 +1802,8 @@ export type BatchUpdateConfigsMutationHookResult = ReturnType<typeof useBatchUpd
 export type BatchUpdateConfigsMutationResult = Apollo.MutationResult<BatchUpdateConfigsMutation>;
 export type BatchUpdateConfigsMutationOptions = Apollo.BaseMutationOptions<BatchUpdateConfigsMutation, BatchUpdateConfigsMutationVariables>;
 export const AdminLogsDocument = gql`
-    query AdminLogs($page: Int, $pageSize: Int, $action: String, $resourceType: String, $startDate: String, $endDate: String) {
-  adminLogs(
-    page: $page
-    pageSize: $pageSize
-    action: $action
-    resourceType: $resourceType
-    startDate: $startDate
-    endDate: $endDate
-  ) {
+    query AdminLogs($query: AuditLogQueryInput!) {
+  adminLogs(query: $query) {
     items {
       ...AuditLogFields
     }
@@ -2013,16 +1826,11 @@ export const AdminLogsDocument = gql`
  * @example
  * const { data, loading, error } = useAdminLogsQuery({
  *   variables: {
- *      page: // value for 'page'
- *      pageSize: // value for 'pageSize'
- *      action: // value for 'action'
- *      resourceType: // value for 'resourceType'
- *      startDate: // value for 'startDate'
- *      endDate: // value for 'endDate'
+ *      query: // value for 'query'
  *   },
  * });
  */
-export function useAdminLogsQuery(baseOptions?: Apollo.QueryHookOptions<AdminLogsQuery, AdminLogsQueryVariables>) {
+export function useAdminLogsQuery(baseOptions: Apollo.QueryHookOptions<AdminLogsQuery, AdminLogsQueryVariables> & ({ variables: AdminLogsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<AdminLogsQuery, AdminLogsQueryVariables>(AdminLogsDocument, options);
       }
@@ -2042,13 +1850,8 @@ export type AdminLogsLazyQueryHookResult = ReturnType<typeof useAdminLogsLazyQue
 export type AdminLogsSuspenseQueryHookResult = ReturnType<typeof useAdminLogsSuspenseQuery>;
 export type AdminLogsQueryResult = Apollo.QueryResult<AdminLogsQuery, AdminLogsQueryVariables>;
 export const ExportAuditLogsDocument = gql`
-    query ExportAuditLogs($action: String, $resourceType: String, $startDate: String, $endDate: String) {
-  exportAuditLogs(
-    action: $action
-    resourceType: $resourceType
-    startDate: $startDate
-    endDate: $endDate
-  ) {
+    query ExportAuditLogs($query: AuditLogQueryInput!) {
+  exportAuditLogs(query: $query) {
     ...AuditLogFields
   }
 }
@@ -2066,14 +1869,11 @@ export const ExportAuditLogsDocument = gql`
  * @example
  * const { data, loading, error } = useExportAuditLogsQuery({
  *   variables: {
- *      action: // value for 'action'
- *      resourceType: // value for 'resourceType'
- *      startDate: // value for 'startDate'
- *      endDate: // value for 'endDate'
+ *      query: // value for 'query'
  *   },
  * });
  */
-export function useExportAuditLogsQuery(baseOptions?: Apollo.QueryHookOptions<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>) {
+export function useExportAuditLogsQuery(baseOptions: Apollo.QueryHookOptions<ExportAuditLogsQuery, ExportAuditLogsQueryVariables> & ({ variables: ExportAuditLogsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ExportAuditLogsQuery, ExportAuditLogsQueryVariables>(ExportAuditLogsDocument, options);
       }
@@ -2424,167 +2224,120 @@ export function useClearCacheByPatternMutation(baseOptions?: Apollo.MutationHook
 export type ClearCacheByPatternMutationHookResult = ReturnType<typeof useClearCacheByPatternMutation>;
 export type ClearCacheByPatternMutationResult = Apollo.MutationResult<ClearCacheByPatternMutation>;
 export type ClearCacheByPatternMutationOptions = Apollo.BaseMutationOptions<ClearCacheByPatternMutation, ClearCacheByPatternMutationVariables>;
-export const UsersDocument = gql`
-    query Users($page: Int, $pageSize: Int) {
-  users(page: $page, pageSize: $pageSize) {
-    items {
-      id
-      username
-      email
-      role
-      status
-      createdAt
-    }
-    total
-    page
-    pageSize
+export const StorageConfigDocument = gql`
+    query StorageConfig {
+  storageConfig {
+    ...SystemConfigFields
   }
 }
-    `;
+    ${SystemConfigFieldsFragmentDoc}`;
 
 /**
- * __useUsersQuery__
+ * __useStorageConfigQuery__
  *
- * To run a query within a React component, call `useUsersQuery` and pass it any options that fit your needs.
- * When your component renders, `useUsersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useStorageConfigQuery` and pass it any options that fit your needs.
+ * When your component renders, `useStorageConfigQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useUsersQuery({
+ * const { data, loading, error } = useStorageConfigQuery({
  *   variables: {
- *      page: // value for 'page'
- *      pageSize: // value for 'pageSize'
  *   },
  * });
  */
-export function useUsersQuery(baseOptions?: Apollo.QueryHookOptions<UsersQuery, UsersQueryVariables>) {
+export function useStorageConfigQuery(baseOptions?: Apollo.QueryHookOptions<StorageConfigQuery, StorageConfigQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<UsersQuery, UsersQueryVariables>(UsersDocument, options);
+        return Apollo.useQuery<StorageConfigQuery, StorageConfigQueryVariables>(StorageConfigDocument, options);
       }
-export function useUsersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<UsersQuery, UsersQueryVariables>) {
+export function useStorageConfigLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<StorageConfigQuery, StorageConfigQueryVariables>) {
           const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<UsersQuery, UsersQueryVariables>(UsersDocument, options);
+          return Apollo.useLazyQuery<StorageConfigQuery, StorageConfigQueryVariables>(StorageConfigDocument, options);
         }
 // @ts-ignore
-export function useUsersSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<UsersQuery, UsersQueryVariables>): Apollo.UseSuspenseQueryResult<UsersQuery, UsersQueryVariables>;
-export function useUsersSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<UsersQuery, UsersQueryVariables>): Apollo.UseSuspenseQueryResult<UsersQuery | undefined, UsersQueryVariables>;
-export function useUsersSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<UsersQuery, UsersQueryVariables>) {
+export function useStorageConfigSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<StorageConfigQuery, StorageConfigQueryVariables>): Apollo.UseSuspenseQueryResult<StorageConfigQuery, StorageConfigQueryVariables>;
+export function useStorageConfigSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<StorageConfigQuery, StorageConfigQueryVariables>): Apollo.UseSuspenseQueryResult<StorageConfigQuery | undefined, StorageConfigQueryVariables>;
+export function useStorageConfigSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<StorageConfigQuery, StorageConfigQueryVariables>) {
           const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<UsersQuery, UsersQueryVariables>(UsersDocument, options);
+          return Apollo.useSuspenseQuery<StorageConfigQuery, StorageConfigQueryVariables>(StorageConfigDocument, options);
         }
-export type UsersQueryHookResult = ReturnType<typeof useUsersQuery>;
-export type UsersLazyQueryHookResult = ReturnType<typeof useUsersLazyQuery>;
-export type UsersSuspenseQueryHookResult = ReturnType<typeof useUsersSuspenseQuery>;
-export type UsersQueryResult = Apollo.QueryResult<UsersQuery, UsersQueryVariables>;
-export const CreateUserDocument = gql`
-    mutation CreateUser($input: CreateUserInput!) {
-  createUser(input: $input) {
-    id
-    username
-    email
-    role
-    status
-    createdAt
+export type StorageConfigQueryHookResult = ReturnType<typeof useStorageConfigQuery>;
+export type StorageConfigLazyQueryHookResult = ReturnType<typeof useStorageConfigLazyQuery>;
+export type StorageConfigSuspenseQueryHookResult = ReturnType<typeof useStorageConfigSuspenseQuery>;
+export type StorageConfigQueryResult = Apollo.QueryResult<StorageConfigQuery, StorageConfigQueryVariables>;
+export const TurnstileConfigDocument = gql`
+    query TurnstileConfig {
+  turnstileConfig {
+    ...SystemConfigFields
   }
 }
-    `;
-export type CreateUserMutationFn = Apollo.MutationFunction<CreateUserMutation, CreateUserMutationVariables>;
+    ${SystemConfigFieldsFragmentDoc}`;
 
 /**
- * __useCreateUserMutation__
+ * __useTurnstileConfigQuery__
  *
- * To run a mutation, you first call `useCreateUserMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateUserMutation` returns a tuple that includes:
+ * To run a query within a React component, call `useTurnstileConfigQuery` and pass it any options that fit your needs.
+ * When your component renders, `useTurnstileConfigQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTurnstileConfigQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useTurnstileConfigQuery(baseOptions?: Apollo.QueryHookOptions<TurnstileConfigQuery, TurnstileConfigQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<TurnstileConfigQuery, TurnstileConfigQueryVariables>(TurnstileConfigDocument, options);
+      }
+export function useTurnstileConfigLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<TurnstileConfigQuery, TurnstileConfigQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<TurnstileConfigQuery, TurnstileConfigQueryVariables>(TurnstileConfigDocument, options);
+        }
+// @ts-ignore
+export function useTurnstileConfigSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<TurnstileConfigQuery, TurnstileConfigQueryVariables>): Apollo.UseSuspenseQueryResult<TurnstileConfigQuery, TurnstileConfigQueryVariables>;
+export function useTurnstileConfigSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<TurnstileConfigQuery, TurnstileConfigQueryVariables>): Apollo.UseSuspenseQueryResult<TurnstileConfigQuery | undefined, TurnstileConfigQueryVariables>;
+export function useTurnstileConfigSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<TurnstileConfigQuery, TurnstileConfigQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<TurnstileConfigQuery, TurnstileConfigQueryVariables>(TurnstileConfigDocument, options);
+        }
+export type TurnstileConfigQueryHookResult = ReturnType<typeof useTurnstileConfigQuery>;
+export type TurnstileConfigLazyQueryHookResult = ReturnType<typeof useTurnstileConfigLazyQuery>;
+export type TurnstileConfigSuspenseQueryHookResult = ReturnType<typeof useTurnstileConfigSuspenseQuery>;
+export type TurnstileConfigQueryResult = Apollo.QueryResult<TurnstileConfigQuery, TurnstileConfigQueryVariables>;
+export const UpdateTurnstileConfigDocument = gql`
+    mutation UpdateTurnstileConfig($input: UpdateConfigInput!) {
+  updateTurnstileConfig(input: $input) {
+    ...SystemConfigFields
+  }
+}
+    ${SystemConfigFieldsFragmentDoc}`;
+export type UpdateTurnstileConfigMutationFn = Apollo.MutationFunction<UpdateTurnstileConfigMutation, UpdateTurnstileConfigMutationVariables>;
+
+/**
+ * __useUpdateTurnstileConfigMutation__
+ *
+ * To run a mutation, you first call `useUpdateTurnstileConfigMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateTurnstileConfigMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [createUserMutation, { data, loading, error }] = useCreateUserMutation({
+ * const [updateTurnstileConfigMutation, { data, loading, error }] = useUpdateTurnstileConfigMutation({
  *   variables: {
  *      input: // value for 'input'
  *   },
  * });
  */
-export function useCreateUserMutation(baseOptions?: Apollo.MutationHookOptions<CreateUserMutation, CreateUserMutationVariables>) {
+export function useUpdateTurnstileConfigMutation(baseOptions?: Apollo.MutationHookOptions<UpdateTurnstileConfigMutation, UpdateTurnstileConfigMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<CreateUserMutation, CreateUserMutationVariables>(CreateUserDocument, options);
+        return Apollo.useMutation<UpdateTurnstileConfigMutation, UpdateTurnstileConfigMutationVariables>(UpdateTurnstileConfigDocument, options);
       }
-export type CreateUserMutationHookResult = ReturnType<typeof useCreateUserMutation>;
-export type CreateUserMutationResult = Apollo.MutationResult<CreateUserMutation>;
-export type CreateUserMutationOptions = Apollo.BaseMutationOptions<CreateUserMutation, CreateUserMutationVariables>;
-export const UpdateUserDocument = gql`
-    mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
-  updateUser(id: $id, input: $input) {
-    id
-    username
-    email
-    role
-    status
-    createdAt
-  }
-}
-    `;
-export type UpdateUserMutationFn = Apollo.MutationFunction<UpdateUserMutation, UpdateUserMutationVariables>;
-
-/**
- * __useUpdateUserMutation__
- *
- * To run a mutation, you first call `useUpdateUserMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateUserMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateUserMutation, { data, loading, error }] = useUpdateUserMutation({
- *   variables: {
- *      id: // value for 'id'
- *      input: // value for 'input'
- *   },
- * });
- */
-export function useUpdateUserMutation(baseOptions?: Apollo.MutationHookOptions<UpdateUserMutation, UpdateUserMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateUserMutation, UpdateUserMutationVariables>(UpdateUserDocument, options);
-      }
-export type UpdateUserMutationHookResult = ReturnType<typeof useUpdateUserMutation>;
-export type UpdateUserMutationResult = Apollo.MutationResult<UpdateUserMutation>;
-export type UpdateUserMutationOptions = Apollo.BaseMutationOptions<UpdateUserMutation, UpdateUserMutationVariables>;
-export const DeleteUserDocument = gql`
-    mutation DeleteUser($id: ID!) {
-  deleteUser(id: $id) {
-    id
-  }
-}
-    `;
-export type DeleteUserMutationFn = Apollo.MutationFunction<DeleteUserMutation, DeleteUserMutationVariables>;
-
-/**
- * __useDeleteUserMutation__
- *
- * To run a mutation, you first call `useDeleteUserMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteUserMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteUserMutation, { data, loading, error }] = useDeleteUserMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
-export function useDeleteUserMutation(baseOptions?: Apollo.MutationHookOptions<DeleteUserMutation, DeleteUserMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<DeleteUserMutation, DeleteUserMutationVariables>(DeleteUserDocument, options);
-      }
-export type DeleteUserMutationHookResult = ReturnType<typeof useDeleteUserMutation>;
-export type DeleteUserMutationResult = Apollo.MutationResult<DeleteUserMutation>;
-export type DeleteUserMutationOptions = Apollo.BaseMutationOptions<DeleteUserMutation, DeleteUserMutationVariables>;
+export type UpdateTurnstileConfigMutationHookResult = ReturnType<typeof useUpdateTurnstileConfigMutation>;
+export type UpdateTurnstileConfigMutationResult = Apollo.MutationResult<UpdateTurnstileConfigMutation>;
+export type UpdateTurnstileConfigMutationOptions = Apollo.BaseMutationOptions<UpdateTurnstileConfigMutation, UpdateTurnstileConfigMutationVariables>;

@@ -14,6 +14,7 @@ import {
   Tag,
   Typography,
   theme,
+  type FormInstance,
 } from 'antd';
 import {
   CameraOutlined,
@@ -24,6 +25,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/auth/auth-context.js';
 import { changePasswordApi, updateSelfApi, uploadAvatarApi } from './api.js';
+import { ChangePasswordSchema, UpdateSelfSchema } from '@starter/api-client';
 import { formatDateTime, ROLE_LABEL_MAP, ROLE_TAG_COLOR_MAP } from './shared.js';
 
 const { Text, Title } = Typography;
@@ -60,6 +62,19 @@ function CardHeader({
       </span>
       <span style={{ fontSize: 15, fontWeight: 600 }}>{title}</span>
     </span>
+  );
+}
+
+/** 把 zod 校验失败映射为 antd 表单字段错误（与 admin-accounts-page 的 applyZodErrors 同模式） */
+function applyZodErrors(
+  form: FormInstance,
+  result: { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } }
+): void {
+  form.setFields(
+    result.error.issues.map((issue) => ({
+      name: issue.path.map(String),
+      errors: [issue.message],
+    }))
   );
 }
 
@@ -128,15 +143,24 @@ export function AccountSettingsPage(): React.JSX.Element {
     }
   };
 
-  /** 保存基本信息 */
+  /** 保存基本信息（提交前用 UpdateSelfSchema 做契约校验，失败映射到表单字段） */
   const onSaveProfile = async (): Promise<void> => {
+    const values = profileForm.getFieldsValue();
+    const parsed = UpdateSelfSchema.safeParse({
+      nickname: values.nickname,
+      email: values.email ?? '',
+      phone: values.phone ?? '',
+    });
+    if (!parsed.success) {
+      applyZodErrors(profileForm, parsed);
+      return;
+    }
     setProfileSaving(true);
     try {
-      const values = profileForm.getFieldsValue();
       await updateSelfApi({
-        nickname: values.nickname,
-        email: values.email ?? '',
-        phone: values.phone ?? '',
+        nickname: parsed.data.nickname,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
       });
       await refreshMe();
       void message.success('基本信息已保存');
@@ -151,14 +175,22 @@ export function AccountSettingsPage(): React.JSX.Element {
     }
   };
 
-  /** 修改密码 */
+  /** 修改密码（提交前用 ChangePasswordSchema 做契约校验，失败映射到表单字段） */
   const onChangePassword = async (): Promise<void> => {
+    const values = passwordForm.getFieldsValue();
+    const parsed = ChangePasswordSchema.safeParse({
+      currentPassword: values.currentPassword,
+      newPassword: values.newPassword,
+    });
+    if (!parsed.success) {
+      applyZodErrors(passwordForm, parsed);
+      return;
+    }
     setPasswordSaving(true);
     try {
-      const values = passwordForm.getFieldsValue();
       await changePasswordApi({
-        currentPassword: values.currentPassword,
-        newPassword: values.newPassword,
+        currentPassword: parsed.data.currentPassword,
+        newPassword: parsed.data.newPassword,
       });
       void message.success('密码已修改，请重新登录');
       passwordForm.resetFields();
@@ -192,7 +224,7 @@ export function AccountSettingsPage(): React.JSX.Element {
           <Card
             title={<CardHeader color="#18A058" icon={<CameraOutlined />} title="头像" />}
             extra={
-              <Button size="small" type="primary" ghost loading={avatarLoading} onClick={onAvatarClick}>
+              <Button size="small" type="primary" variant="outlined" loading={avatarLoading} onClick={onAvatarClick}>
                 更换头像
               </Button>
             }

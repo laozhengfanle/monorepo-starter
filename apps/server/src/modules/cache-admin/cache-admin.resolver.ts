@@ -19,7 +19,7 @@ export class CacheAdminResolver {
     @Args('offset', { type: () => Int, nullable: true, defaultValue: 0 }) offset: number,
     @Args('limit', { type: () => Int, nullable: true, defaultValue: 50 }) limit: number,
   ): Promise<CacheKeyType[]> {
-    const result = await this.cacheAdminService.listKeys(pattern, offset, limit);
+    const result = await this.cacheAdminService.listKeys({ pattern, offset, limit });
     return result.items as CacheKeyType[];
   }
 
@@ -29,7 +29,7 @@ export class CacheAdminResolver {
   async cacheKeyTotal(
     @Args('pattern', { type: () => String, nullable: true, defaultValue: '*' }) pattern: string,
   ): Promise<number> {
-    const result = await this.cacheAdminService.listKeys(pattern, 0, 1);
+    const result = await this.cacheAdminService.listKeys({ pattern, offset: 0, limit: 1 });
     return result.total;
   }
 

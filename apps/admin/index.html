@@ -7,6 +7,44 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!--
+      主题防闪烁（FOUC）：React bundle 加载前同步应用持久化主题，
+      否则暗色模式下刷新会先渲染白底再切换成暗色。
+      与 ThemeProvider（providers/theme-provider.tsx）解析逻辑保持一致：
+      mode = system → 跟随 prefers-color-scheme；否则取 mode 本身。
+    -->
+    <script>
+      (function () {
+        try {
+          var mode = JSON.parse(localStorage.getItem('theme-mode'));
+          var dark =
+            mode === 'dark'
+              ? true
+              : mode === 'light'
+                ? false
+                : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+          root.classList.toggle('dark', dark);
+          // 兜底背景色：antd 挂载前防止白屏闪烁（!important 防 Tailwind preflight 覆盖）
+          // 脚本位于 <head>，此时 <body> 尚未解析，需在 DOMContentLoaded 后再设置
+          var bg = dark ? '#141414' : '#f5f5f5';
+          function applyBg() {
+            var b = document.body;
+            if (b) b.style.setProperty('background-color', bg, 'important');
+            var rootEl = document.getElementById('root');
+            if (rootEl) rootEl.style.setProperty('background-color', bg, 'important');
+          }
+          if (document.body) {
+            applyBg();
+          } else {
+            document.addEventListener('DOMContentLoaded', applyBg, { once: true });
+          }
+        } catch (e) {
+          /* localStorage 不可用（隐私模式等）时保持默认 */
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>

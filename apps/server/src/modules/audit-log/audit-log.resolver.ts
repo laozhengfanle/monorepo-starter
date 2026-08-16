@@ -1,5 +1,8 @@
-import { Args, ID, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
+import type { AuditLogQuery } from '@starter/contracts';
+import { AuditLogQuerySchema } from '@starter/contracts';
+import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
@@ -8,6 +11,7 @@ import type { AuthUser } from '../auth/auth.types.js';
 import { AuditLogService } from './audit-log.service.js';
 import {
   AuditLogItemType,
+  AuditLogQueryInputType,
   ClearAuditLogsResultType,
   PaginatedAuditLogsType,
 } from './audit-log.type.js';
@@ -21,21 +25,10 @@ export class AuditLogResolver {
   @Query(() => PaginatedAuditLogsType)
   @RequirePermission('config:audit:view')
   async adminLogs(
-    @Args('page', { type: () => Int, nullable: true, defaultValue: 1 }) page: number,
-    @Args('pageSize', { type: () => Int, nullable: true, defaultValue: 20 }) pageSize: number,
-    @Args('action', { type: () => String, nullable: true }) action?: string,
-    @Args('resourceType', { type: () => String, nullable: true }) resourceType?: string,
-    @Args('startDate', { type: () => String, nullable: true }) startDate?: string,
-    @Args('endDate', { type: () => String, nullable: true }) endDate?: string,
+    @Args('query', { type: () => AuditLogQueryInputType }, new ZodArgsPipe(AuditLogQuerySchema))
+    query: AuditLogQuery,
   ): Promise<PaginatedAuditLogsType> {
-    const result = await this.auditLogService.findAll({
-      page,
-      pageSize,
-      action: action ?? undefined,
-      resourceType: resourceType ?? undefined,
-      startDate: startDate ?? undefined,
-      endDate: endDate ?? undefined,
-    });
+    const result = await this.auditLogService.findAll(query);
     return {
       items: result.items as AuditLogItemType[],
       total: result.total,
@@ -47,16 +40,14 @@ export class AuditLogResolver {
   @Query(() => [AuditLogItemType])
   @RequirePermission('config:audit:export')
   async exportAuditLogs(
-    @Args('action', { type: () => String, nullable: true }) action?: string,
-    @Args('resourceType', { type: () => String, nullable: true }) resourceType?: string,
-    @Args('startDate', { type: () => String, nullable: true }) startDate?: string,
-    @Args('endDate', { type: () => String, nullable: true }) endDate?: string,
+    @Args('query', { type: () => AuditLogQueryInputType }, new ZodArgsPipe(AuditLogQuerySchema))
+    query: AuditLogQuery,
   ): Promise<AuditLogItemType[]> {
     return this.auditLogService.exportLogs({
-      action: action ?? undefined,
-      resourceType: resourceType ?? undefined,
-      startDate: startDate ?? undefined,
-      endDate: endDate ?? undefined,
+      action: query.action,
+      resourceType: query.resourceType,
+      startDate: query.startDate,
+      endDate: query.endDate,
     });
   }
 

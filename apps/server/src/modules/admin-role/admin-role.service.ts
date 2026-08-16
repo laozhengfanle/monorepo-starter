@@ -3,6 +3,7 @@ import { BizException, newId } from '@starter/server-core';
 import { CreateRoleSchema, UpdateRoleSchema } from '@starter/contracts';
 import type { AdminRole, CreateRoleInput, UpdateRoleInput } from '@starter/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { AuditService, AUDIT_ACTIONS } from '../auth/audit.service.js';
 
 /** Prisma 唯一约束冲突检测（P2002） */
 function isUniqueConstraintError(error: unknown): boolean {
@@ -39,10 +40,14 @@ function toAdminRole(row: {
  * 角色管理（阶段 3 权限闭环）：
  * - CRUD 角色 + 权限点分配（AdminRoleMenu 绑定）
  * - 内置 super_admin 角色不允许删除/禁用（防止锁死系统）
+ * - 核心操作写审计（ROLE_CREATED / ROLE_UPDATED / ROLE_DELETED）
  */
 @Injectable()
 export class AdminRoleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   private readonly roleInclude = {
     roleMenus: { include: { menu: true } },
@@ -56,7 +61,7 @@ export class AdminRoleService {
     return rows.map(toAdminRole);
   }
 
-  async create(input: CreateRoleInput): Promise<AdminRole> {
+  async create(input: CreateRoleInput, operatorId: string): Promise<AdminRole> {
     const data = CreateRoleSchema.parse(input);
     const roleId = newId();
     try {
@@ -79,10 +84,17 @@ export class AdminRoleService {
       }
       throw error;
     }
+    await this.audit.write({
+      accountId: operatorId,
+      action: AUDIT_ACTIONS.ROLE_CREATED,
+      resourceType: 'admin_role',
+      resourceId: roleId,
+      detail: { roleId, code: data.code },
+    });
     return this.findById(roleId);
   }
 
-  async update(id: string, input: UpdateRoleInput): Promise<AdminRole> {
+  async update(id: string, input: UpdateRoleInput, operatorId: string): Promise<AdminRole> {
     const data = UpdateRoleSchema.parse(input);
     const role = await this.prisma.client.adminRole.findUnique({ where: { id } });
     if (!role) {
@@ -109,10 +121,17 @@ export class AdminRoleService {
         }
       }
     });
+    await this.audit.write({
+      accountId: operatorId,
+      action: AUDIT_ACTIONS.ROLE_UPDATED,
+      resourceType: 'admin_role',
+      resourceId: id,
+      detail: { roleId: id, code: role.code },
+    });
     return this.findById(id);
   }
 
-  async remove(id: string): Promise<AdminRole> {
+  async remove(id: string, operatorId: string): Promise<AdminRole> {
     const role = await this.prisma.client.adminRole.findUnique({ where: { id } });
     if (!role) {
       throw new BizException({ code: 'ROLE_NOT_FOUND', message: '角色不存在' });
@@ -129,6 +148,13 @@ export class AdminRoleService {
       this.prisma.client.adminRoleMenu.deleteMany({ where: { roleId: id } }),
       this.prisma.client.adminRole.delete({ where: { id } }),
     ]);
+    await this.audit.write({
+      accountId: operatorId,
+      action: AUDIT_ACTIONS.ROLE_DELETED,
+      resourceType: 'admin_role',
+      resourceId: id,
+      detail: { roleId: id, code: role.code },
+    });
     return toAdminRole({ ...role, roleMenus: [] });
   }
 

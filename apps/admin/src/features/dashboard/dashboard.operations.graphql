@@ -1,11 +1,5 @@
-query DashboardUsersTotal {
-  users(page: 1, pageSize: 1) {
-    total
-  }
-}
-
 query DashboardAccountsTotal {
-  adminAccounts(page: 1, pageSize: 1) {
+  adminAccounts(query: { page: 1, pageSize: 1 }) {
     total
   }
 }
@@ -13,18 +7,5 @@ query DashboardAccountsTotal {
 query DashboardRolesTotal {
   adminRoles {
     id
-  }
-}
-
-query DashboardRecentUsers {
-  users(page: 1, pageSize: 5) {
-    items {
-      id
-      username
-      email
-      role
-      status
-      createdAt
-    }
   }
 }

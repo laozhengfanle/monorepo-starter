@@ -1,5 +1,4 @@
 export * from './generated/health/health';
-export * from './generated/users/users';
 export * from './generated/model';
 export { customInstance, ApiClientError } from './axios-instance';
 
@@ -7,10 +6,6 @@ export { customInstance, ApiClientError } from './axios-instance';
 // 不再直接依赖 @starter/contracts（注：UserVo 等模型名与 generated 重名，
 // 故这里选择性 re-export，避免 export * 的命名歧义）。
 export {
-  CreateUserSchema,
-  UpdateUserSchema,
-  userRoleSchema,
-  userStatusSchema,
   LoginSchema,
   RefreshSchema,
   CreateAdminAccountSchema,
@@ -32,6 +27,9 @@ export {
   CacheKeySchema,
   CacheStatsSchema,
   DeleteCacheKeysResultSchema,
+  CacheListQuerySchema,
+  DeleteCacheKeysInputSchema,
+  ClearCachePatternInputSchema,
   SysDictItemSchema,
   SysDictTypeSchema,
   CreateDictTypeSchema,
@@ -74,6 +72,9 @@ export type {
   CacheKey,
   CacheStats,
   DeleteCacheKeysResult,
+  CacheListQuery,
+  DeleteCacheKeysInput,
+  ClearCachePatternInput,
   SysDictItem,
   SysDictType,
   CreateDictTypeInput,

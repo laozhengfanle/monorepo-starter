@@ -10,6 +10,8 @@ import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthUser } from '../auth/auth.types.js';
 import { SysDictService } from './system-dict.service.js';
 import {
   CreateDictItemInputType,
@@ -37,8 +39,9 @@ export class SysDictResolver {
   async createDictType(
     @Args('input', { type: () => CreateDictTypeInputType }, new ZodArgsPipe(CreateDictTypeSchema))
     input: CreateDictTypeInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<SysDictTypeType> {
-    return this.sysDictService.createType(input as never);
+    return this.sysDictService.createType(input as never, user.accountId);
   }
 
   @Mutation(() => SysDictTypeType)
@@ -47,14 +50,18 @@ export class SysDictResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('input', { type: () => UpdateDictTypeInputType }, new ZodArgsPipe(UpdateDictTypeSchema))
     input: UpdateDictTypeInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<SysDictTypeType> {
-    return this.sysDictService.updateType(id, input as never);
+    return this.sysDictService.updateType(id, input as never, user.accountId);
   }
 
   @Mutation(() => Boolean)
   @RequirePermission('config:dict:update')
-  async deleteDictType(@Args('id', { type: () => ID }) id: string): Promise<boolean> {
-    await this.sysDictService.removeType(id);
+  async deleteDictType(
+    @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<boolean> {
+    await this.sysDictService.removeType(id, user.accountId);
     return true;
   }
 
@@ -63,8 +70,9 @@ export class SysDictResolver {
   async createDictItem(
     @Args('input', { type: () => CreateDictItemInputType }, new ZodArgsPipe(CreateDictItemSchema))
     input: CreateDictItemInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<SysDictItemType> {
-    return this.sysDictService.createItem(input as never);
+    return this.sysDictService.createItem(input as never, user.accountId);
   }
 
   @Mutation(() => SysDictItemType)
@@ -73,14 +81,18 @@ export class SysDictResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('input', { type: () => UpdateDictItemInputType }, new ZodArgsPipe(UpdateDictItemSchema))
     input: UpdateDictItemInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<SysDictItemType> {
-    return this.sysDictService.updateItem(id, input as never);
+    return this.sysDictService.updateItem(id, input as never, user.accountId);
   }
 
   @Mutation(() => Boolean)
   @RequirePermission('config:dict:update')
-  async deleteDictItem(@Args('id', { type: () => ID }) id: string): Promise<boolean> {
-    await this.sysDictService.removeItem(id);
+  async deleteDictItem(
+    @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<boolean> {
+    await this.sysDictService.removeItem(id, user.accountId);
     return true;
   }
 }

@@ -5,6 +5,8 @@ import type { AccountMenusResult, AdminAccount } from '@starter/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthUser } from '../auth/auth.types.js';
 import { AdminAccountService } from './admin-account.service.js';
 
 /**
@@ -23,15 +25,21 @@ export class AdminAccountController {
   @Post(':id/restore')
   @RequirePermission('global:trash:restore')
   @ApiOkResponse({ description: '恢复已软删账户' })
-  restore(@Param('id', new ParseUUIDPipe()) id: string): Promise<AdminAccount> {
-    return this.adminAccountService.restore(id);
+  restore(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<AdminAccount> {
+    return this.adminAccountService.restore(id, user.accountId);
   }
 
   @Delete(':id/hard')
   @RequirePermission('global:trash:hard_delete')
   @ApiOkResponse({ description: '彻底删除（清级联表后硬删）' })
-  hardRemove(@Param('id', new ParseUUIDPipe()) id: string): Promise<AdminAccount> {
-    return this.adminAccountService.hardRemove(id);
+  hardRemove(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<AdminAccount> {
+    return this.adminAccountService.hardRemove(id, user.accountId);
   }
 
   @Get(':id/menus')
@@ -48,7 +56,8 @@ export class AdminAccountController {
   saveAccountMenus(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: SaveAccountMenusDto,
+    @CurrentUser() user: AuthUser,
   ): Promise<AccountMenusResult> {
-    return this.adminAccountService.saveAccountMenus(id, body);
+    return this.adminAccountService.saveAccountMenus(id, body, user.accountId);
   }
 }

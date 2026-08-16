@@ -67,8 +67,9 @@ export class AuthController {
   async changePassword(
     @CurrentUser() user: AuthUser,
     @Body() body: ChangePasswordDto,
+    @Req() req: Request,
   ): Promise<{ success: true }> {
-    await this.authService.changePassword(user.accountId, body);
+    await this.authService.changePassword(user.accountId, body, req);
     return { success: true };
   }
 }

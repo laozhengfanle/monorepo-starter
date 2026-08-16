@@ -75,12 +75,14 @@ export function AuditLogsPage(): React.JSX.Element {
 
   const { data, loading, refetch } = useAdminLogsQuery({
     variables: {
-      page,
-      pageSize,
-      ...(filters.action ? { action: filters.action } : {}),
-      ...(filters.resourceType ? { resourceType: filters.resourceType } : {}),
-      ...(filters.startDate ? { startDate: filters.startDate } : {}),
-      ...(filters.endDate ? { endDate: filters.endDate } : {}),
+      query: {
+        page,
+        pageSize,
+        ...(filters.action ? { action: filters.action } : {}),
+        ...(filters.resourceType ? { resourceType: filters.resourceType } : {}),
+        ...(filters.startDate ? { startDate: filters.startDate } : {}),
+        ...(filters.endDate ? { endDate: filters.endDate } : {}),
+      },
     },
     fetchPolicy: 'network-only',
   });
@@ -121,10 +123,12 @@ export function AuditLogsPage(): React.JSX.Element {
   const handleExport = async (): Promise<void> => {
     const res = await exportLogs({
       variables: {
-        ...(filters.action ? { action: filters.action } : {}),
-        ...(filters.resourceType ? { resourceType: filters.resourceType } : {}),
-        ...(filters.startDate ? { startDate: filters.startDate } : {}),
-        ...(filters.endDate ? { endDate: filters.endDate } : {}),
+        query: {
+          ...(filters.action ? { action: filters.action } : {}),
+          ...(filters.resourceType ? { resourceType: filters.resourceType } : {}),
+          ...(filters.startDate ? { startDate: filters.startDate } : {}),
+          ...(filters.endDate ? { endDate: filters.endDate } : {}),
+        },
       },
       fetchPolicy: 'network-only',
     });
@@ -262,7 +266,7 @@ export function AuditLogsPage(): React.JSX.Element {
         </Space>
       }
     >
-      {/* 筛选区 */}
+            {/* 筛选区 */}
       <Form
         form={searchForm}
         layout="inline"

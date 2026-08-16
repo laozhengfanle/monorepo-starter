@@ -5,6 +5,8 @@ import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthUser } from '../auth/auth.types.js';
 import { AdminMenuService } from './admin-menu.service.js';
 import {
   AdminMenuNodeType,
@@ -30,8 +32,9 @@ export class AdminMenuResolver {
   async createMenu(
     @Args('input', { type: () => CreateMenuInputType }, new ZodArgsPipe(CreateMenuSchema))
     input: CreateMenuInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<AdminMenuNodeType> {
-    return this.adminMenuService.create(input as never);
+    return this.adminMenuService.create(input as never, user.accountId);
   }
 
   @Mutation(() => AdminMenuNodeType)
@@ -40,13 +43,17 @@ export class AdminMenuResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('input', { type: () => UpdateMenuInputType }, new ZodArgsPipe(UpdateMenuSchema))
     input: UpdateMenuInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<AdminMenuNodeType> {
-    return this.adminMenuService.update(id, input as never);
+    return this.adminMenuService.update(id, input as never, user.accountId);
   }
 
   @Mutation(() => AdminMenuNodeType)
   @RequirePermission('menu:delete')
-  async deleteMenu(@Args('id', { type: () => ID }) id: string): Promise<AdminMenuNodeType> {
-    return this.adminMenuService.remove(id);
+  async deleteMenu(
+    @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<AdminMenuNodeType> {
+    return this.adminMenuService.remove(id, user.accountId);
   }
 }

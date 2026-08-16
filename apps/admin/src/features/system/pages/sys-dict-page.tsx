@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Col,
+  Dropdown,
   Form,
   Input,
   InputNumber,
@@ -16,6 +17,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
+import { EllipsisOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { SysDictItem, SysDictType } from '@starter/api-client';
 import {
@@ -284,41 +286,61 @@ export function SysDictPage(): React.JSX.Element {
             {types.map((type) => (
               <div
                 key={type.id}
-                onClick={() => setSelectedId(type.id)}
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
                   padding: '8px 12px',
                   borderRadius: 6,
-                  cursor: 'pointer',
                   border:
                     selectedId === type.id ? '1px solid #1677ff' : '1px solid transparent',
                   background: selectedId === type.id ? 'rgba(22,119,255,0.06)' : 'transparent',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Space size={6}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(type.id)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    color: 'inherit',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Text strong>{type.name}</Text>
                     {!type.enabled && <Tag color="default">禁用</Tag>}
-                  </Space>
-                  {canUpdate && (
-                    <Space size={0} onClick={(e) => e.stopPropagation()}>
-                      <Button type="text" size="small" onClick={() => openEditType(type)}>
-                        编辑
-                      </Button>
-                      <Popconfirm
-                        title="确认删除该字典类型？"
-                        description="将同时删除其下所有字典项"
-                        onConfirm={() => void handleDeleteType(type)}
-                      >
-                        <Button type="text" size="small" danger>
-                          删除
-                        </Button>
-                      </Popconfirm>
-                    </Space>
-                  )}
-                </div>
-                <Text type="secondary" style={{ fontSize: 12, fontFamily: 'monospace' }}>
-                  {type.code} · {type.items.length} 项
-                </Text>
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 12, fontFamily: 'monospace' }}>
+                    {type.code} · {type.items.length} 项
+                  </Text>
+                </button>
+                {canUpdate && (
+                  <Dropdown
+                    trigger={['click']}
+                    menu={{
+                      items: [
+                        { key: 'edit', label: '编辑' },
+                        { key: 'delete', label: '删除', danger: true },
+                      ],
+                      onClick: ({ key }) => {
+                        if (key === 'edit') {
+                          openEditType(type);
+                        } else if (key === 'delete') {
+                          handleDeleteType(type).catch(() => undefined);
+                        }
+                      },
+                    }}
+                  >
+                    <Button type="text" size="small" icon={<EllipsisOutlined />} aria-label="操作" />
+                  </Dropdown>
+                )}
               </div>
             ))}
             {types.length === 0 && !loading && (

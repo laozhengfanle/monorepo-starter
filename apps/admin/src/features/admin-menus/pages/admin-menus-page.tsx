@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
+import {  App,
   Button,
   Card,
   Checkbox,
@@ -17,9 +17,9 @@ import {
   Tag,
   TreeSelect,
   Typography,
-  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import type { MessageInstance } from 'antd/es/message/interface';
 import {
   DeliveredProcedureOutlined,
   FileExcelOutlined,
@@ -99,7 +99,7 @@ const ICON_OPTIONS = [
 ];
 
 /** GraphQL 错误 → 用户提示 */
-function showMutationError(error: unknown): void {
+function showMutationError(message: MessageInstance, error: unknown): void {
   if (error instanceof ApolloError) {
     void message.error(error.graphQLErrors[0]?.message ?? '操作失败，请稍后重试');
     return;
@@ -148,6 +148,7 @@ function toTreeSelectData(
  * 菜单与权限同一张表：目录(directory) → 菜单(menu) → 按钮(button，权限点)。
  */
 export function AdminMenusPage(): React.JSX.Element {
+  const { message } = App.useApp();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
@@ -248,7 +249,7 @@ export function AdminMenusPage(): React.JSX.Element {
       await refreshList();
       await refreshMe();
     } catch (error) {
-      showMutationError(error);
+      showMutationError(message, error);
     }
   };
 
@@ -259,7 +260,7 @@ export function AdminMenusPage(): React.JSX.Element {
       await refreshList();
       await refreshMe();
     } catch (error) {
-      showMutationError(error);
+      showMutationError(message, error);
     }
   };
 

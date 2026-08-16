@@ -1,28 +1,28 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { BizException } from '@starter/server-core';
-import type { CacheKey, CacheStats } from '@starter/contracts';
+import {
+  CacheListQuerySchema,
+  ClearCachePatternInputSchema,
+  DeleteCacheKeysInputSchema,
+} from '@starter/contracts';
+import type { CacheKey, CacheListQuery, CacheStats } from '@starter/contracts';
 import { CACHE_SERVICE_TOKEN, type ICacheService } from '../../common/cache/cache.interface.js';
-
-/** 列表单页最大 key 数（防止 OOM） */
-const MAX_KEYS_PER_PAGE = 500;
-/** 批量删除单次上限 */
-const MAX_BATCH_DELETE = 1000;
 
 /**
  * 缓存管理服务（运维侧 API）
  * - listKeys / getValue / delete / deleteKeys / clearByPattern / getStats
  * - SCAN 而非 KEYS *；pattern 安全校验（拒纯通配符）
+ * - 长度/范围校验由 @starter/contracts 的 zod schema 统一承担（limit ≤ 500、批量 ≤ 1000）
  */
 @Injectable()
 export class CacheAdminService {
   constructor(@Inject(CACHE_SERVICE_TOKEN) private readonly cache: ICacheService) {}
 
-  /** 按 pattern 列出缓存 key（分页，limit ≤ 500） */
-  async listKeys(pattern: string, offset: number, limit: number): Promise<{ items: CacheKey[]; total: number }> {
-    const safeLimit = Math.min(Math.max(limit, 1), MAX_KEYS_PER_PAGE);
-    const safeOffset = Math.max(offset, 0);
+  /** 按 pattern 列出缓存 key（分页，limit 由 CacheListQuerySchema 限制 ≤ 500） */
+  async listKeys(query: CacheListQuery): Promise<{ items: CacheKey[]; total: number }> {
+    const { pattern, offset, limit } = CacheListQuerySchema.parse(query);
     const allKeys = await this.cache.scanKeys(pattern || '*');
-    const pageKeys = allKeys.slice(safeOffset, safeOffset + safeLimit);
+    const pageKeys = allKeys.slice(offset, offset + limit);
     const items = await Promise.all(
       pageKeys.map(async (key) => {
         const [type, ttl, rawValue] = await Promise.all([
@@ -73,26 +73,22 @@ export class CacheAdminService {
     return existed;
   }
 
-  /** 批量删除（单次上限 1000） */
+  /** 批量删除（数量上限由 DeleteCacheKeysInputSchema 限制 ≤ 1000） */
   async deleteKeys(keys: string[]): Promise<{ deletedCount: number; keys: string[] }> {
-    if (keys.length > MAX_BATCH_DELETE) {
-      throw new BizException({
-        code: 'CACHE_BATCH_TOO_LARGE',
-        message: `单次最多删除 ${MAX_BATCH_DELETE} 个 key`,
-      });
-    }
+    const { keys: parsedKeys } = DeleteCacheKeysInputSchema.parse({ keys });
     let deletedCount = 0;
-    for (const key of keys) {
+    for (const key of parsedKeys) {
       if (await this.cache.exists(key)) {
         await this.cache.del(key);
         deletedCount += 1;
       }
     }
-    return { deletedCount, keys };
+    return { deletedCount, keys: parsedKeys };
   }
 
-  /** 按 pattern 清空（安全校验：拒绝纯通配符 / 以 * 开头） */
+  /** 按 pattern 清空（长度校验走 schema；安全校验保留在 service：拒绝纯通配符 / 以 * 开头） */
   async clearByPattern(pattern: string): Promise<number> {
+    ClearCachePatternInputSchema.parse({ pattern });
     this.assertSafePattern(pattern);
     const keys = await this.cache.scanKeys(pattern);
     for (const key of keys) {

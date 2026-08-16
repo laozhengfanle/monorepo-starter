@@ -1,5 +1,23 @@
 import { z } from 'zod';
 
+/** 账户列表查询参数（服务端筛选，对标老项目 Vue 管理员查询） */
+export const AdminAccountQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  /** 按用户名模糊搜索（identityType=username 的 identifier） */
+  username: z.string().max(50, '用户名最多 50 个字符').optional(),
+  /** 按邮箱模糊搜索（admin_profile.email） */
+  email: z.string().max(100, '邮箱最多 100 个字符').optional(),
+  /** 按角色编码精确筛选 */
+  roleCode: z.string().max(100, '角色编码最多 100 个字符').optional(),
+  /** 状态筛选：true=正常 / false=禁用 / 不传=全部 */
+  enabled: z.boolean().optional(),
+  /** 是否包含已软删记录（软删除视图） */
+  includeDeleted: z.boolean().optional(),
+});
+
+export type AdminAccountQuery = z.input<typeof AdminAccountQuerySchema>;
+
 /** 管理端账户（列表项） */
 export const AdminAccountSchema = z.object({
   accountId: z.string(),

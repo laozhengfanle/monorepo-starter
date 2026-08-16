@@ -14,6 +14,16 @@ type AdminAccount {
   username: String!
 }
 
+input AdminAccountQueryInput {
+  email: String
+  enabled: Boolean
+  includeDeleted: Boolean
+  page: Int
+  pageSize: Int
+  roleCode: String
+  username: String
+}
+
 type AdminMe {
   accountId: ID!
   avatar: String!
@@ -63,6 +73,15 @@ type AuditLogItem {
   resourceId: String
   resourceType: String
   userAgent: String
+}
+
+input AuditLogQueryInput {
+  action: String
+  endDate: String
+  page: Int
+  pageSize: Int
+  resourceType: String
+  startDate: String
 }
 
 type AuthResult {
@@ -141,13 +160,6 @@ input CreateRoleInput {
   permissionCodes: [String!]
 }
 
-input CreateUserInput {
-  email: String!
-  role: UserRole
-  status: UserStatus
-  username: String!
-}
-
 type DeleteCacheKeysResult {
   deletedCount: Int!
   keys: [String!]!
@@ -170,7 +182,6 @@ type Mutation {
   createDictType(input: CreateDictTypeInput!): SysDictType!
   createMenu(input: CreateMenuInput!): AdminMenuNode!
   createRole(input: CreateRoleInput!): AdminRole!
-  createUser(input: CreateUserInput!): User!
   deleteAdminAccount(id: ID!): AdminAccount!
   deleteAuditLog(id: ID!): Boolean!
   deleteCacheKey(key: String!): Boolean!
@@ -179,14 +190,13 @@ type Mutation {
   deleteDictType(id: ID!): Boolean!
   deleteMenu(id: ID!): AdminMenuNode!
   deleteRole(id: ID!): AdminRole!
-  deleteUser(id: ID!): User!
   login(input: LoginInput!): AuthResult!
   updateAdminAccount(id: ID!, input: UpdateAdminAccountInput!): AdminAccount!
   updateDictItem(id: ID!, input: UpdateDictItemInput!): SysDictItem!
   updateDictType(id: ID!, input: UpdateDictTypeInput!): SysDictType!
   updateMenu(id: ID!, input: UpdateMenuInput!): AdminMenuNode!
   updateRole(id: ID!, input: UpdateRoleInput!): AdminRole!
-  updateUser(id: ID!, input: UpdateUserInput!): User!
+  updateTurnstileConfig(input: UpdateConfigInput!): SystemConfig!
 }
 
 type PaginatedAdminAccounts {
@@ -203,13 +213,6 @@ type PaginatedAuditLogs {
   total: Int!
 }
 
-type PaginatedUsers {
-  items: [User!]!
-  page: Int!
-  pageSize: Int!
-  total: Int!
-}
-
 type PermissionCode {
   code: String!
   id: ID!
@@ -218,21 +221,21 @@ type PermissionCode {
 }
 
 type Query {
-  adminAccounts(includeDeleted: Boolean = false, page: Int = 1, pageSize: Int = 20): PaginatedAdminAccounts!
+  adminAccounts(query: AdminAccountQueryInput!): PaginatedAdminAccounts!
   adminConfigs: [SystemConfig!]!
-  adminLogs(action: String, endDate: String, page: Int = 1, pageSize: Int = 20, resourceType: String, startDate: String): PaginatedAuditLogs!
+  adminLogs(query: AuditLogQueryInput!): PaginatedAuditLogs!
   adminRoles: [AdminRole!]!
   cacheKey(key: String!): CacheKey!
   cacheKeyTotal(pattern: String = "*"): Int!
   cacheKeys(limit: Int = 50, offset: Int = 0, pattern: String = "*"): [CacheKey!]!
   cacheStats: CacheStats!
-  exportAuditLogs(action: String, endDate: String, resourceType: String, startDate: String): [AuditLogItem!]!
+  exportAuditLogs(query: AuditLogQueryInput!): [AuditLogItem!]!
   me: AdminMe!
   menuTree: [AdminMenuNode!]!
   permissionCodes: [PermissionCode!]!
+  storageConfig: SystemConfig
   sysDictTypes: [SysDictType!]!
-  user(id: ID!): User
-  users(page: Int = 1, pageSize: Int = 20): PaginatedUsers!
+  turnstileConfig: SystemConfig
 }
 
 type SysDictItem {
@@ -275,6 +278,10 @@ input UpdateAdminAccountInput {
   roleCodes: [String!]
 }
 
+input UpdateConfigInput {
+  value: JSON!
+}
+
 input UpdateDictItemInput {
   enabled: Boolean
   label: String
@@ -305,31 +312,4 @@ input UpdateRoleInput {
   enabled: Boolean
   name: String
   permissionCodes: [String!]
-}
-
-input UpdateUserInput {
-  email: String
-  role: UserRole
-  status: UserStatus
-  username: String
-}
-
-type User {
-  createdAt: String!
-  email: String!
-  id: ID!
-  role: UserRole!
-  status: UserStatus!
-  username: String!
-}
-
-enum UserRole {
-  admin
-  member
-}
-
-enum UserStatus {
-  active
-  disabled
-  locked
 }

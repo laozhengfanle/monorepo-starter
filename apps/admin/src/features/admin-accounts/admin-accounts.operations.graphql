@@ -1,5 +1,5 @@
-query AdminAccounts($page: Int, $pageSize: Int, $includeDeleted: Boolean) {
-  adminAccounts(page: $page, pageSize: $pageSize, includeDeleted: $includeDeleted) {
+query AdminAccounts($query: AdminAccountQueryInput!) {
+  adminAccounts(query: $query) {
     items {
       accountId
       username

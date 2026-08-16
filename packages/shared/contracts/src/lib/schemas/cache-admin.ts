@@ -33,6 +33,34 @@ export const CacheStatsSchema = z.object({
 
 export type CacheStats = z.infer<typeof CacheStatsSchema>;
 
+/** 缓存 key 列表查询参数（分页 + 匹配模式） */
+export const CacheListQuerySchema = z.object({
+  /** 匹配模式（Redis glob，如 admin:session:*），不传默认全量 */
+  pattern: z.string().max(200, '匹配模式最多 200 个字符').optional(),
+  offset: z.coerce.number().int().min(0).default(0),
+  /** 单页上限 500，防止 OOM */
+  limit: z.coerce.number().int().min(1).max(500).default(50),
+});
+
+export type CacheListQuery = z.infer<typeof CacheListQuerySchema>;
+
+/** 批量删除缓存 key 入参（单次上限 1000） */
+export const DeleteCacheKeysInputSchema = z.object({
+  keys: z
+    .array(z.string().min(1, 'key 不能为空'))
+    .min(1, '至少选择一个 key')
+    .max(1000, '单次最多删除 1000 个 key'),
+});
+
+export type DeleteCacheKeysInput = z.infer<typeof DeleteCacheKeysInputSchema>;
+
+/** 按模式清空缓存入参 */
+export const ClearCachePatternInputSchema = z.object({
+  pattern: z.string().min(1, '请输入匹配模式').max(200, '匹配模式最多 200 个字符'),
+});
+
+export type ClearCachePatternInput = z.infer<typeof ClearCachePatternInputSchema>;
+
 /** 批量删除结果 */
 export const DeleteCacheKeysResultSchema = z.object({
   /** 实际删除数 */

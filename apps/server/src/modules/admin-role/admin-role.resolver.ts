@@ -7,6 +7,8 @@ import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthUser } from '../auth/auth.types.js';
 import { AdminRoleService } from './admin-role.service.js';
 
 /** 角色（GraphQL 薄壳） */
@@ -112,8 +114,9 @@ export class AdminRoleResolver {
   async createRole(
     @Args('input', { type: () => CreateRoleInputType }, new ZodArgsPipe(CreateRoleSchema))
     input: CreateRoleInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<AdminRoleType> {
-    return this.adminRoleService.create(input as never);
+    return this.adminRoleService.create(input as never, user.accountId);
   }
 
   @Mutation(() => AdminRoleType)
@@ -122,13 +125,17 @@ export class AdminRoleResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('input', { type: () => UpdateRoleInputType }, new ZodArgsPipe(UpdateRoleSchema))
     input: UpdateRoleInputType,
+    @CurrentUser() user: AuthUser,
   ): Promise<AdminRoleType> {
-    return this.adminRoleService.update(id, input as never);
+    return this.adminRoleService.update(id, input as never, user.accountId);
   }
 
   @Mutation(() => AdminRoleType)
   @RequirePermission('role:delete')
-  async deleteRole(@Args('id', { type: () => ID }) id: string): Promise<AdminRoleType> {
-    return this.adminRoleService.remove(id);
+  async deleteRole(
+    @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<AdminRoleType> {
+    return this.adminRoleService.remove(id, user.accountId);
   }
 }

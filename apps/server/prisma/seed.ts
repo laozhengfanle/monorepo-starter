@@ -438,10 +438,19 @@ async function main(): Promise<void> {
     },
   ];
   for (const cfg of DEFAULT_CONFIGS) {
-    const existing = await prisma.systemConfig.findFirst({
-      where: { key: cfg.key, deletedAt: null },
-    });
-    if (!existing) {
+    // 先找未删行；不存在则找已软删行（key 唯一约束，软删后重建需复用并清除 deletedAt）
+    const existing =
+      (await prisma.systemConfig.findFirst({ where: { key: cfg.key, deletedAt: null } })) ??
+      (await prisma.systemConfig.findFirst({ where: { key: cfg.key } }));
+    if (existing) {
+      if (existing.deletedAt) {
+        await prisma.systemConfig.update({
+          where: { id: existing.id },
+          data: { value: cfg.value as never, deletedAt: null },
+        });
+        console.log(`✅ 已重建软删的系统配置 ${cfg.key}`);
+      }
+    } else {
       await prisma.systemConfig.create({
         data: {
           id: newId(),
@@ -492,6 +501,9 @@ async function main(): Promise<void> {
         { label: '删除文件', value: 'file_deleted', sort: 41 },
         { label: '配置更新', value: 'config_updated', sort: 50 },
         { label: '清空审计', value: 'audit_cleared', sort: 51 },
+        { label: '创建字典', value: 'dict_created', sort: 52 },
+        { label: '更新字典', value: 'dict_updated', sort: 53 },
+        { label: '删除字典', value: 'dict_deleted', sort: 54 },
       ],
     },
     {

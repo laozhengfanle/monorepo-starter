@@ -12,6 +12,7 @@ import bcrypt from 'bcrypt';
 import type { Counter } from 'prom-client';
 import type { Request } from 'express';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { resolveAccountPermissions } from './account-permission.util.js';
 import { AuditService, AUDIT_ACTIONS } from './audit.service.js';
 import { LoginLockService } from './login-lock.service.js';
 import { TokenIssuanceService, type IssuedTokens } from './token-issuance.service.js';
@@ -149,24 +150,8 @@ export class AuthService {
     });
 
     const isSuperAdmin = account.adminRoles.some((r) => r.role.code === 'super_admin');
-    // 聚合权限点：角色 → roleMenus → menu.code（去重排序）
-    const permissionSet = new Set(
-      account.adminRoles.flatMap((r) =>
-        r.role.roleMenus.filter((rm) => rm.menu.enabled).map((rm) => rm.menu.code),
-      ),
-    );
-    // 账户级特例授权覆盖（对标老项目 AdminAccountMenu）：grant 追加，deny 移除
-    const overrides = await this.prisma.client.adminAccountMenu.findMany({
-      where: { accountId },
-      include: { menu: true },
-    });
-    for (const o of overrides) {
-      if (o.type === 'grant') {
-        permissionSet.add(o.menu.code);
-      } else if (o.type === 'deny') {
-        permissionSet.delete(o.menu.code);
-      }
-    }
+    // 聚合权限点：角色基线 + 账户级特例授权覆盖（与 PermissionGuard 共用同一逻辑，保证前后端一致）
+    const permissionSet = await resolveAccountPermissions(this.prisma, account);
     // 菜单树：与权限同一张表；超管全量下发，其余按权限裁剪（目录经祖先链自动保留）。
     // 侧栏只需 directory + menu（按钮权限点在 permissions 数组里，不进树）
     const menuRows = await this.prisma.client.adminMenu.findMany({
@@ -211,9 +196,14 @@ export class AuthService {
     return this.me(accountId);
   }
 
-  /** 个人中心：修改密码（校验当前密码 → 更新 hash → 撤销全部 token） */
-  async changePassword(accountId: string, input: ChangePasswordInput): Promise<void> {
+  /** 个人中心：修改密码（校验当前密码 → 更新 hash → 撤销全部 token → 审计） */
+  async changePassword(
+    accountId: string,
+    input: ChangePasswordInput,
+    req: Request,
+  ): Promise<void> {
     const data = ChangePasswordSchema.parse(input);
+    const { ip, userAgent } = clientInfo(req);
     const identity = await this.prisma.client.accountIdentity.findFirst({
       where: { accountId, identityType: 'username' },
     });
@@ -231,5 +221,14 @@ export class AuthService {
     });
     // 密码已变：撤销该账户所有已签发 token（tokenVersion 自增），强制重新登录
     await this.tokenIssuance.logout(accountId);
+    // 审计：密码修改成功（账号身份变更；审计写入容错，失败不阻塞）
+    await this.audit.write({
+      accountId,
+      action: AUDIT_ACTIONS.PASSWORD_CHANGED,
+      resourceType: 'account_identity',
+      resourceId: accountId,
+      ip,
+      userAgent,
+    });
   }
 }

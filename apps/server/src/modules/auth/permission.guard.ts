@@ -7,13 +7,16 @@ import {
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { resolveAccountPermissions } from './account-permission.util.js';
 import { PERMISSIONS_KEY } from './permission.decorator.js';
 import type { AuthUser } from './auth.types.js';
 
 /**
- * 权限守卫：校验当前用户角色是否拥有 @RequirePermission 声明的权限点。
+ * 权限守卫：校验当前用户是否拥有 @RequirePermission 声明的权限点。
  * - 权限来源：account → adminRoles → roleMenus → menu.code（permissionCode）
- * - 超级管理员（super_admin 角色）自动绕过
+ *   再叠加账户级特例授权覆盖（admin_account_menu）：grant 追加、deny 移除（deny 优先）
+ * - 与 me() 共用 resolveAccountPermissions，保证前端显示与后端校验一致
+ * - 超级管理员（super_admin 角色）自动绕过（不看权限）
  * - 必须排在 JwtAuthGuard 之后（依赖 request.user）
  */
 @Injectable()
@@ -59,9 +62,8 @@ export class PermissionGuard implements CanActivate {
       return true;
     }
 
-    const ownedCodes = new Set(
-      account.adminRoles.flatMap((r) => r.role.roleMenus.map((rm) => rm.menu.code)),
-    );
+    // 聚合权限点：角色基线 + 账户特例授权覆盖（grant 追加 / deny 移除，deny 优先）
+    const ownedCodes = await resolveAccountPermissions(this.prisma, account);
     const hasAll = required.every((permission) => ownedCodes.has(permission));
     if (!hasAll) {
       throw new ForbiddenException('权限不足');

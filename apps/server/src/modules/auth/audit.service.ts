@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { newId } from '@starter/server-core';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 
@@ -28,6 +28,9 @@ export const AUDIT_ACTIONS = {
   FILE_DELETED: 'file_deleted',
   CONFIG_UPDATED: 'config_updated',
   AUDIT_CLEARED: 'audit_cleared',
+  DICT_CREATED: 'dict_created',
+  DICT_UPDATED: 'dict_updated',
+  DICT_DELETED: 'dict_deleted',
 } as const;
 
 export interface AuditEntry {
@@ -46,20 +49,37 @@ export interface AuditEntry {
  */
 @Injectable()
 export class AuditService {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * 写入审计日志 —— 业务审计容错（fail-open）：
+   * create 失败仅 Logger.error，不抛出，避免审计旁路记录失败阻塞/回滚主流程
+   * （如登录失败、配置更新、改密等）。
+   * 安全敏感路径（登录失败/锁定）保持现状：这些路径在 write 之后才抛 BizException，
+   * 审计失败只损失日志本身，不影响既定的安全判定结果（不会把“密码错误”变成 500）。
+   */
   async write(entry: AuditEntry): Promise<void> {
-    await this.prisma.client.auditLog.create({
-      data: {
-        id: newId(),
-        accountId: entry.accountId,
-        action: entry.action,
-        resourceType: entry.resourceType,
-        resourceId: entry.resourceId,
-        detail: entry.detail as never,
-        ip: entry.ip,
-        userAgent: entry.userAgent,
-      },
-    });
+    try {
+      await this.prisma.client.auditLog.create({
+        data: {
+          id: newId(),
+          accountId: entry.accountId,
+          action: entry.action,
+          resourceType: entry.resourceType,
+          resourceId: entry.resourceId,
+          detail: entry.detail as never,
+          ip: entry.ip,
+          userAgent: entry.userAgent,
+        },
+      });
+    } catch (err) {
+      this.logger.error(
+        `写入审计日志失败 (action=${entry.action}, accountId=${entry.accountId ?? '-'}): ${
+          (err as Error).message
+        }`,
+      );
+    }
   }
 }

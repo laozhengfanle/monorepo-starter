@@ -21,7 +21,6 @@ import { TurnstileModule } from '../modules/turnstile/turnstile.module.js';
 import { SysDictModule } from '../modules/system-dict/system-dict.module.js';
 import { validateEnv } from '../config/env.validation.js';
 import { HealthModule } from '../health/health.module.js';
-import { UsersModule } from '../users/users.module.js';
 
 @Module({
   imports: [
@@ -53,7 +52,6 @@ import { UsersModule } from '../users/users.module.js';
     TurnstileModule,
     SysDictModule,
     HealthModule,
-    UsersModule,
   ],
   providers: [
     // 全局限流守卫（GraphQL 兼容）

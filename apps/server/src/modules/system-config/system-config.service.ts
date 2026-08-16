@@ -3,7 +3,7 @@ import { BizException, newId } from '@starter/server-core';
 import { BatchUpdateConfigsSchema, SystemConfig, UpdateConfigSchema } from '@starter/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { CACHE_SERVICE_TOKEN, type ICacheService } from '../../common/cache/cache.interface.js';
-import { AuditService } from '../auth/audit.service.js';
+import { AuditService, AUDIT_ACTIONS } from '../auth/audit.service.js';
 
 /** 系统配置缓存 key 前缀（缓存管理页可按此 pattern 观察） */
 export const SYSTEM_CONFIG_CACHE_PREFIX = 'sys:config:';
@@ -127,7 +127,7 @@ export class SystemConfigService {
     const config = await this.upsertConfig(key, data.value, operatorId);
     await this.audit.write({
       accountId: operatorId,
-      action: 'config_updated',
+      action: AUDIT_ACTIONS.CONFIG_UPDATED,
       resourceType: 'system_config',
       resourceId: config.id,
       detail: { key },
@@ -143,7 +143,7 @@ export class SystemConfigService {
       const config = await this.upsertConfig(item.key, item.value, operatorId);
       await this.audit.write({
         accountId: operatorId,
-        action: 'config_updated',
+        action: AUDIT_ACTIONS.CONFIG_UPDATED,
         resourceType: 'system_config',
         resourceId: config.id,
         detail: { key: item.key },
@@ -168,7 +168,7 @@ export class SystemConfigService {
     await this.cache.del(`${SYSTEM_CONFIG_CACHE_PREFIX}${key}`);
     await this.audit.write({
       accountId: operatorId,
-      action: 'config_updated',
+      action: AUDIT_ACTIONS.CONFIG_UPDATED,
       resourceType: 'system_config',
       resourceId: existing.id,
       detail: { key, deleted: true },
@@ -176,7 +176,7 @@ export class SystemConfigService {
     return { success: true };
   }
 
-  /** 内部：upsert 配置行 + 失效缓存 */
+  /** 内部：upsert 配置行 + 失效缓存（软删行复用：清 deletedAt + 覆盖 value，key 保持唯一可重建） */
   private async upsertConfig(
     key: string,
     value: Record<string, unknown>,
@@ -185,13 +185,14 @@ export class SystemConfigService {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
       throw new BizException({ code: 'CONFIG_VALUE_INVALID', message: '配置值必须是 JSON 对象' });
     }
-    const existing = await this.prisma.client.systemConfig.findFirst({
-      where: { key, deletedAt: null },
-    });
+    // 先找未删行；不存在则找已软删行（key 唯一约束，软删后重建需复用并清除 deletedAt）
+    const existing =
+      (await this.prisma.client.systemConfig.findFirst({ where: { key, deletedAt: null } })) ??
+      (await this.prisma.client.systemConfig.findFirst({ where: { key } }));
     const row = existing
       ? await this.prisma.client.systemConfig.update({
           where: { id: existing.id },
-          data: { value: value as never, updatedBy: operatorId },
+          data: { value: value as never, updatedBy: operatorId, deletedAt: null },
         })
       : await this.prisma.client.systemConfig.create({
           data: {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  App,
   Button,
   Card,
   Checkbox,
@@ -14,8 +15,8 @@ import {
   Table,
   Tag,
   Typography,
-  message,
 } from 'antd';
+import type { MessageInstance } from 'antd/es/message/interface';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeliveredProcedureOutlined,
@@ -49,8 +50,8 @@ import type {
 
 const DEFAULT_PAGE_SIZE = 10;
 
-/** GraphQL 错误 → 用户提示 */
-function showMutationError(error: unknown): void {
+/** GraphQL 错误 → 用户提示（message 来自 App.useApp()，静态方法无法消费动态主题） */
+function showMutationError(message: MessageInstance, error: unknown): void {
   if (error instanceof ApolloError) {
     void message.error(error.graphQLErrors[0]?.message ?? '操作失败，请稍后重试');
     return;
@@ -73,11 +74,18 @@ function applyZodErrors(
 
 /** 管理端账户管理页：列表 + 创建/编辑/删除（权限按钮控制） */
 export function AdminAccountsPage(): React.JSX.Element {
+  const { message } = App.useApp();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [keyword, setKeyword] = useState('');
+  // 服务端筛选（点「查询」才生效，对标老项目 Vue 管理员查询）
+  const [filters, setFilters] = useState<{
+    username?: string;
+    email?: string;
+    roleCode?: string;
+    enabled?: boolean;
+  }>({});
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
     () => new Set(['username', 'nickname', 'email', 'roleCodes', 'status', 'actions']),
   );
@@ -98,7 +106,17 @@ export function AdminAccountsPage(): React.JSX.Element {
   const canHardDeleteTrash = usePermission('global:trash:hard_delete');
 
   const { data, loading, refetch } = useAdminAccountsQuery({
-    variables: { page, pageSize, includeDeleted },
+    variables: {
+      query: {
+        page,
+        pageSize,
+        ...(filters.username ? { username: filters.username } : {}),
+        ...(filters.email ? { email: filters.email } : {}),
+        ...(filters.roleCode ? { roleCode: filters.roleCode } : {}),
+        ...(filters.enabled !== undefined ? { enabled: filters.enabled } : {}),
+        includeDeleted,
+      },
+    },
   });
   const { data: rolesData } = useAdminRolesQuery();
   const [createAccount, { loading: createLoading }] = useCreateAdminAccountMutation();
@@ -107,23 +125,23 @@ export function AdminAccountsPage(): React.JSX.Element {
 
   const accounts = useMemo(() => data?.adminAccounts.items ?? [], [data?.adminAccounts]);
   const total = data?.adminAccounts.total ?? 0;
-  const filteredAccounts = useMemo(() => {
-    const kw = keyword.trim().toLowerCase();
-    if (!kw) return accounts;
-    return accounts.filter(
-      (a) =>
-        a.username.toLowerCase().includes(kw) ||
-        a.nickname.toLowerCase().includes(kw) ||
-        a.email.toLowerCase().includes(kw),
-    );
-  }, [accounts, keyword]);
   const roleOptions = (rolesData?.adminRoles ?? []).map((role) => ({
     value: role.code,
     label: `${role.name}（${role.code}）`,
   }));
 
   const refreshList = async (): Promise<void> => {
-    await refetch({ page, pageSize, includeDeleted });
+    await refetch({
+      query: {
+        page,
+        pageSize,
+        ...(filters.username ? { username: filters.username } : {}),
+        ...(filters.email ? { email: filters.email } : {}),
+        ...(filters.roleCode ? { roleCode: filters.roleCode } : {}),
+        ...(filters.enabled !== undefined ? { enabled: filters.enabled } : {}),
+        includeDeleted,
+      },
+    });
   };
 
   const openCreate = (): void => {
@@ -170,7 +188,7 @@ export function AdminAccountsPage(): React.JSX.Element {
       form.resetFields();
       await refreshList();
     } catch (error) {
-      showMutationError(error);
+      showMutationError(message, error);
     }
   };
 
@@ -206,7 +224,7 @@ export function AdminAccountsPage(): React.JSX.Element {
       void message.success('删除成功');
       await refreshList();
     } catch (error) {
-      showMutationError(error);
+      showMutationError(message, error);
     }
   };
 
@@ -331,13 +349,13 @@ export function AdminAccountsPage(): React.JSX.Element {
   // 列过滤开销极小，直接计算（避免 fullColumns 引用变化导致的 useMemo 抖动）
   const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
 
-  // 导出 CSV：导出过滤后的账户（含可见列）
+  // 导出 CSV：导出当前筛选条件下的账户（含可见列）
   const handleExport = (format: 'excel' | 'csv'): void => {
     const exportCols = fullColumns.filter((c) => visibleKeys.has(c.key as string) && c.key !== 'actions');
     const header = exportCols.map((c) => String(c.title));
     const rows: (string | number | boolean | null | undefined)[][] = [
       header,
-      ...filteredAccounts.map((a) =>
+      ...accounts.map((a) =>
         exportCols.map((c) => {
           if (c.key === 'status') return a.deletedAt ? `已删除 ${a.deletedAt.slice(0, 10)}` : a.enabled ? '正常' : '禁用';
           if (c.key === 'roleCodes') return a.roleCodes.join(' / ');
@@ -353,24 +371,65 @@ export function AdminAccountsPage(): React.JSX.Element {
     } else {
       downloadBlob(toCSV(rows), `账户管理_${ts}.csv`, 'text/csv;charset=utf-8;');
     }
-    void message.success(`已导出 ${filteredAccounts.length} 条`);
+    void message.success(`已导出 ${accounts.length} 条`);
   };
 
   return (
     <div>
-      {/* 搜索卡 */}
+            {/* 搜索卡：服务端筛选（点「查询」才请求，对标老项目 Vue） */}
       <Card style={{ marginBottom: 16 }}>
         <Form
           form={searchForm}
           layout="inline"
-          onFinish={(values: { keyword?: string }) => setKeyword(values.keyword ?? '')}
+          style={{ rowGap: 12 }}
+          onFinish={(values: {
+            username?: string;
+            email?: string;
+            roleCode?: string;
+            enabled?: string;
+          }) => {
+            setPage(1);
+            setFilters({
+              username: values.username || undefined,
+              email: values.email || undefined,
+              roleCode: values.roleCode || undefined,
+              enabled:
+                values.enabled === 'enabled' ? true : values.enabled === 'disabled' ? false : undefined,
+            });
+          }}
         >
-          <Form.Item name="keyword" style={{ marginBottom: 0 }}>
+          <Form.Item name="username" style={{ marginBottom: 0 }}>
             <Input
               allowClear
               prefix={<SearchOutlined />}
-              placeholder="按用户名 / 昵称 / 邮箱搜索"
-              style={{ width: 300 }}
+              placeholder="用户名"
+              style={{ width: 160 }}
+            />
+          </Form.Item>
+          <Form.Item name="email" style={{ marginBottom: 0 }}>
+            <Input
+              allowClear
+              placeholder="邮箱"
+              style={{ width: 180 }}
+            />
+          </Form.Item>
+          <Form.Item name="roleCode" style={{ marginBottom: 0 }}>
+            <Select
+              allowClear
+              placeholder="角色"
+              style={{ width: 160 }}
+              options={roleOptions}
+            />
+          </Form.Item>
+          <Form.Item name="enabled" style={{ marginBottom: 0 }}>
+            <Select
+              allowClear
+              placeholder="状态"
+              style={{ width: 120 }}
+              options={[
+                { value: 'enabled', label: '正常' },
+                { value: 'disabled', label: '禁用' },
+              ]}
             />
           </Form.Item>
           {canViewTrash && (
@@ -394,8 +453,9 @@ export function AdminAccountsPage(): React.JSX.Element {
               <Button
                 onClick={() => {
                   searchForm.resetFields();
-                  setKeyword('');
+                  setFilters({});
                   setIncludeDeleted(false);
+                  setPage(1);
                 }}
               >
                 重置
@@ -442,7 +502,7 @@ export function AdminAccountsPage(): React.JSX.Element {
       <Table<AdminAccount>
         rowKey="accountId"
         columns={columns}
-        dataSource={filteredAccounts}
+        dataSource={accounts}
         loading={loading}
         locale={{ emptyText: '暂无数据' }}
         pagination={{

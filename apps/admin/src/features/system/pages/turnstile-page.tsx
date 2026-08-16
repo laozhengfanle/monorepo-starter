@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Alert, App, Button, Card, Form, Input, Spin, Switch, Typography } from 'antd';
-import { useAdminConfigsQuery, useBatchUpdateConfigsMutation } from '../../../generated/graphql';
+import {
+  useTurnstileConfigQuery,
+  useUpdateTurnstileConfigMutation,
+} from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
 
 const { Text } = Typography;
-
-/** 配置 key：turnstile.config（Cloudflare Turnstile 人机验证） */
-const TURNSTILE_KEY = 'turnstile.config';
 
 /** 后端对密钥字段统一脱敏占位符 */
 const MASK_PLACEHOLDER = '******';
@@ -30,14 +30,14 @@ export function TurnstilePage(): React.JSX.Element {
   const { message } = App.useApp();
   const [form] = Form.useForm<TurnstileFormValues>();
   const [isLoading, setIsLoading] = useState(true);
-  const canUpdate = usePermission('config:admin:update');
+  const canUpdate = usePermission('config:turnstile:update');
 
-  const { data } = useAdminConfigsQuery();
-  const [batchUpdate, { loading: saving }] = useBatchUpdateConfigsMutation();
+  const { data } = useTurnstileConfigQuery();
+  const [updateConfig, { loading: saving }] = useUpdateTurnstileConfigMutation();
 
   useEffect(() => {
     if (!data) return;
-    const config = data.adminConfigs.find((c) => c.key === TURNSTILE_KEY);
+    const config = data.turnstileConfig;
     if (config) {
       const v = config.value as Record<string, unknown>;
       form.setFieldsValue({
@@ -71,8 +71,8 @@ export function TurnstilePage(): React.JSX.Element {
       payload.secretKey = values.secretKey;
     }
     try {
-      await batchUpdate({
-        variables: { input: { updates: [{ key: TURNSTILE_KEY, value: payload }] } },
+      await updateConfig({
+        variables: { input: { value: payload } },
       });
       void message.success('Turnstile 配置已保存');
     } catch (error) {
@@ -125,7 +125,7 @@ export function TurnstilePage(): React.JSX.Element {
           </Button>
         </Form.Item>
         {!canUpdate && (
-          <Text type="secondary">当前角色无编辑配置权限（config:admin:update）</Text>
+          <Text type="secondary">当前角色无编辑配置权限（config:turnstile:update）</Text>
         )}
       </Form>
       </Spin>

@@ -29,12 +29,30 @@ export default [
           depConstraints: [
             // 共享层只允许依赖共享层，禁止反向依赖应用
             { sourceTag: 'scope:shared', onlyDependOnLibsWithTags: ['scope:shared'] },
-            // 管理端只能依赖管理端与共享层
+            // 管理端只能依赖管理端与共享层（直接依赖 @starter/contracts 由 admin 专属 no-restricted-imports 拦截）
             { sourceTag: 'scope:admin', onlyDependOnLibsWithTags: ['scope:admin', 'scope:shared'] },
             // C 端只能依赖 C 端与共享层（预留，创建 member 应用时生效）
             { sourceTag: 'scope:member', onlyDependOnLibsWithTags: ['scope:member', 'scope:shared'] },
             // server 端只能依赖 server 端与共享层
             { sourceTag: 'scope:server', onlyDependOnLibsWithTags: ['scope:server', 'scope:shared'] },
+          ],
+        },
+      ],
+    },
+  },
+  // 管理端应用专属：禁止直接 import @starter/contracts（契约必须经 @starter/api-client 消费）
+  {
+    files: ['apps/admin/**/*.ts', 'apps/admin/**/*.tsx'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@starter/contracts',
+              message:
+                '应用层禁止直接 import @starter/contracts，请从 @starter/api-client 获取契约 schema/类型。',
+            },
           ],
         },
       ],

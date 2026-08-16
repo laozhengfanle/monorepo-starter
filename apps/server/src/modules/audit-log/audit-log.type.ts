@@ -1,5 +1,27 @@
-import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
+import { Field, ID, InputType, Int, ObjectType } from '@nestjs/graphql';
 import type { AuditLogItem, ClearAuditLogsResult } from '@starter/contracts';
+
+/** 审计日志分页查询入参（GraphQL 薄壳；默认值与校验由 AuditLogQuerySchema 兜底） */
+@InputType('AuditLogQueryInput')
+export class AuditLogQueryInputType {
+  @Field(() => Int, { nullable: true })
+  page?: number;
+
+  @Field(() => Int, { nullable: true })
+  pageSize?: number;
+
+  @Field(() => String, { nullable: true })
+  action?: string;
+
+  @Field(() => String, { nullable: true })
+  resourceType?: string;
+
+  @Field(() => String, { nullable: true })
+  startDate?: string;
+
+  @Field(() => String, { nullable: true })
+  endDate?: string;
+}
 
 /** 审计日志项 */
 @ObjectType('AuditLogItem')

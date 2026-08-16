@@ -33,10 +33,10 @@ export type AuditLogItem = z.infer<typeof AuditLogItemSchema>;
 export const AuditLogQuerySchema = paginationQuerySchema.extend({
   action: z.string().optional(),
   resourceType: z.string().optional(),
-  /** 起始时间（ISO） */
-  startDate: z.string().optional(),
-  /** 结束时间（ISO） */
-  endDate: z.string().optional(),
+  /** 起始时间（ISO 8601，须带时区，如 2024-01-01T00:00:00.000Z） */
+  startDate: z.string().datetime({ offset: true }).optional(),
+  /** 结束时间（ISO 8601，须带时区） */
+  endDate: z.string().datetime({ offset: true }).optional(),
 });
 
 export type AuditLogQuery = z.infer<typeof AuditLogQuerySchema>;

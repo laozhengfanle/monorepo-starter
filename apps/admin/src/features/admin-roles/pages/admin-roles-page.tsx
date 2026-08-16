@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  App,
   Button,
   Card,
   Checkbox,
@@ -14,9 +15,9 @@ import {
   Table,
   Tag,
   Typography,
-  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import type { MessageInstance } from 'antd/es/message/interface';
 import {
   DeliveredProcedureOutlined,
   FileExcelOutlined,
@@ -42,7 +43,7 @@ import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
 const SUPER_ADMIN_CODE = 'super_admin';
 
 /** GraphQL 错误 → 用户提示 */
-function showMutationError(error: unknown): void {
+function showMutationError(message: MessageInstance, error: unknown): void {
   if (error instanceof ApolloError) {
     void message.error(error.graphQLErrors[0]?.message ?? '操作失败，请稍后重试');
     return;
@@ -83,6 +84,7 @@ function buildPermissionOptions(
 
 /** 角色权限管理页（对标 antd-admin RolePage）：搜索卡 + 表格卡（列控制/导出/刷新） */
 export function AdminRolesPage(): React.JSX.Element {
+  const { message } = App.useApp();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
@@ -160,7 +162,7 @@ export function AdminRolesPage(): React.JSX.Element {
       form.resetFields();
       await refreshList();
     } catch (error) {
-      showMutationError(error);
+      showMutationError(message, error);
     }
   };
 
@@ -170,7 +172,7 @@ export function AdminRolesPage(): React.JSX.Element {
       void message.success('删除成功');
       await refreshList();
     } catch (error) {
-      showMutationError(error);
+      showMutationError(message, error);
     }
   };
 
@@ -289,7 +291,7 @@ export function AdminRolesPage(): React.JSX.Element {
 
   return (
     <div>
-      {/* 搜索卡 */}
+            {/* 搜索卡 */}
       <Card style={{ marginBottom: 16 }}>
         <Form
           form={searchForm}

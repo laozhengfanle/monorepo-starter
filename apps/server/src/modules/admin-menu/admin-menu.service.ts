@@ -3,6 +3,7 @@ import { BizException, newId } from '@starter/server-core';
 import { CreateMenuSchema, UpdateMenuSchema } from '@starter/contracts';
 import type { AdminMenuNode, CreateMenuInput, UpdateMenuInput } from '@starter/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { AuditService, AUDIT_ACTIONS } from '../auth/audit.service.js';
 import { buildMenuTree, type MenuRow } from './menu-tree.util.js';
 
 /** Prisma 唯一约束冲突检测（P2002） */
@@ -36,12 +37,16 @@ function toNode(row: MenuRow): AdminMenuNode {
 /**
  * 菜单/权限点管理（菜单与权限同一张表）：
  * - 树形结构：目录(directory) → 菜单(menu，有 path) → 按钮(button，权限点)
- * - 删除限制：存在子节点不允许删除；删除同时清理角色绑定
+ * - 删除限制：存在子节点不允许删除；删除同时清理角色绑定与账户特例授权覆盖（admin_account_menu）
  * - 编码唯一（P2002 → MENU_CODE_EXISTS）
+ * - 核心操作写审计（MENU_CREATED / MENU_UPDATED / MENU_DELETED）
  */
 @Injectable()
 export class AdminMenuService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /** 完整菜单树（菜单管理页使用） */
   async listTree(): Promise<AdminMenuNode[]> {
@@ -51,7 +56,7 @@ export class AdminMenuService {
     return buildMenuTree(rows, null);
   }
 
-  async create(input: CreateMenuInput): Promise<AdminMenuNode> {
+  async create(input: CreateMenuInput, operatorId: string): Promise<AdminMenuNode> {
     const data = CreateMenuSchema.parse(input);
     await this.validateParent(data.parentId ?? null, data.type);
     try {
@@ -69,6 +74,13 @@ export class AdminMenuService {
           visible: data.visible ?? true,
         },
       });
+      await this.audit.write({
+        accountId: operatorId,
+        action: AUDIT_ACTIONS.MENU_CREATED,
+        resourceType: 'admin_menu',
+        resourceId: row.id,
+        detail: { menuId: row.id, code: row.code },
+      });
       return toNode(row);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -78,7 +90,7 @@ export class AdminMenuService {
     }
   }
 
-  async update(id: string, input: UpdateMenuInput): Promise<AdminMenuNode> {
+  async update(id: string, input: UpdateMenuInput, operatorId: string): Promise<AdminMenuNode> {
     const data = UpdateMenuSchema.parse(input);
     const existing = await this.prisma.client.adminMenu.findUnique({ where: { id } });
     if (!existing) {
@@ -107,10 +119,17 @@ export class AdminMenuService {
         ...(data.visible !== undefined ? { visible: data.visible } : {}),
       },
     });
+    await this.audit.write({
+      accountId: operatorId,
+      action: AUDIT_ACTIONS.MENU_UPDATED,
+      resourceType: 'admin_menu',
+      resourceId: id,
+      detail: { menuId: id, code: row.code },
+    });
     return toNode(row);
   }
 
-  async remove(id: string): Promise<AdminMenuNode> {
+  async remove(id: string, operatorId: string): Promise<AdminMenuNode> {
     const existing = await this.prisma.client.adminMenu.findUnique({ where: { id } });
     if (!existing) {
       throw new BizException({ code: 'MENU_NOT_FOUND', message: '菜单不存在' });
@@ -119,11 +138,20 @@ export class AdminMenuService {
     if (childCount > 0) {
       throw new BizException({ code: 'MENU_HAS_CHILDREN', message: '存在子菜单，请先删除子菜单' });
     }
-    // 同步清理角色-菜单绑定（角色随即失去该权限点）
+    // 同步清理关联（顺序不能乱，admin_account_menu.menu_id / admin_role_menu.menu_id 均为 FK Restrict）：
+    // 1) 账户特例授权覆盖（grant/deny）2) 角色-菜单绑定 3) 菜单本身
     await this.prisma.client.$transaction([
+      this.prisma.client.adminAccountMenu.deleteMany({ where: { menuId: id } }),
       this.prisma.client.adminRoleMenu.deleteMany({ where: { menuId: id } }),
       this.prisma.client.adminMenu.delete({ where: { id } }),
     ]);
+    await this.audit.write({
+      accountId: operatorId,
+      action: AUDIT_ACTIONS.MENU_DELETED,
+      resourceType: 'admin_menu',
+      resourceId: id,
+      detail: { menuId: id, code: existing.code },
+    });
     return toNode(existing);
   }
 

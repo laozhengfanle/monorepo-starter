@@ -68,7 +68,9 @@ function buildMenuData(nodes: AdminMenuNode[]): BuildResult {
       if (node.type === 'button') continue;
       // 隐藏节点（如全局权限目录）不进侧栏（me.menus 已过滤，此处双保险）
       if (node.visible === false) continue;
-      const children = (node.children ?? []).filter((c) => c.type !== 'button' && c.visible !== false);
+      const children = (node.children ?? []).filter(
+        (c) => c.type !== 'button' && c.visible !== false,
+      );
       const key = node.path ?? node.code;
       // 有子菜单（目录）时：记录子级 → 父级关系
       if (children.length > 0) {
@@ -80,7 +82,9 @@ function buildMenuData(nodes: AdminMenuNode[]): BuildResult {
         key,
         ...(depth === 0 ? { icon: resolveIcon(node.icon) } : {}),
         label: node.name,
-        ...(children.length > 0 ? { children: build(children, depth + 1) } : {}),
+        ...(children.length > 0
+          ? { children: build(children, depth + 1) }
+          : {}),
       });
     }
     return result;
@@ -110,7 +114,10 @@ export function LayoutSidebar({
   const menus = useMemo(() => user?.menus ?? [], [user?.menus]);
   const selectedKey = location.pathname;
   // parentMap 必须 memo：Menu 的 openKeys 受控，parentMap 每次 render 重建会触发无限 setState
-  const { items: menuItems, parentMap } = useMemo(() => buildMenuData(menus), [menus]);
+  const { items: menuItems, parentMap } = useMemo(
+    () => buildMenuData(menus),
+    [menus],
+  );
 
   // 手风琴：openKeys 只保留一个父级
   const [openKeys, setOpenKeys] = useState<string[]>(() => {
@@ -141,7 +148,6 @@ export function LayoutSidebar({
       trigger={null}
       width={260}
       breakpoint="lg"
-      collapsedWidth={0}
       onBreakpoint={onBreakpoint}
       className="h-full border-r relative"
       style={{

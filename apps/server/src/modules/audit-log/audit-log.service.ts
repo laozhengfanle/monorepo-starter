@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { BizException, newId } from '@starter/server-core';
 import type { AuditLogItem, AuditLogQuery } from '@starter/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { AUDIT_ACTIONS } from '../auth/audit.service.js';
 
 /** 审计日志导出的上限（防止 OOM） */
 const EXPORT_LIMIT = 10_000;
@@ -70,7 +71,7 @@ export class AuditLogService {
         data: {
           id: newId(),
           accountId: operatorId,
-          action: 'audit_cleared',
+          action: AUDIT_ACTIONS.AUDIT_CLEARED,
           resourceType: 'audit_log',
           detail: { clearedCount: total, clearedAt: new Date().toISOString() } as never,
         },
@@ -98,8 +99,21 @@ export class AuditLogService {
     if (resourceType) where.resourceType = resourceType;
     if (startDate || endDate) {
       where.createdAt = {};
-      if (startDate) (where.createdAt as Record<string, unknown>).gte = new Date(startDate);
-      if (endDate) (where.createdAt as Record<string, unknown>).lte = new Date(endDate);
+      // 防御性校验：入口层（ZodArgsPipe）已按 ISO 校验，这里兜底防止非法字符串 → Invalid Date
+      if (startDate) {
+        const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) {
+          throw new BizException({ code: 'INVALID_DATE', message: 'startDate 不是合法的 ISO 日期' });
+        }
+        (where.createdAt as Record<string, unknown>).gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        if (Number.isNaN(end.getTime())) {
+          throw new BizException({ code: 'INVALID_DATE', message: 'endDate 不是合法的 ISO 日期' });
+        }
+        (where.createdAt as Record<string, unknown>).lte = end;
+      }
     }
     return where;
   }
