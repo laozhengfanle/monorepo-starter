@@ -1,15 +1,15 @@
 # monorepo-starter
 
-企业级全栈 monorepo starter：**Nx + pnpm workspace + NestJS (Fastify) + React 19 (Vite) + Ant Design**。
+企业级全栈 monorepo starter：**Nx + pnpm workspace + NestJS (Express) + React 19 (Vite) + Ant Design**。
 
 ## 技术栈
 
 | 层 | 选型 |
 |---|---|
 | 单仓编排 | [Nx](https://nx.dev) 23 + pnpm 11 workspaces |
-| 后端 | NestJS 11 + Fastify（zod-first 契约、Swagger、Orval 代码生成） |
+| 后端 | NestJS 11 + Express（zod-first 契约、Swagger、Orval 代码生成） |
 | 前端 | React 19 + Vite 8 + Ant Design 6 + TanStack Query |
-| 数据 | Prisma 6（PostgreSQL，分页/软删除扩展） |
+| 数据 | Prisma 7（PostgreSQL，driver adapter + UUIDv7 + 分页/软删除扩展） |
 | Lint | oxlint（代码规则，Rust 极速）+ ESLint（仅 Nx 模块边界规则） |
 | 测试 | Vitest 4 + Playwright（80% 覆盖率阈值） |
 
@@ -17,7 +17,7 @@
 
 ```
 apps/
-  server/       NestJS + Fastify API（@starter/server，端口 3301）
+  server/       NestJS + Express API（@starter/server，端口 3301）
   admin/        React SPA 管理端（@starter/admin，端口 3302）
   admin-e2e/    Playwright 端到端测试
 packages/

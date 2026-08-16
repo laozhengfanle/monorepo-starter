@@ -160,6 +160,77 @@ input CreateRoleInput {
   permissionCodes: [String!]
 }
 
+"""操作类型分布项"""
+type DashboardDistItem {
+  """饼图颜色"""
+  color: String!
+
+  """操作中文标签（字典 audit_action）"""
+  label: String!
+
+  """占比（0-100）"""
+  percent: Int!
+}
+
+"""最近操作记录"""
+type DashboardOpLog {
+  """操作内容中文标签（字典 audit_action）"""
+  content: String!
+
+  """IP"""
+  ip: String!
+
+  """资源类型中文标签（字典 audit_resource）"""
+  module: String!
+
+  """序号"""
+  seq: Int!
+
+  """操作时间（YYYY-MM-DD HH:mm:ss）"""
+  time: String!
+
+  """操作类型分类：login/logout/create/update/delete/reset/grant/export"""
+  type: String!
+
+  """操作者用户名（无则系统）"""
+  user: String!
+}
+
+"""分页操作记录"""
+type DashboardOpLogPage {
+  list: [DashboardOpLog!]!
+  page: Int!
+  pageSize: Int!
+  total: Int!
+}
+
+"""仪表盘统计卡片"""
+type DashboardStat {
+  """标签名，如 管理员 / 角色 / 菜单项 / 近7日操作"""
+  label: String!
+
+  """较上周趋势百分比（正=上升，负=下降）"""
+  trend: Int!
+
+  """当前值"""
+  value: Int!
+}
+
+"""敏感操作趋势数据点"""
+type DashboardTrendItem {
+  """高危操作次数"""
+  highRisk: Int!
+
+  """时间段标签（周一 / MM-DD / M月）"""
+  label: String!
+
+  """低危操作次数"""
+  lowRisk: Int!
+
+  """中危操作次数"""
+  midRisk: Int!
+}
+
 type DeleteCacheKeysResult {
   deletedCount: Int!
   keys: [String!]!
@@ -237,6 +308,10 @@ type Query {
   cacheKeyTotal(pattern: String = "*"): Int!
   cacheKeys(limit: Int = 50, offset: Int = 0, pattern: String = "*"): [CacheKey!]!
   cacheStats: CacheStats!
+  dashboardDistribution: [DashboardDistItem!]!
+  dashboardOperationLogs(page: Int! = 1, pageSize: Int! = 10): DashboardOpLogPage!
+  dashboardStats: [DashboardStat!]!
+  dashboardTrend(range: String! = "week"): [DashboardTrendItem!]!
   exportAuditLogs(query: AuditLogQueryInput!): [AuditLogItem!]!
   me: AdminMe!
   menuTree: [AdminMenuNode!]!

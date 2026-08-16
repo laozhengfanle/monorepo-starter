@@ -21,6 +21,7 @@ import { CacheAdminModule } from '../modules/cache-admin/cache-admin.module.js';
 import { TurnstileModule } from '../modules/turnstile/turnstile.module.js';
 import { SysDictModule } from '../modules/system-dict/system-dict.module.js';
 import { FileManagerModule } from '../modules/file-manager/file-manager.module.js';
+import { DashboardModule } from '../modules/dashboard/dashboard.module.js';
 import { validateEnv } from '../config/env.validation.js';
 import { HealthModule } from '../health/health.module.js';
 
@@ -55,6 +56,7 @@ import { HealthModule } from '../health/health.module.js';
     TurnstileModule,
     SysDictModule,
     FileManagerModule,
+    DashboardModule,
     HealthModule,
   ],
   providers: [

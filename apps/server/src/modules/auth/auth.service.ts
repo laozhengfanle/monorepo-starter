@@ -74,7 +74,7 @@ export class AuthService {
         ip,
         userAgent,
       });
-      throw new BizException({ code: ACCOUNT_LOCKED, message: '登录失败次数过多，请稍后再试' });
+      throw new BizException({ code: ACCOUNT_LOCKED, message: '登录失败次数过多，账号已锁定，请稍后再试' });
     }
 
     // 不泄露账号存在性：账号不存在与密码错误返回同一提示
@@ -91,7 +91,13 @@ export class AuthService {
         ip,
         userAgent,
       });
-      throw new BizException({ code: INVALID_CREDENTIALS, message: '用户名或密码错误' });
+      // 携带剩余可尝试次数（登录框提示）；达到 0 后下次登录将被锁定
+      const remaining = await this.loginLock.getRemainingAttempts(identity.account.id);
+      throw new BizException({
+        code: INVALID_CREDENTIALS,
+        message: '用户名或密码错误',
+        details: { remainingAttempts: [String(remaining)] },
+      });
     }
     if (!identity.account.enabled) {
       throw new BizException({ code: ACCOUNT_DISABLED, message: '账号已禁用' });

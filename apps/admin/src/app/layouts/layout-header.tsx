@@ -134,7 +134,11 @@ export function LayoutHeader(): React.JSX.Element {
         >
           <Button style={{ padding: '0 8px' }}>
             <Space size={8}>
-              <Avatar size={24} icon={<UserOutlined />} />
+              <Avatar
+                size={24}
+                src={user?.avatar || undefined}
+                icon={user?.avatar ? undefined : <UserOutlined />}
+              />
               <span style={{ lineHeight: 'normal' }}>{user?.nickname || user?.username}</span>
             </Space>
           </Button>

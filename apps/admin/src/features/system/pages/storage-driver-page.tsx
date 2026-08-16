@@ -267,7 +267,7 @@ export function StorageDriverPage(): React.JSX.Element {
               </>
             )}
 
-            <Form.Item>
+            <Form.Item label=" " colon={false}>
               <Button type="primary" loading={saving} disabled={!canUpdate} onClick={() => void handleSubmit()}>
                 保存设置
               </Button>

@@ -119,7 +119,7 @@ export function TurnstilePage(): React.JSX.Element {
         >
           <Input.Password placeholder="请输入 Secret Key" autoComplete="new-password" />
         </Form.Item>
-        <Form.Item>
+        <Form.Item label=" " colon={false}>
           <Button type="primary" loading={saving} disabled={!canUpdate} onClick={() => void handleSubmit()}>
             保存设置
           </Button>

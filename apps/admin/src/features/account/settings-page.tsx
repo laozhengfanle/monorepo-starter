@@ -5,11 +5,9 @@ import {
   Avatar,
   Button,
   Card,
-  Col,
   Descriptions,
   Form,
   Input,
-  Row,
   Space,
   Tag,
   Typography,
@@ -218,174 +216,176 @@ export function AccountSettingsPage(): React.JSX.Element {
         </Text>
       </div>
 
-      <Row gutter={[token.marginMD, token.marginMD]}>
-        {/* 头像 */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={<CardHeader color="#18A058" icon={<CameraOutlined />} title="头像" />}
-            extra={
-              <Button size="small" type="primary" variant="outlined" loading={avatarLoading} onClick={onAvatarClick}>
-                更换头像
+      {/* 第一行：头像 + 基本信息（Grid 等高） */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: token.marginMD,
+        }}
+      >
+        <Card
+          title={<CardHeader color="#18A058" icon={<CameraOutlined />} title="头像" />}
+          extra={
+            <Button size="small" type="primary" variant="outlined" loading={avatarLoading} onClick={onAvatarClick}>
+              更换头像
+            </Button>
+          }
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12,
+              padding: '24px 0',
+            }}
+          >
+            <Avatar
+              src={avatarPreview || null}
+              size={96}
+              style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+            >
+              {(user?.nickname || '?')[0]}
+            </Avatar>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              支持 JPG / PNG / WEBP，大小不超过 2MB，上传后立即生效
+            </Text>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              style={{ display: 'none' }}
+              onChange={(e) => void onAvatarChange(e)}
+            />
+          </div>
+        </Card>
+
+        <Card title={<CardHeader color="#1677FF" icon={<EditOutlined />} title="基本信息" />}>
+          <Form form={profileForm} layout="vertical" onFinish={onSaveProfile}>
+            <Form.Item label="账号 ID">
+              <Input value={user?.accountId ?? '-'} disabled />
+            </Form.Item>
+            <Form.Item
+              name="nickname"
+              label="昵称"
+              rules={[
+                { required: true, message: '请输入昵称' },
+                { min: 2, max: 32, message: '昵称长度 2-32 个字符' },
+              ]}
+            >
+              <Input placeholder="请输入昵称" allowClear />
+            </Form.Item>
+            <Form.Item
+              name="email"
+              label="邮箱"
+              rules={[
+                {
+                  validator: (_rule, value) => {
+                    if (!value) return Promise.resolve();
+                    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('邮箱格式不正确'));
+                  },
+                },
+              ]}
+            >
+              <Input placeholder="请输入邮箱" allowClear />
+            </Form.Item>
+            <Form.Item
+              name="phone"
+              label="手机号"
+              rules={[
+                {
+                  validator: (_rule, value) => {
+                    if (!value) return Promise.resolve();
+                    return /^1[3-9]\d{9}$/.test(String(value))
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('手机号格式不正确'));
+                  },
+                },
+              ]}
+            >
+              <Input placeholder="请输入手机号" allowClear />
+            </Form.Item>
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button type="primary" htmlType="submit" loading={profileSaving}>
+                保存修改
               </Button>
-            }
+            </Form.Item>
+          </Form>
+        </Card>
+      </div>
+
+      {/* 第二行：账号状态 + 修改密码（Grid 等高） */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: token.marginMD,
+        }}
+      >
+        <Card
+          title={<CardHeader color="#FA8C16" icon={<SafetyCertificateOutlined />} title="账号状态" />}
+        >
+          <Descriptions bordered column={1} size="small" styles={{ label: { width: 120 } }}>
+            <Descriptions.Item label="账号 ID">{user?.accountId ?? '-'}</Descriptions.Item>
+            <Descriptions.Item label="用户名">{user?.username ?? '-'}</Descriptions.Item>
+            <Descriptions.Item label="角色">
+              <Tag color={roleTagColor}>{displayRole}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">{formatDateTime(user?.createdAt)}</Descriptions.Item>
+          </Descriptions>
+        </Card>
+
+        <Card title={<CardHeader color="#F5222D" icon={<LockOutlined />} title="修改密码" />}>
+          <Form
+            form={passwordForm}
+            layout="vertical"
+            onFinish={onChangePassword}
+            validateTrigger="onBlur"
           >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 12,
-                padding: '24px 0',
-              }}
+            <Form.Item
+              name="currentPassword"
+              label="当前密码"
+              rules={[{ required: true, message: '请输入当前密码' }]}
             >
-              <Avatar
-                src={avatarPreview || null}
-                size={96}
-                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-              >
-                {(user?.nickname || '?')[0]}
-              </Avatar>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                支持 JPG / PNG / WEBP，大小不超过 2MB，上传后立即生效
-              </Text>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                style={{ display: 'none' }}
-                onChange={(e) => void onAvatarChange(e)}
-              />
-            </div>
-          </Card>
-        </Col>
-
-        {/* 基本信息 */}
-        <Col xs={24} lg={12}>
-          <Card title={<CardHeader color="#1677FF" icon={<EditOutlined />} title="基本信息" />}>
-            <Form form={profileForm} layout="vertical" onFinish={onSaveProfile}>
-              <Form.Item label="账号 ID">
-                <Input value={user?.accountId ?? '-'} disabled />
-              </Form.Item>
-              <Form.Item
-                name="nickname"
-                label="昵称"
-                rules={[
-                  { required: true, message: '请输入昵称' },
-                  { min: 2, max: 32, message: '昵称长度 2-32 个字符' },
-                ]}
-              >
-                <Input placeholder="请输入昵称" allowClear />
-              </Form.Item>
-              <Form.Item
-                name="email"
-                label="邮箱"
-                rules={[
-                  {
-                    validator: (_rule, value) => {
-                      if (!value) return Promise.resolve();
-                      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))
-                        ? Promise.resolve()
-                        : Promise.reject(new Error('邮箱格式不正确'));
-                    },
-                  },
-                ]}
-              >
-                <Input placeholder="请输入邮箱" allowClear />
-              </Form.Item>
-              <Form.Item
-                name="phone"
-                label="手机号"
-                rules={[
-                  {
-                    validator: (_rule, value) => {
-                      if (!value) return Promise.resolve();
-                      return /^1[3-9]\d{9}$/.test(String(value))
-                        ? Promise.resolve()
-                        : Promise.reject(new Error('手机号格式不正确'));
-                    },
-                  },
-                ]}
-              >
-                <Input placeholder="请输入手机号" allowClear />
-              </Form.Item>
-              <Form.Item style={{ marginBottom: 0 }}>
-                <Button type="primary" htmlType="submit" loading={profileSaving}>
-                  保存修改
-                </Button>
-              </Form.Item>
-            </Form>
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[token.marginMD, token.marginMD]}>
-        {/* 账号状态 */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={<CardHeader color="#FA8C16" icon={<SafetyCertificateOutlined />} title="账号状态" />}
-          >
-            <Descriptions bordered column={1} size="small" styles={{ label: { width: 120 } }}>
-              <Descriptions.Item label="账号 ID">{user?.accountId ?? '-'}</Descriptions.Item>
-              <Descriptions.Item label="用户名">{user?.username ?? '-'}</Descriptions.Item>
-              <Descriptions.Item label="角色">
-                <Tag color={roleTagColor}>{displayRole}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="创建时间">{formatDateTime(user?.createdAt)}</Descriptions.Item>
-            </Descriptions>
-          </Card>
-        </Col>
-
-        {/* 修改密码 */}
-        <Col xs={24} lg={12}>
-          <Card title={<CardHeader color="#F5222D" icon={<LockOutlined />} title="修改密码" />}>
-            <Form
-              form={passwordForm}
-              layout="vertical"
-              onFinish={onChangePassword}
-              validateTrigger="onBlur"
+              <Input.Password placeholder="请输入当前密码" autoComplete="current-password" />
+            </Form.Item>
+            <Form.Item
+              name="newPassword"
+              label="新密码"
+              rules={[
+                { required: true, message: '请输入新密码' },
+                { min: 8, max: 100, message: '新密码至少 8 位' },
+              ]}
             >
-              <Form.Item
-                name="currentPassword"
-                label="当前密码"
-                rules={[{ required: true, message: '请输入当前密码' }]}
-              >
-                <Input.Password placeholder="请输入当前密码" autoComplete="current-password" />
-              </Form.Item>
-              <Form.Item
-                name="newPassword"
-                label="新密码"
-                rules={[
-                  { required: true, message: '请输入新密码' },
-                  { min: 8, max: 100, message: '新密码至少 8 位' },
-                ]}
-              >
-                <Input.Password placeholder="至少 8 位" autoComplete="new-password" />
-              </Form.Item>
-              <Form.Item
-                name="confirm"
-                label="确认新密码"
-                dependencies={['newPassword']}
-                rules={[
-                  { required: true, message: '请再次输入新密码' },
-                  ({ getFieldValue }) => ({
-                    validator: (_rule, value) =>
-                      !value || getFieldValue('newPassword') === value
-                        ? Promise.resolve()
-                        : Promise.reject(new Error('两次输入的密码不一致')),
-                  }),
-                ]}
-              >
-                <Input.Password placeholder="再次输入新密码" autoComplete="new-password" />
-              </Form.Item>
-              <Form.Item style={{ marginBottom: 0 }}>
-                <Button type="primary" danger htmlType="submit" loading={passwordSaving}>
-                  确认修改
-                </Button>
-              </Form.Item>
-            </Form>
-          </Card>
-        </Col>
-      </Row>
+              <Input.Password placeholder="至少 8 位" autoComplete="new-password" />
+            </Form.Item>
+            <Form.Item
+              name="confirm"
+              label="确认新密码"
+              dependencies={['newPassword']}
+              rules={[
+                { required: true, message: '请再次输入新密码' },
+                ({ getFieldValue }) => ({
+                  validator: (_rule, value) =>
+                    !value || getFieldValue('newPassword') === value
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('两次输入的密码不一致')),
+                }),
+              ]}
+            >
+              <Input.Password placeholder="再次输入新密码" autoComplete="new-password" />
+            </Form.Item>
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button type="primary" danger htmlType="submit" loading={passwordSaving}>
+                确认修改
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      </div>
     </Space>
   );
 }

@@ -354,7 +354,7 @@ export function SystemSettingsPage(): React.JSX.Element {
           </Col>
         </Row>
 
-        <Form.Item>
+        <Form.Item label=" " colon={false} style={{ marginBottom: 0 }}>
           <Button type="primary" loading={saving} onClick={() => void handleSubmit()}>
             保存设置
           </Button>

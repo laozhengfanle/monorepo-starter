@@ -58,7 +58,6 @@ async function main(): Promise<void> {
       where: { code: 'super_admin' },
     });
     const roleId = superAdminRole?.id ?? newId();
-
     await prisma.$transaction(async (tx) => {
       // 账户（身份容器）
       await tx.account.create({
@@ -79,9 +78,9 @@ async function main(): Promise<void> {
           verified: true,
         },
       });
-      // 档案
+      // 档案（默认头像 /avatar.jpeg：admin public 静态资源，seed 内置保证可用）
       await tx.adminProfile.create({
-        data: { id: newId(), accountId, nickname: '超级管理员' },
+        data: { id: newId(), accountId, nickname: '超级管理员', avatar: '/avatar.jpeg' },
       });
       // 角色（super_admin）+ 绑定
       if (!superAdminRole) {
@@ -95,7 +94,12 @@ async function main(): Promise<void> {
     });
     console.log('✅ 已创建初始管理员 root / Root!123（角色 super_admin）');
   } else {
-    console.log('root 账户已存在，跳过');
+    // 同步更新超管档案头像（幂等：每次 seed 都覆盖，保证 /avatar.jpeg 不会丢）
+    await prisma.adminProfile.updateMany({
+      where: { accountId: rootIdentity.accountId },
+      data: { avatar: '/avatar.jpeg' },
+    });
+    console.log('root 账户已存在，跳过（头像已同步为 /avatar.jpeg）');
   }
 
   // ── 3. 菜单树种子（目录 → 菜单 → 按钮）+ 绑定到 super_admin ──
@@ -608,6 +612,8 @@ async function main(): Promise<void> {
     'recycle:list',
     // 旧后台设置权限码 config:admin → 已升级为 config:admin:view
     'config:admin',
+    // 富文本编辑器是功能不是栏目（曾误挂侧栏，改为无菜单功能页）
+    'config:editor:view',
   ];
   const legacyMenus = await prisma.adminMenu.findMany({
     where: { code: { in: LEGACY_MENU_CODES } },

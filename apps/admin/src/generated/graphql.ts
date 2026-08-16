@@ -186,6 +186,69 @@ export type CreateRoleInput = {
   permissionCodes?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+/** 操作类型分布项 */
+export type DashboardDistItem = {
+  __typename?: 'DashboardDistItem';
+  /** 饼图颜色 */
+  color: Scalars['String']['output'];
+  /** 操作中文标签（字典 audit_action） */
+  label: Scalars['String']['output'];
+  /** 占比（0-100） */
+  percent: Scalars['Int']['output'];
+};
+
+/** 最近操作记录 */
+export type DashboardOpLog = {
+  __typename?: 'DashboardOpLog';
+  /** 操作内容中文标签（字典 audit_action） */
+  content: Scalars['String']['output'];
+  /** IP */
+  ip: Scalars['String']['output'];
+  /** 资源类型中文标签（字典 audit_resource） */
+  module: Scalars['String']['output'];
+  /** 序号 */
+  seq: Scalars['Int']['output'];
+  /** 操作时间（YYYY-MM-DD HH:mm:ss） */
+  time: Scalars['String']['output'];
+  /** 操作类型分类：login/logout/create/update/delete/reset/grant/export */
+  type: Scalars['String']['output'];
+  /** 操作者用户名（无则系统） */
+  user: Scalars['String']['output'];
+};
+
+/** 分页操作记录 */
+export type DashboardOpLogPage = {
+  __typename?: 'DashboardOpLogPage';
+  list: Array<DashboardOpLog>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+};
+
+/** 仪表盘统计卡片 */
+export type DashboardStat = {
+  __typename?: 'DashboardStat';
+  /** 标签名，如 管理员 / 角色 / 菜单项 / 近7日操作 */
+  label: Scalars['String']['output'];
+  /** 较上周趋势百分比（正=上升，负=下降） */
+  trend: Scalars['Int']['output'];
+  /** 当前值 */
+  value: Scalars['Int']['output'];
+};
+
+/** 敏感操作趋势数据点 */
+export type DashboardTrendItem = {
+  __typename?: 'DashboardTrendItem';
+  /** 高危操作次数 */
+  highRisk: Scalars['Int']['output'];
+  /** 时间段标签（周一 / MM-DD / M月） */
+  label: Scalars['String']['output'];
+  /** 低危操作次数 */
+  lowRisk: Scalars['Int']['output'];
+  /** 中危操作次数 */
+  midRisk: Scalars['Int']['output'];
+};
+
 export type DeleteCacheKeysResult = {
   __typename?: 'DeleteCacheKeysResult';
   deletedCount: Scalars['Int']['output'];
@@ -387,6 +450,10 @@ export type Query = {
   cacheKeyTotal: Scalars['Int']['output'];
   cacheKeys: Array<CacheKey>;
   cacheStats: CacheStats;
+  dashboardDistribution: Array<DashboardDistItem>;
+  dashboardOperationLogs: DashboardOpLogPage;
+  dashboardStats: Array<DashboardStat>;
+  dashboardTrend: Array<DashboardTrendItem>;
   exportAuditLogs: Array<AuditLogItem>;
   me: AdminMe;
   menuTree: Array<AdminMenuNode>;
@@ -423,6 +490,17 @@ export type QueryCacheKeysArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   pattern?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryDashboardOperationLogsArgs = {
+  page?: Scalars['Int']['input'];
+  pageSize?: Scalars['Int']['input'];
+};
+
+
+export type QueryDashboardTrendArgs = {
+  range?: Scalars['String']['input'];
 };
 
 
@@ -624,15 +702,30 @@ export type DeleteRoleMutationVariables = Exact<{
 
 export type DeleteRoleMutation = { __typename?: 'Mutation', deleteRole: { __typename?: 'AdminRole', id: string } };
 
-export type DashboardAccountsTotalQueryVariables = Exact<{ [key: string]: never; }>;
+export type DashboardStatsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type DashboardAccountsTotalQuery = { __typename?: 'Query', adminAccounts: { __typename?: 'PaginatedAdminAccounts', total: number } };
+export type DashboardStatsQuery = { __typename?: 'Query', dashboardStats: Array<{ __typename?: 'DashboardStat', label: string, value: number, trend: number }> };
 
-export type DashboardRolesTotalQueryVariables = Exact<{ [key: string]: never; }>;
+export type DashboardTrendQueryVariables = Exact<{
+  range?: InputMaybe<Scalars['String']['input']>;
+}>;
 
 
-export type DashboardRolesTotalQuery = { __typename?: 'Query', adminRoles: Array<{ __typename?: 'AdminRole', id: string }> };
+export type DashboardTrendQuery = { __typename?: 'Query', dashboardTrend: Array<{ __typename?: 'DashboardTrendItem', label: string, highRisk: number, midRisk: number, lowRisk: number }> };
+
+export type DashboardDistributionQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DashboardDistributionQuery = { __typename?: 'Query', dashboardDistribution: Array<{ __typename?: 'DashboardDistItem', label: string, percent: number, color: string }> };
+
+export type DashboardOperationLogsQueryVariables = Exact<{
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type DashboardOperationLogsQuery = { __typename?: 'Query', dashboardOperationLogs: { __typename?: 'DashboardOpLogPage', total: number, page: number, pageSize: number, list: Array<{ __typename?: 'DashboardOpLog', seq: number, user: string, content: string, module: string, type: string, ip: string, time: string }> } };
 
 export type SysDictItemFieldsFragment = { __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string };
 
@@ -1476,90 +1569,195 @@ export function useDeleteRoleMutation(baseOptions?: Apollo.MutationHookOptions<D
 export type DeleteRoleMutationHookResult = ReturnType<typeof useDeleteRoleMutation>;
 export type DeleteRoleMutationResult = Apollo.MutationResult<DeleteRoleMutation>;
 export type DeleteRoleMutationOptions = Apollo.BaseMutationOptions<DeleteRoleMutation, DeleteRoleMutationVariables>;
-export const DashboardAccountsTotalDocument = gql`
-    query DashboardAccountsTotal {
-  adminAccounts(query: {page: 1, pageSize: 1}) {
+export const DashboardStatsDocument = gql`
+    query DashboardStats {
+  dashboardStats {
+    label
+    value
+    trend
+  }
+}
+    `;
+
+/**
+ * __useDashboardStatsQuery__
+ *
+ * To run a query within a React component, call `useDashboardStatsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardStatsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardStatsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDashboardStatsQuery(baseOptions?: Apollo.QueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardStatsQuery, DashboardStatsQueryVariables>(DashboardStatsDocument, options);
+      }
+export function useDashboardStatsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardStatsQuery, DashboardStatsQueryVariables>(DashboardStatsDocument, options);
+        }
+// @ts-ignore
+export function useDashboardStatsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardStatsQuery, DashboardStatsQueryVariables>;
+export function useDashboardStatsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardStatsQuery | undefined, DashboardStatsQueryVariables>;
+export function useDashboardStatsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DashboardStatsQuery, DashboardStatsQueryVariables>(DashboardStatsDocument, options);
+        }
+export type DashboardStatsQueryHookResult = ReturnType<typeof useDashboardStatsQuery>;
+export type DashboardStatsLazyQueryHookResult = ReturnType<typeof useDashboardStatsLazyQuery>;
+export type DashboardStatsSuspenseQueryHookResult = ReturnType<typeof useDashboardStatsSuspenseQuery>;
+export type DashboardStatsQueryResult = Apollo.QueryResult<DashboardStatsQuery, DashboardStatsQueryVariables>;
+export const DashboardTrendDocument = gql`
+    query DashboardTrend($range: String) {
+  dashboardTrend(range: $range) {
+    label
+    highRisk
+    midRisk
+    lowRisk
+  }
+}
+    `;
+
+/**
+ * __useDashboardTrendQuery__
+ *
+ * To run a query within a React component, call `useDashboardTrendQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardTrendQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardTrendQuery({
+ *   variables: {
+ *      range: // value for 'range'
+ *   },
+ * });
+ */
+export function useDashboardTrendQuery(baseOptions?: Apollo.QueryHookOptions<DashboardTrendQuery, DashboardTrendQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardTrendQuery, DashboardTrendQueryVariables>(DashboardTrendDocument, options);
+      }
+export function useDashboardTrendLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardTrendQuery, DashboardTrendQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardTrendQuery, DashboardTrendQueryVariables>(DashboardTrendDocument, options);
+        }
+// @ts-ignore
+export function useDashboardTrendSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardTrendQuery, DashboardTrendQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardTrendQuery, DashboardTrendQueryVariables>;
+export function useDashboardTrendSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardTrendQuery, DashboardTrendQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardTrendQuery | undefined, DashboardTrendQueryVariables>;
+export function useDashboardTrendSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardTrendQuery, DashboardTrendQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DashboardTrendQuery, DashboardTrendQueryVariables>(DashboardTrendDocument, options);
+        }
+export type DashboardTrendQueryHookResult = ReturnType<typeof useDashboardTrendQuery>;
+export type DashboardTrendLazyQueryHookResult = ReturnType<typeof useDashboardTrendLazyQuery>;
+export type DashboardTrendSuspenseQueryHookResult = ReturnType<typeof useDashboardTrendSuspenseQuery>;
+export type DashboardTrendQueryResult = Apollo.QueryResult<DashboardTrendQuery, DashboardTrendQueryVariables>;
+export const DashboardDistributionDocument = gql`
+    query DashboardDistribution {
+  dashboardDistribution {
+    label
+    percent
+    color
+  }
+}
+    `;
+
+/**
+ * __useDashboardDistributionQuery__
+ *
+ * To run a query within a React component, call `useDashboardDistributionQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardDistributionQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardDistributionQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDashboardDistributionQuery(baseOptions?: Apollo.QueryHookOptions<DashboardDistributionQuery, DashboardDistributionQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardDistributionQuery, DashboardDistributionQueryVariables>(DashboardDistributionDocument, options);
+      }
+export function useDashboardDistributionLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardDistributionQuery, DashboardDistributionQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardDistributionQuery, DashboardDistributionQueryVariables>(DashboardDistributionDocument, options);
+        }
+// @ts-ignore
+export function useDashboardDistributionSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardDistributionQuery, DashboardDistributionQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardDistributionQuery, DashboardDistributionQueryVariables>;
+export function useDashboardDistributionSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardDistributionQuery, DashboardDistributionQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardDistributionQuery | undefined, DashboardDistributionQueryVariables>;
+export function useDashboardDistributionSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardDistributionQuery, DashboardDistributionQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DashboardDistributionQuery, DashboardDistributionQueryVariables>(DashboardDistributionDocument, options);
+        }
+export type DashboardDistributionQueryHookResult = ReturnType<typeof useDashboardDistributionQuery>;
+export type DashboardDistributionLazyQueryHookResult = ReturnType<typeof useDashboardDistributionLazyQuery>;
+export type DashboardDistributionSuspenseQueryHookResult = ReturnType<typeof useDashboardDistributionSuspenseQuery>;
+export type DashboardDistributionQueryResult = Apollo.QueryResult<DashboardDistributionQuery, DashboardDistributionQueryVariables>;
+export const DashboardOperationLogsDocument = gql`
+    query DashboardOperationLogs($page: Int, $pageSize: Int) {
+  dashboardOperationLogs(page: $page, pageSize: $pageSize) {
+    list {
+      seq
+      user
+      content
+      module
+      type
+      ip
+      time
+    }
     total
+    page
+    pageSize
   }
 }
     `;
 
 /**
- * __useDashboardAccountsTotalQuery__
+ * __useDashboardOperationLogsQuery__
  *
- * To run a query within a React component, call `useDashboardAccountsTotalQuery` and pass it any options that fit your needs.
- * When your component renders, `useDashboardAccountsTotalQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useDashboardOperationLogsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardOperationLogsQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useDashboardAccountsTotalQuery({
+ * const { data, loading, error } = useDashboardOperationLogsQuery({
  *   variables: {
+ *      page: // value for 'page'
+ *      pageSize: // value for 'pageSize'
  *   },
  * });
  */
-export function useDashboardAccountsTotalQuery(baseOptions?: Apollo.QueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>) {
+export function useDashboardOperationLogsQuery(baseOptions?: Apollo.QueryHookOptions<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>(DashboardAccountsTotalDocument, options);
+        return Apollo.useQuery<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>(DashboardOperationLogsDocument, options);
       }
-export function useDashboardAccountsTotalLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>) {
+export function useDashboardOperationLogsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>) {
           const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>(DashboardAccountsTotalDocument, options);
+          return Apollo.useLazyQuery<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>(DashboardOperationLogsDocument, options);
         }
 // @ts-ignore
-export function useDashboardAccountsTotalSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>;
-export function useDashboardAccountsTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardAccountsTotalQuery | undefined, DashboardAccountsTotalQueryVariables>;
-export function useDashboardAccountsTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>) {
+export function useDashboardOperationLogsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>;
+export function useDashboardOperationLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardOperationLogsQuery | undefined, DashboardOperationLogsQueryVariables>;
+export function useDashboardOperationLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>) {
           const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>(DashboardAccountsTotalDocument, options);
+          return Apollo.useSuspenseQuery<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>(DashboardOperationLogsDocument, options);
         }
-export type DashboardAccountsTotalQueryHookResult = ReturnType<typeof useDashboardAccountsTotalQuery>;
-export type DashboardAccountsTotalLazyQueryHookResult = ReturnType<typeof useDashboardAccountsTotalLazyQuery>;
-export type DashboardAccountsTotalSuspenseQueryHookResult = ReturnType<typeof useDashboardAccountsTotalSuspenseQuery>;
-export type DashboardAccountsTotalQueryResult = Apollo.QueryResult<DashboardAccountsTotalQuery, DashboardAccountsTotalQueryVariables>;
-export const DashboardRolesTotalDocument = gql`
-    query DashboardRolesTotal {
-  adminRoles {
-    id
-  }
-}
-    `;
-
-/**
- * __useDashboardRolesTotalQuery__
- *
- * To run a query within a React component, call `useDashboardRolesTotalQuery` and pass it any options that fit your needs.
- * When your component renders, `useDashboardRolesTotalQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDashboardRolesTotalQuery({
- *   variables: {
- *   },
- * });
- */
-export function useDashboardRolesTotalQuery(baseOptions?: Apollo.QueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>(DashboardRolesTotalDocument, options);
-      }
-export function useDashboardRolesTotalLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>(DashboardRolesTotalDocument, options);
-        }
-// @ts-ignore
-export function useDashboardRolesTotalSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>;
-export function useDashboardRolesTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardRolesTotalQuery | undefined, DashboardRolesTotalQueryVariables>;
-export function useDashboardRolesTotalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>) {
-          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>(DashboardRolesTotalDocument, options);
-        }
-export type DashboardRolesTotalQueryHookResult = ReturnType<typeof useDashboardRolesTotalQuery>;
-export type DashboardRolesTotalLazyQueryHookResult = ReturnType<typeof useDashboardRolesTotalLazyQuery>;
-export type DashboardRolesTotalSuspenseQueryHookResult = ReturnType<typeof useDashboardRolesTotalSuspenseQuery>;
-export type DashboardRolesTotalQueryResult = Apollo.QueryResult<DashboardRolesTotalQuery, DashboardRolesTotalQueryVariables>;
+export type DashboardOperationLogsQueryHookResult = ReturnType<typeof useDashboardOperationLogsQuery>;
+export type DashboardOperationLogsLazyQueryHookResult = ReturnType<typeof useDashboardOperationLogsLazyQuery>;
+export type DashboardOperationLogsSuspenseQueryHookResult = ReturnType<typeof useDashboardOperationLogsSuspenseQuery>;
+export type DashboardOperationLogsQueryResult = Apollo.QueryResult<DashboardOperationLogsQuery, DashboardOperationLogsQueryVariables>;
 export const SysDictTypesDocument = gql`
     query SysDictTypes {
   sysDictTypes {

@@ -5,6 +5,13 @@ import { useAdminConfigsQuery, usePublicConfigsQuery } from '../../generated/gra
 
 /** 系统配置 key */
 const SETTINGS_KEY = 'settings';
+const TURNSTILE_KEY = 'turnstile.config';
+
+/** Cloudflare Turnstile 配置（登录页人机验证；secretKey 后端脱敏，前端只需 siteKey） */
+export interface TurnstileConfig {
+  enabled: boolean;
+  siteKey: string;
+}
 
 /** 后台设置（system_config.settings）解析后的形态，供 Header/Footer/登录页等消费 */
 export interface SystemSettings {
@@ -29,6 +36,8 @@ export interface SystemSettings {
 interface SystemConfigContextValue {
   /** 后台设置配置（加载完成前为默认值） */
   settings: SystemSettings;
+  /** Turnstile 人机验证配置（登录页用；未配置默认关闭） */
+  turnstile: TurnstileConfig;
   /** 是否已从后端加载 */
   loaded: boolean;
 }
@@ -79,8 +88,15 @@ export function SystemConfigProvider({ children }: { children: ReactNode }): Rea
 
   const value = useMemo<SystemConfigContextValue>(() => {
     const config = rawConfigs?.find((c) => c.key === SETTINGS_KEY);
+    const turnstileCfg = rawConfigs?.find((c) => c.key === TURNSTILE_KEY);
+    const tv = turnstileCfg?.value as Record<string, unknown> | undefined;
+    // settings 未加载时仍返回默认 turnstile（关闭态），避免登录页 undefined
+    const turnstile: TurnstileConfig = {
+      enabled: (tv?.enabled as boolean) ?? false,
+      siteKey: (tv?.siteKey as string) || '',
+    };
     if (!config) {
-      return { settings: DEFAULT_SETTINGS, loaded: false };
+      return { settings: DEFAULT_SETTINGS, turnstile, loaded: false };
     }
     const v = config.value as Record<string, unknown>;
     return {
@@ -98,6 +114,7 @@ export function SystemConfigProvider({ children }: { children: ReactNode }): Rea
             DEFAULT_SETTINGS.passwordComplexity),
         watermarkContent: (v.watermarkContent as string) || '',
       },
+      turnstile,
     };
   }, [rawConfigs]);
 

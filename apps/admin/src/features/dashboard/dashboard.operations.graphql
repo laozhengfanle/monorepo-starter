@@ -1,11 +1,41 @@
-query DashboardAccountsTotal {
-  adminAccounts(query: { page: 1, pageSize: 1 }) {
-    total
+query DashboardStats {
+  dashboardStats {
+    label
+    value
+    trend
   }
 }
 
-query DashboardRolesTotal {
-  adminRoles {
-    id
+query DashboardTrend($range: String) {
+  dashboardTrend(range: $range) {
+    label
+    highRisk
+    midRisk
+    lowRisk
+  }
+}
+
+query DashboardDistribution {
+  dashboardDistribution {
+    label
+    percent
+    color
+  }
+}
+
+query DashboardOperationLogs($page: Int, $pageSize: Int) {
+  dashboardOperationLogs(page: $page, pageSize: $pageSize) {
+    list {
+      seq
+      user
+      content
+      module
+      type
+      ip
+      time
+    }
+    total
+    page
+    pageSize
   }
 }

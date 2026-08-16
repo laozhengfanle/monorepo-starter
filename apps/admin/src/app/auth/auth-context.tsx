@@ -8,7 +8,7 @@ interface AuthContextValue {
   user: AdminMe | null;
   /** 初始化时校验 token（读 /auth/me）的加载态 */
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, turnstileToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   /** 重新拉取当前用户（菜单/权限变更后刷新侧栏） */
   refreshMe: () => Promise<void>;
@@ -38,8 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (username: string, password: string) => {
-    const result = await loginApi({ username, password });
+  const login = useCallback(async (username: string, password: string, turnstileToken?: string) => {
+    const result = await loginApi({ username, password, turnstileToken });
     authStorage.setTokens(result.accessToken, result.refreshToken);
     const me = await fetchMe(result.accessToken);
     setUser(me);

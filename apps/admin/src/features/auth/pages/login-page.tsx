@@ -4,8 +4,10 @@ import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LoginSchema } from '@starter/api-client';
 import { useAuth } from '../../../app/auth/auth-context.js';
+import { useTheme } from '../../../app/providers/theme-provider.js';
 import { LoginLayout } from '../login-layout.js';
 import { useSystemConfig } from '../../../app/providers/system-config-provider.js';
+import { TurnstileWidget } from '../../../shared/components/turnstile-widget.js';
 import heroPng from '../../../assets/hero.png';
 
 /** 开发测试账号（点击快速填充） */
@@ -20,12 +22,14 @@ const TEST_ACCOUNTS = [
 export function LoginPage(): React.JSX.Element {
   const { login } = useAuth();
   const { token } = antdTheme.useToken();
+  const { resolved: themeIsDark } = useTheme();
   const { message, notification } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [form] = Form.useForm();
-  const { settings } = useSystemConfig();
+  const { settings, turnstile } = useSystemConfig();
   // 防重复提交：setLoading 是异步的，快速连点/回车会在重渲染前二次触发 onFinish；
   // ref 读写同步，入口处检查彻底杜绝竞态
   const submittingRef = useRef(false);
@@ -41,19 +45,38 @@ export function LoginPage(): React.JSX.Element {
       void message.error(parsed.error.issues[0]?.message ?? '输入不合法');
       return;
     }
+    // 启用 Turnstile 时必须已通过人机验证（token 非空）
+    if (turnstile.enabled && !turnstileToken) {
+      void message.warning('请先完成人机验证');
+      return;
+    }
     submittingRef.current = true;
     setLoading(true);
     let loggedIn = false;
     try {
-      await login(parsed.data.username, parsed.data.password);
+      await login(parsed.data.username, parsed.data.password, turnstileToken || undefined);
       loggedIn = true;
       notification.success({
         title: '登录成功',
         description: `欢迎回来，${parsed.data.username}`,
       });
       navigate(from, { replace: true });
-    } catch {
-      void message.error('用户名或密码错误');
+    } catch (err) {
+      // 解析后端 envelope：error.details.remainingAttempts（登录失败剩余次数）
+      const errorData = (err as {
+        response?: { data?: { error?: { message?: string; details?: Record<string, string[]> } } };
+      }).response?.data?.error;
+      const remainingRaw = errorData?.details?.remainingAttempts?.[0];
+      const remaining = remainingRaw !== undefined ? Number(remainingRaw) : null;
+      if (remaining !== null && Number.isFinite(remaining)) {
+        if (remaining <= 0) {
+          void message.error('登录失败次数过多，账号已锁定，请稍后再试');
+        } else {
+          void message.warning(`用户名或密码错误，剩余可尝试 ${remaining} 次`);
+        }
+      } else {
+        void message.error('用户名或密码错误');
+      }
     } finally {
       // 成功路径：页面即将卸载，保持 loading 禁用，避免跳转前按钮恢复可点
       if (!loggedIn) {
@@ -202,7 +225,13 @@ export function LoginPage(): React.JSX.Element {
               initialValues={{ username: 'root', password: 'Root!123' }}
             >
               <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-                <Input allowClear prefix={<UserOutlined />} placeholder="用户名" autoComplete="username" />
+                <Input
+                  allowClear
+                  prefix={<UserOutlined />}
+                  placeholder="用户名"
+                  autoComplete="username"
+                  style={{ width: '100%' }}
+                />
               </Form.Item>
               <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
                 <Input.Password
@@ -210,8 +239,18 @@ export function LoginPage(): React.JSX.Element {
                   prefix={<LockOutlined />}
                   placeholder="密码"
                   autoComplete="current-password"
+                  style={{ width: '100%' }}
                 />
               </Form.Item>
+              {turnstile.enabled && turnstile.siteKey && (
+                <Form.Item style={{ marginBottom: 12, width: '100%' }}>
+                  <TurnstileWidget
+                    siteKey={turnstile.siteKey}
+                    onToken={setTurnstileToken}
+                    dark={themeIsDark}
+                  />
+                </Form.Item>
+              )}
               <Form.Item style={{ marginBottom: 12 }}>
                 <Button type="primary" htmlType="submit" block loading={loading}>
                   登 录
