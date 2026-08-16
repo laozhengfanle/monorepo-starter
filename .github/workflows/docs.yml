@@ -1,0 +1,116 @@
+# ============================================
+# Docs 工作流：自动生成并发布文档到 GitHub Pages
+# ============================================
+# 触发：
+#   1. push 到 main（更新文档）
+#   2. 手动 workflow_dispatch（按需重新生成）
+#
+# 流程：
+#   - 生成 ERD（Prisma 数据库关系图）
+#   - 生成 OpenAPI（服务端 REST API 文档）
+#   - 生成 TypeDoc（共享包 API 文档）
+#   - 部署到 GitHub Pages
+#
+# 注意事项：
+#   - 需要在仓库设置中开启 GitHub Pages（Source: GitHub Actions）
+#   - 文档站点地址：https://<owner>.github.io/<repo>/
+# ============================================
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/server/**'
+      - 'packages/**'
+      - 'docs/**'
+      - 'openapi/**'
+  workflow_dispatch:
+
+# 取消同 branch 旧的 run
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  generate-and-deploy:
+    name: Generate + Deploy Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # 生成 OpenAPI spec（server 构建后 emit）
+      - name: Generate OpenAPI
+        run: pnpm exec nx run server:generate-openapi
+
+      # 生成 ERD（Prisma 关系图）—— prisma generate 会同时跑 client + erd generator
+      - name: Generate ERD
+        run: pnpm erd:generate
+
+      # 生成 TypeDoc（共享包 API 文档）
+      - name: Generate TypeDoc
+        run: pnpm exec typedoc --entryPoints packages/shared/contracts/src/index.ts --entryPoints packages/shared/server-core/src/index.ts --out docs/api-reference
+
+      # 组装站点：根 README + 生成物
+      - name: Assemble docs site
+        run: |
+          mkdir -p docs-site
+          cp -r docs/* docs-site/
+          cp -r openapi docs-site/openapi
+          cp -r docs/api-reference docs-site/api-reference
+          # 生成站点首页
+          cat > docs-site/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>monorepo-starter Docs</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }
+              a { color: #1677ff; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <h1>monorepo-starter 文档站</h1>
+            <ul>
+              <li><a href="./api-reference/">TypeDoc API 参考</a></li>
+              <li><a href="./erd.svg">数据库 ERD</a></li>
+              <li><a href="./openapi/openapi.json">OpenAPI spec（JSON）</a></li>
+              <li><a href="./命名规范.md">命名规范</a></li>
+            </ul>
+          </body>
+          </html>
+          EOF
+          cp docs/erd.svg docs-site/erd.svg
+
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-site
+      - id: deployment
+        uses: actions/deploy-pages@v4

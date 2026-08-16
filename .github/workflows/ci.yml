@@ -1,17 +1,44 @@
+# ============================================
+# CI 主流程（push main + PR）
+# 覆盖：lint → typecheck → test → build → e2e → 安全审计 → Docker 构建 + Trivy 扫描
+# 基于 Nx affected 增量执行；矩阵验证 node/pnpm 多版本
+# ============================================
 name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
 
+# 取消同 branch 旧的 run
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# 最小权限原则
 permissions:
   contents: read
 
+env:
+  NODE_VERSION: '24'
+  PNPM_VERSION: '11.21.0'
+
 jobs:
-  main:
+  # ============================================
+  # Job 1: lint + typecheck + test + build + e2e（fast feedback）
+  # ============================================
+  lint-test-build:
+    name: Lint + Typecheck + Test + Build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # 多版本验证矩阵（默认只跑 node 24；如需矩阵验证放开注释）
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['24.x']
+        # node-version: ['22.x', '24.x']
+
     steps:
       - uses: actions/checkout@v5
         with:
@@ -22,12 +49,21 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.21.0
+          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: ${{ matrix.node-version }}
           cache: pnpm
+
+      # 显式缓存 pnpm store（与 setup-node 的 cache: pnpm 互补）
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-store-${{ env.PNPM_VERSION }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-${{ env.PNPM_VERSION }}-
 
       - run: pnpm install --frozen-lockfile
 
@@ -36,9 +72,11 @@ jobs:
 
       - run: pnpm lint:boundaries
 
-      # 先显式生成 API client（缓存命中时秒回），保证后续 typecheck/build 使用确定的产物；
-      # admin:typecheck 的缓存 inputs 已包含 api-client 源码，避免 orval 重写文件引发的
-      # tsc 增量竞态（此前用 --skip-nx-cache 重试兜底，属掩盖根因）。
+      # 依赖安全审计（high 及以上阻断）
+      - name: Security audit
+        run: pnpm audit --audit-level=high
+
+      # 先显式生成 API client（缓存命中时秒回），保证后续 typecheck/build 使用确定的产物
       - run: pnpm exec nx run @starter/api-client:generate-api
 
       - run: pnpm exec nx affected -t test build typecheck --base=origin/main --head=HEAD
@@ -46,3 +84,76 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
 
       - run: pnpm exec nx affected -t e2e --base=origin/main --head=HEAD
+
+  # ============================================
+  # Job 2: 构建 Docker 镜像 + Trivy 安全扫描
+  # ============================================
+  build-and-scan:
+    name: Build Docker + Trivy Scan
+    runs-on: ubuntu-latest
+    needs: lint-test-build
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      security-events: write # 上传 SARIF 需要
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build server image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          push: false
+          tags: server:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build admin image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: false
+          tags: admin:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy scan (server)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: server:ci-${{ github.sha }}
+          format: sarif
+          output: trivy-server.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          ignore-unfixed: true
+
+      - name: Trivy scan (admin)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: admin:ci-${{ github.sha }}
+          format: sarif
+          output: trivy-admin.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          ignore-unfixed: true
+
+      - name: Upload Trivy results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-server.sarif
+
+      - name: Upload Trivy results (admin)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-admin.sarif

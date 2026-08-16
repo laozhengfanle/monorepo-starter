@@ -1,0 +1,158 @@
+# ============================================
+# Release 工作流：打 tag 时构建镜像 + 发布 GitHub Release
+# ============================================
+# 触发：
+#   1. 推送 tag 形如 v*.*.*（如 v0.2.0、v1.0.0）
+#
+# 流程：
+#   Job 1 (build-and-push)：构建 docker 镜像 + push GHCR
+#   Job 2 (publish-release)：发布 GitHub Release（包含镜像信息）
+#
+# 部署由 deploy.yml 负责（本 workflow 只构建和发布制品）
+# ============================================
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# 取消同 tag 旧的 run
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# 最小权限原则
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE_TAG: ${{ github.ref_name }}
+  REGISTRY: ghcr.io
+  OWNER: ${{ github.repository_owner }}
+
+jobs:
+  build-and-push:
+    name: Build + Push Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # 获取完整历史，用于生成 changelog
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---- server 镜像 ----
+      - name: Extract metadata (server)
+        id: meta-server
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-starter-server
+          tags: |
+            type=ref,event=tag
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=monorepo-starter-server
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push (server)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          push: true
+          tags: ${{ steps.meta-server.outputs.tags }}
+          labels: ${{ steps.meta-server.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ---- admin 镜像 ----
+      - name: Extract metadata (admin)
+        id: meta-admin
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-starter-admin
+          tags: |
+            type=ref,event=tag
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=monorepo-starter-admin
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push (admin)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: true
+          tags: ${{ steps.meta-admin.outputs.tags }}
+          labels: ${{ steps.meta-admin.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get tag annotation
+        id: tag-info
+        run: |
+          TAG_MSG=$(git tag -l --format='%(contents:subject)' ${{ github.ref_name }} 2>/dev/null || echo "")
+          if [ -z "$TAG_MSG" ]; then
+            TAG_MSG=$(git log -1 --format='%s' ${{ github.ref_name }})
+          fi
+          echo "message=$TAG_MSG" >> $GITHUB_OUTPUT
+          echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+      # 生成 changelog（最近 50 条提交）
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 ${{ github.ref_name }}^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            git log --oneline --no-merges $PREV_TAG..${{ github.ref_name }} > changelog.txt
+          else
+            git log --oneline --no-merges -30 > changelog.txt
+          fi
+          echo "changelog generated ($(wc -l < changelog.txt) commits)"
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## ${{ steps.tag-info.outputs.message }}
+
+            ### 变更日志
+            $(cat changelog.txt)
+
+            ### 镜像
+            - server: `ghcr.io/${{ env.OWNER }}/monorepo-starter-server:${{ github.ref_name }}`
+            - admin: `ghcr.io/${{ env.OWNER }}/monorepo-starter-admin:${{ github.ref_name }}`
+
+            部署见 [deploy.yml](../blob/main/.github/workflows/deploy.yml)。
+          draft: false
+          prerelease: false

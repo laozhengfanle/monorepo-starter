@@ -1,0 +1,203 @@
+# ============================================
+# Deploy 工作流
+# ============================================
+# 触发：
+#   1. 推送 tag 形如 v*.*.*（如 v0.2.0）
+#   2. 手动 dispatch（可指定环境：staging / production；可指定 image_tag）
+#
+# 流程：
+#   Job 1 (build-and-push)：登录 GHCR → build 2 个镜像（server/admin）→ push
+#   Job 2 (deploy)         ：SSH 到目标服务器 → pull 新镜像 → docker compose up
+#                            → 健康检查 → 失败自动回滚到上一个 tag
+#
+# 注意：
+#   - 当前是占位实现（appleboy/ssh-action），实际生产部署目标待定
+#   - 用 concurrency: 同一 tag 不允许多个 deploy 并行
+#   - 镜像标签策略：tag 名（如 v0.2.0）作为主 tag，shorthash 作为辅 tag
+# ============================================
+
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (staging/production)'
+        required: false
+        default: 'production'
+      image_tag:
+        description: 'Docker image tag to deploy (default: ref_name or latest)'
+        required: false
+
+# 同一 tag 不允许多个 deploy 并行
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+# 最小权限原则：读代码 + 写 Packages（推镜像到 GHCR 需要）
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: ${{ github.repository_owner }}
+
+jobs:
+  # ============================================
+  # Job 1: build + push 2 个镜像到 GHCR
+  # ============================================
+  build-and-push:
+    name: Build + Push Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---- server 镜像 ----
+      - name: Extract metadata (server)
+        id: meta-server
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-starter-server
+          tags: |
+            type=ref,event=tag
+            type=ref,event=branch
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=monorepo-starter-server
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build + push (server)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          push: true
+          tags: ${{ steps.meta-server.outputs.tags }}
+          labels: ${{ steps.meta-server.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ---- admin 镜像 ----
+      - name: Extract metadata (admin)
+        id: meta-admin
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-starter-admin
+          tags: |
+            type=ref,event=tag
+            type=ref,event=branch
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=monorepo-starter-admin
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build + push (admin)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: true
+          tags: ${{ steps.meta-admin.outputs.tags }}
+          labels: ${{ steps.meta-admin.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================
+  # Job 2: deploy 到目标环境（占位实现）
+  # ============================================
+  deploy:
+    name: Deploy to ${{ inputs.environment || 'tag-target' }}
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+      url: ${{ secrets.DEPLOY_URL }}
+    steps:
+      # 确定要部署的镜像 tag 优先级：
+      #   1. 手动输入的 image_tag（dispatch 时指定）
+      #   2. tag 推送时 GitHub 自动产生的 ref_name（如 v0.2.0）
+      #   3. 兜底 latest
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "value=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=latest" >> $GITHUB_OUTPUT
+          fi
+
+      # 占位 SSH 部署：
+      # 1) 拉取新镜像
+      # 2) 备份当前 tag（用于回滚）
+      # 3) 启动新容器
+      # 4) 健康检查（失败则自动回滚到上一个 tag）
+      # 5) 清理 dangling 镜像
+      - name: Deploy via SSH (placeholder)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/monorepo-starter
+
+            # 1) 拉取新镜像
+            export IMAGE_TAG=${{ steps.tag.outputs.value }}
+            echo "Deploying IMAGE_TAG=${IMAGE_TAG}"
+
+            # 2) 备份上一个 tag（用于回滚）
+            PREVIOUS_TAG=$(docker compose -f docker-compose.prod.yml ps --format json 2>/dev/null | jq -r '.[].Image' | head -1 | awk -F: '{print $2}' || echo "none")
+            echo "Previous tag: ${PREVIOUS_TAG}"
+
+            # 3) 拉新 + 启新
+            docker compose -f docker-compose.prod.yml --env-file .env.production pull
+            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --remove-orphans
+
+            # 4) 健康检查（server/admin 都是 healthy）
+            sleep 10
+            HEALTHY_COUNT=$(docker compose -f docker-compose.prod.yml ps | grep -c "healthy" || true)
+            if [ "$HEALTHY_COUNT" -lt 2 ]; then
+              echo "::error::Expected 2 healthy services, got $HEALTHY_COUNT, rolling back"
+              if [ "${PREVIOUS_TAG}" != "none" ]; then
+                export IMAGE_TAG=${PREVIOUS_TAG}
+                docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+              fi
+              exit 1
+            fi
+
+            # 5) 清理 dangling 镜像（保留 7 天内）
+            docker image prune -f --filter "until=168h"
+
+            echo "✅ Deploy complete: IMAGE_TAG=${IMAGE_TAG}"
+
+      - name: Notify (placeholder)
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deploy succeeded: ${{ steps.tag.outputs.value }}"
+          else
+            echo "❌ Deploy failed: ${{ steps.tag.outputs.value }}"
+          fi

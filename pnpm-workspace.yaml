@@ -126,6 +126,9 @@ catalog:
   # ---- ERD 生成（Prisma 关系图，docs 工作流用） ----
   prisma-erd-generator: ^2.4.3
 
+  # ---- API 文档生成（docs 工作流用） ----
+  typedoc: ^0.28.20
+
   # ---- 后端（NestJS + Express） ----
   '@nestjs/common': ^11.0.0
   '@nestjs/core': ^11.0.0
