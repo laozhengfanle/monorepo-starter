@@ -1,0 +1,162 @@
+# ============================================
+# 生产编排（PRODUCTION）
+# ============================================
+# 服务：server / admin / postgres / redis
+# 不含 adminer（dev only）
+#
+# 所有端口、版本、凭据、资源限制均通过变量配置。
+# 启动前创建 .env.production 文件：
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# 资源：所有服务声明 cpus / memory / pids_limit（防资源争抢）
+# 安全：所有服务 security_opt no-new-privileges；server/postgres/redis 非 root 运行
+# ============================================
+
+name: ${COMPOSE_PROJECT_NAME:-monorepo-starter-prod}
+
+services:
+  # ==========================================
+  # Backend: NestJS
+  # ==========================================
+  server:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:-your-org}/monorepo-starter-server:${IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}-server
+    restart: unless-stopped
+    user: '${SERVER_UID:-1001}:${SERVER_UID:-1001}'
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=100m,mode=1777
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      PORT: 3301
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-monorepo_starter}?schema=public
+      REDIS_URL: redis://redis:${REDIS_PORT:-6379}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 必填}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://admin.example.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${SERVER_PORT:-3301}:3301'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '--spider',
+          '-q',
+          'http://127.0.0.1:3301/health/readiness',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  # ==========================================
+  # Admin: nginx 静态服务
+  # ==========================================
+  admin:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:-your-org}/monorepo-starter-admin:${IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}-admin
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /var/cache/nginx:size=32m,mode=1777
+      - /var/run:size=8m,mode=1777
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${ADMIN_PORT:-3302}:80'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost/healthz']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ==========================================
+  # PostgreSQL
+  # ==========================================
+  postgres:
+    image: postgres:17-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}-postgres
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 必填}
+      POSTGRES_DB: ${POSTGRES_DB:-monorepo_starter}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-monorepo_starter}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+
+  # ==========================================
+  # Redis
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}-redis
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+
+volumes:
+  postgres-data:
+  redis-data:

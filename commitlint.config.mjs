@@ -56,6 +56,9 @@ export default {
     // body 与 footer 之间需要空行
     'body-leading-blank': [2, 'always'],
     'footer-leading-blank': [2, 'always'],
+    // 中文提交信息常见长行，放宽 body/footer 行长度限制
+    'body-max-line-length': [0],
+    'footer-max-line-length': [0],
     // 允许本仓库已有的长历史提交（release 信息等）
     'header-max-length': [0],
   },

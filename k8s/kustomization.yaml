@@ -1,0 +1,38 @@
+# Kustomization：一键部署 monorepo-starter 全栈到 K8s
+# 用法：kubectl apply -k k8s/
+# 依赖：
+#   - cert-manager + letsencrypt-prod ClusterIssuer（TLS 自动签发）
+#   - Nginx Ingress Controller（ingressClassName: nginx）
+#   - metrics-server（HPA 需要）
+#
+# 部署顺序（或直接 kubectl apply -k k8s/）：
+#   1. kubectl apply -f k8s/namespace.yaml
+#   2. kubectl apply -f k8s/postgres-statefulset.yaml（含 PVC 模板 + Service）
+#   3. kubectl apply -f k8s/redis-statefulset.yaml
+#   4. kubectl create secret generic postgres-credentials --from-literal=username=postgres --from-literal=password=...
+#   5. kubectl apply -f k8s/server-deployment.yaml
+#   6. kubectl apply -f k8s/admin-deployment.yaml
+#   7. kubectl apply -f k8s/ingress.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - postgres-statefulset.yaml
+  - redis-statefulset.yaml
+  - server-deployment.yaml
+  - admin-deployment.yaml
+  - ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: monorepo-starter
+  app.kubernetes.io/managed-by: kustomize
+
+# 镜像 tag 占位（生产替换为实际版本，或用 kustomize edit set image）
+images:
+  - name: server
+    newName: <registry>/monorepo-starter-server
+    newTag: latest
+  - name: admin
+    newName: <registry>/monorepo-starter-admin
+    newTag: latest

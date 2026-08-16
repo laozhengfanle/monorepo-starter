@@ -1,0 +1,80 @@
+# Admin Deployment（nginx 静态服务 + 反代 /api /graphql /uploads）
+# - SPA 无状态，多副本 + HPA 无压力
+# - 探针打 /healthz（nginx 内置端点）
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin
+  namespace: monorepo-starter
+  labels:
+    app: admin
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: admin
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: admin
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101 # nginx 镜像内置用户
+        runAsGroup: 101
+        fsGroup: 101
+        readOnlyRootFilesystem: true
+      containers:
+        - name: admin
+          image: <registry>/monorepo-starter-admin:<tag>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: '1'
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+      terminationGracePeriodSeconds: 30
+---
+# Admin Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-service
+  namespace: monorepo-starter
+  labels:
+    app: admin
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    app: admin

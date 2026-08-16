@@ -1,0 +1,43 @@
+# ===== Docker 构建上下文排除 =====
+# 排除项必须与 .gitignore 保持同步，避免把大文件/敏感文件打进镜像上下文
+
+# 依赖与构建产物
+node_modules
+**/node_modules
+dist
+**/dist
+out-tsc
+**/out-tsc
+test-output
+**/test-output
+coverage
+**/coverage
+.nx
+
+# 本地环境与临时文件
+.env
+**/.env
+!.env.example
+.tmp/
+uploads/
+**/uploads/
+.DS_Store
+.git
+.gitignore
+.pnpm-store
+
+# 编辑器 / AI 配置（不需要进镜像）
+.vscode
+.idea
+.claude
+.cursor
+.codex
+.gemini
+.opencode
+.agents
+
+# 生成文件（构建期重新生成）
+**/generated
+apps/server/src/generated
+pnpm-debug.log*
+*.tsbuildinfo

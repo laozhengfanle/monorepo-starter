@@ -1,0 +1,15 @@
+# PostgreSQL PVC：数据持久化卷
+# 生产建议用云托管 RDS（通过 ExternalName Service 接入），本地/自建用此 PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: monorepo-starter
+  labels:
+    app: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

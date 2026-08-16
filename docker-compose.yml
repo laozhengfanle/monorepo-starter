@@ -1,0 +1,130 @@
+# ⚠️ 这是开发编排（DEVELOPMENT）
+# - 含 postgres / redis / adminer 等 dev 工具
+# - 资源限制宽松
+#
+# 所有端口、版本、凭据均通过变量配置，默认值即可本地启动：
+#   docker compose up -d
+#
+# 自定义（可选）：
+#   SERVER_PORT=3301 ADMIN_PORT=3302 docker compose up -d
+#
+# 生产用 docker-compose.prod.yml：
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# ============================================
+
+name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}
+
+services:
+  # ──────────────────────────────────────────────
+  # PostgreSQL（业务数据库，Prisma 连接）
+  # ──────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-monorepo_starter}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-monorepo_starter}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  # Redis（缓存 / 登录锁定 / 会话）
+  # ──────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  # 后端 NestJS server
+  # ──────────────────────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3301
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-monorepo_starter}?schema=public
+      REDIS_URL: redis://redis:${REDIS_PORT:-6379}
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-secret}
+      LOG_LEVEL: log
+      CORS_ORIGINS: http://localhost:${ADMIN_PORT:-3302}
+    ports:
+      - '127.0.0.1:${SERVER_PORT:-3301}:3301'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1:3301/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/server
+          target: /workspace/apps/server
+          ignore:
+            - node_modules/
+            - dist/
+
+  # ──────────────────────────────────────────────
+  # 管理后台 Admin（nginx 静态服务 + 反代）
+  # ──────────────────────────────────────────────
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${ADMIN_PORT:-3302}:80'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost/healthz']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # ──────────────────────────────────────────────
+  # Adminer（数据库管理，dev-only）
+  # ──────────────────────────────────────────────
+  adminer:
+    image: adminer:4
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:${ADMINER_PORT:-8080}:8080'
+
+volumes:
+  postgres-data:
+  redis-data:
