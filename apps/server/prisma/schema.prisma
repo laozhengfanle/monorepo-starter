@@ -3,11 +3,12 @@ generator client {
   output   = "../src/generated/prisma-client"
 }
 
-// ERD 生成器：docs workflow 用（pnpm erd:generate 生成 docs/erd.svg）
-// 需要 mermaid-cli 支持（CI 中通过 npx @mermaid-js/mermaid-cli 渲染）
+// ERD 生成器：docs workflow 用（pnpm erd:generate 生成 docs/erd.md，mermaid 格式）
+// - 输出 .md（mermaid 代码块），不需要 puppeteer/mermaid-cli 渲染
+// - 常规 build 通过 DISABLE_ERD=true 跳过（见 server 的 prisma-generate target）
 generator erd {
   provider = "prisma-erd-generator"
-  output   = "../../../docs/erd.svg"
+  output   = "../../../docs/erd.md"
 }
 
 datasource db {

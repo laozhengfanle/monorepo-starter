@@ -22,7 +22,7 @@
     "db:seed": "cd apps/server && pnpm exec prisma db seed",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "erd:generate": "cd apps/server && pnpm exec prisma generate --generator erd"
+    "erd:generate": "cd apps/server && DISABLE_ERD=false pnpm exec prisma generate --generator erd"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs,json,md,css,yml,yaml}": "prettier --write",

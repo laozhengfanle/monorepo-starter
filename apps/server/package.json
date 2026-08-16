@@ -13,7 +13,10 @@
         "executor": "nx:run-commands",
         "options": {
           "cwd": "apps/server",
-          "command": "prisma generate"
+          "command": "prisma generate",
+          "env": {
+            "DISABLE_ERD": "true"
+          }
         },
         "inputs": [
           "{projectRoot}/prisma/schema.prisma"
@@ -127,47 +130,50 @@
     "@nestjs/graphql": "catalog:",
     "@nestjs/jwt": "catalog:",
     "@nestjs/platform-express": "catalog:",
-    "@nestjs/swagger": "catalog:",
-    "@nestjs/throttler": "catalog:",
-    "@nestjs/terminus": "catalog:",
-    "@nestjs/websockets": "catalog:",
-    "@willsoto/nestjs-prometheus": "catalog:",
-    "prom-client": "catalog:",
     "@nestjs/platform-socket.io": "catalog:",
-    "socket.io": "catalog:",
+    "@nestjs/schedule": "catalog:",
+    "@nestjs/swagger": "catalog:",
+    "@nestjs/terminus": "catalog:",
+    "@nestjs/throttler": "catalog:",
+    "@nestjs/websockets": "catalog:",
     "@prisma/adapter-pg": "catalog:",
     "@prisma/client": "catalog:",
-    "@starter/server-core": "workspace:*",
     "@starter/contracts": "workspace:*",
+    "@starter/server-core": "workspace:*",
+    "@willsoto/nestjs-prometheus": "catalog:",
     "bcrypt": "catalog:",
     "compression": "catalog:",
     "cookie-parser": "catalog:",
+    "dataloader": "catalog:",
     "express": "catalog:",
     "graphql": "catalog:",
     "helmet": "catalog:",
     "ioredis": "catalog:",
-    "nestjs-zod": "catalog:",
+    "multer": "catalog:",
     "nestjs-pino": "catalog:",
+    "nestjs-zod": "catalog:",
     "pg": "catalog:",
     "pino": "catalog:",
     "pino-http": "catalog:",
     "pino-pretty": "catalog:",
+    "prom-client": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
+    "socket.io": "catalog:",
     "tslib": "catalog:",
-    "zod": "catalog:",
-    "multer": "catalog:"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@nestjs/testing": "catalog:",
     "@types/bcrypt": "catalog:",
+    "@types/express": "catalog:",
     "@types/ioredis": "catalog:",
     "@types/multer": "catalog:",
-    "@types/express": "catalog:",
     "@types/pg": "catalog:",
     "@types/pino-http": "catalog:",
     "prisma": "catalog:",
-    "tsx": "catalog:",
-    "socket.io-client": "catalog:"
+    "prisma-erd-generator": "catalog:",
+    "socket.io-client": "catalog:",
+    "tsx": "catalog:"
   }
 }

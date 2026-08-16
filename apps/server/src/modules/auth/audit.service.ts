@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { newId } from '@starter/server-core';
+import { BusinessMetrics } from '../../common/metrics/business.metrics.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import {
   AUDIT_ACTION_RESOURCE_MAP,
@@ -33,7 +34,10 @@ export interface AuditEntry {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly metrics: BusinessMetrics,
+  ) {}
 
   /**
    * 写入审计日志 —— 业务审计容错（fail-open）：
@@ -50,8 +54,13 @@ export class AuditService {
     // 资源类型自动补全：未传时按 action 映射取默认（如 login_* → auth）
     const resourceType =
       entry.resourceType ??
-      AUDIT_ACTION_RESOURCE_MAP[entry.action as keyof typeof AUDIT_ACTION_RESOURCE_MAP];
-    if (resourceType && !(Object.values(AUDIT_RESOURCES) as string[]).includes(resourceType)) {
+      AUDIT_ACTION_RESOURCE_MAP[
+        entry.action as keyof typeof AUDIT_ACTION_RESOURCE_MAP
+      ];
+    if (
+      resourceType &&
+      !(Object.values(AUDIT_RESOURCES) as string[]).includes(resourceType)
+    ) {
       this.logger.error(
         `审计资源类型不在词表中 (resourceType=${resourceType})，请同步 audit.constants.ts 与字典 audit_resource`,
       );
@@ -69,6 +78,8 @@ export class AuditService {
           userAgent: entry.userAgent,
         },
       });
+      // 业务指标：审计写入计数（按动作）
+      this.metrics.incAuditLogWrite(entry.action);
     } catch (err) {
       this.logger.error(
         `写入审计日志失败 (action=${entry.action}, accountId=${entry.accountId ?? '-'}): ${

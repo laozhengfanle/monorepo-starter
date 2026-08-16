@@ -4,108 +4,111 @@
 
 type AdminAccount {
   accountId: ID!
-  avatar: String!
-  createdAt: String!
-  deletedAt: String
-  email: String!
+  avatar: BigInt!
+  createdAt: BigInt!
+  deletedAt: BigInt
+  email: BigInt!
   enabled: Boolean!
-  nickname: String!
-  roleCodes: [String!]!
-  username: String!
+  nickname: BigInt!
+  roleCodes: [BigInt!]!
+  username: BigInt!
 }
 
 input AdminAccountQueryInput {
-  email: String
+  email: BigInt
   enabled: Boolean
   includeDeleted: Boolean
   page: Int
   pageSize: Int
-  roleCode: String
-  username: String
+  roleCode: BigInt
+  username: BigInt
 }
 
 type AdminMe {
   accountId: ID!
-  avatar: String!
-  createdAt: String!
-  email: String!
+  avatar: BigInt!
+  createdAt: BigInt!
+  email: BigInt!
   menus: [AdminMenuNode!]!
-  nickname: String!
-  permissions: [String!]!
-  phone: String!
-  roleCodes: [String!]!
-  username: String!
+  nickname: BigInt!
+  permissions: [BigInt!]!
+  phone: BigInt!
+  roleCodes: [BigInt!]!
+  username: BigInt!
 }
 
 type AdminMenuNode {
   children: [AdminMenuNode!]!
-  code: String!
-  createdAt: String!
+  code: BigInt!
+  createdAt: BigInt!
   enabled: Boolean!
-  icon: String
+  icon: BigInt
   id: ID!
-  name: String!
+  name: BigInt!
   parentId: ID
-  path: String
+  path: BigInt
   sort: Int!
-  type: String!
+  type: BigInt!
   visible: Boolean!
 }
 
 type AdminRole {
-  code: String!
-  createdAt: String!
-  description: String!
+  code: BigInt!
+  createdAt: BigInt!
+  description: BigInt!
   enabled: Boolean!
   id: ID!
-  name: String!
-  permissionCodes: [String!]!
+  name: BigInt!
+  permissionCodes: [BigInt!]!
 }
 
 type AuditLogItem {
-  accountId: String
-  accountUsername: String
-  action: String!
-  createdAt: String!
-  detail: String
+  accountId: BigInt
+  accountUsername: BigInt
+  action: BigInt!
+  createdAt: BigInt!
+  detail: BigInt
   id: ID!
-  ip: String
-  resourceId: String
-  resourceType: String
-  userAgent: String
+  ip: BigInt
+  resourceId: BigInt
+  resourceType: BigInt
+  userAgent: BigInt
 }
 
 input AuditLogQueryInput {
-  action: String
-  endDate: String
+  action: BigInt
+  endDate: BigInt
   page: Int
   pageSize: Int
-  resourceType: String
-  startDate: String
+  resourceType: BigInt
+  startDate: BigInt
 }
 
 type AuthResult {
-  accessToken: String!
+  accessToken: BigInt!
   expiresIn: Int!
-  refreshToken: String!
+  refreshToken: BigInt!
 }
 
 input BatchUpdateConfigsInput {
   updates: [ConfigUpdateItemInput!]!
 }
 
+"""64 位整数（超出 Number 安全范围，以字符串传输）"""
+scalar BigInt
+
 type CacheKey {
-  key: String!
+  key: BigInt!
   size: Int!
   ttl: Int!
-  type: String!
-  value: String
+  type: BigInt!
+  value: BigInt
 }
 
 type CacheStats {
-  hitRate: String!
-  uptime: String!
-  usedMemory: String!
+  hitRate: BigInt!
+  uptime: BigInt!
+  usedMemory: BigInt!
 }
 
 type ClearAuditLogsResult {
@@ -113,60 +116,60 @@ type ClearAuditLogsResult {
 }
 
 input ConfigUpdateItemInput {
-  key: String!
+  key: BigInt!
   value: JSON!
 }
 
 input CreateAdminAccountInput {
-  email: String
-  nickname: String
-  password: String!
-  roleCodes: [String!]!
-  username: String!
+  email: BigInt
+  nickname: BigInt
+  password: BigInt!
+  roleCodes: [BigInt!]!
+  username: BigInt!
 }
 
 input CreateDictItemInput {
   dictTypeId: ID!
   enabled: Boolean
-  label: String!
-  remark: String
+  label: BigInt!
+  remark: BigInt
   sort: Int
-  value: String!
+  value: BigInt!
 }
 
 input CreateDictTypeInput {
-  code: String!
+  code: BigInt!
   enabled: Boolean
-  name: String!
-  remark: String
+  name: BigInt!
+  remark: BigInt
   sort: Int
 }
 
 input CreateMenuInput {
-  code: String!
-  icon: String
-  name: String!
+  code: BigInt!
+  icon: BigInt
+  name: BigInt!
   parentId: ID
-  path: String
+  path: BigInt
   sort: Int
-  type: String!
+  type: BigInt!
   visible: Boolean
 }
 
 input CreateRoleInput {
-  code: String!
-  description: String
-  name: String!
-  permissionCodes: [String!]
+  code: BigInt!
+  description: BigInt
+  name: BigInt!
+  permissionCodes: [BigInt!]
 }
 
 """操作类型分布项"""
 type DashboardDistItem {
   """饼图颜色"""
-  color: String!
+  color: BigInt!
 
   """操作中文标签（字典 audit_action）"""
-  label: String!
+  label: BigInt!
 
   """占比（0-100）"""
   percent: Int!
@@ -175,25 +178,25 @@ type DashboardDistItem {
 """最近操作记录"""
 type DashboardOpLog {
   """操作内容中文标签（字典 audit_action）"""
-  content: String!
+  content: BigInt!
 
   """IP"""
-  ip: String!
+  ip: BigInt!
 
   """资源类型中文标签（字典 audit_resource）"""
-  module: String!
+  module: BigInt!
 
   """序号"""
   seq: Int!
 
   """操作时间（YYYY-MM-DD HH:mm:ss）"""
-  time: String!
+  time: BigInt!
 
   """操作类型分类：login/logout/create/update/delete/reset/grant/export"""
-  type: String!
+  type: BigInt!
 
   """操作者用户名（无则系统）"""
-  user: String!
+  user: BigInt!
 }
 
 """分页操作记录"""
@@ -207,7 +210,7 @@ type DashboardOpLogPage {
 """仪表盘统计卡片"""
 type DashboardStat {
   """标签名，如 管理员 / 角色 / 菜单项 / 近7日操作"""
-  label: String!
+  label: BigInt!
 
   """较上周趋势百分比（正=上升，负=下降）"""
   trend: Int!
@@ -222,7 +225,7 @@ type DashboardTrendItem {
   highRisk: Int!
 
   """时间段标签（周一 / MM-DD / M月）"""
-  label: String!
+  label: BigInt!
 
   """低危操作次数"""
   lowRisk: Int!
@@ -233,21 +236,21 @@ type DashboardTrendItem {
 
 type DeleteCacheKeysResult {
   deletedCount: Int!
-  keys: [String!]!
+  keys: [BigInt!]!
 }
 
 """任意 JSON 值（对象 / 数组 / 字符串 / 数字 / 布尔 / null）"""
 scalar JSON
 
 input LoginInput {
-  password: String!
-  username: String!
+  password: BigInt!
+  username: BigInt!
 }
 
 type Mutation {
   batchUpdateConfigs(input: BatchUpdateConfigsInput!): [SystemConfig!]!
   clearAuditLogs: ClearAuditLogsResult!
-  clearCacheByPattern(pattern: String!): Int!
+  clearCacheByPattern(pattern: BigInt!): Int!
   createAdminAccount(input: CreateAdminAccountInput!): AdminAccount!
   createDictItem(input: CreateDictItemInput!): SysDictItem!
   createDictType(input: CreateDictTypeInput!): SysDictType!
@@ -255,8 +258,8 @@ type Mutation {
   createRole(input: CreateRoleInput!): AdminRole!
   deleteAdminAccount(id: ID!): AdminAccount!
   deleteAuditLog(id: ID!): Boolean!
-  deleteCacheKey(key: String!): Boolean!
-  deleteCacheKeys(keys: [String!]!): DeleteCacheKeysResult!
+  deleteCacheKey(key: BigInt!): Boolean!
+  deleteCacheKeys(keys: [BigInt!]!): DeleteCacheKeysResult!
   deleteDictItem(id: ID!): Boolean!
   deleteDictType(id: ID!): Boolean!
   deleteMenu(id: ID!): AdminMenuNode!
@@ -293,10 +296,10 @@ type PaginatedUploadFiles {
 }
 
 type PermissionCode {
-  code: String!
+  code: BigInt!
   id: ID!
-  name: String!
-  type: String!
+  name: BigInt!
+  type: BigInt!
 }
 
 type Query {
@@ -304,14 +307,14 @@ type Query {
   adminConfigs: [SystemConfig!]!
   adminLogs(query: AuditLogQueryInput!): PaginatedAuditLogs!
   adminRoles: [AdminRole!]!
-  cacheKey(key: String!): CacheKey!
-  cacheKeyTotal(pattern: String = "*"): Int!
-  cacheKeys(limit: Int = 50, offset: Int = 0, pattern: String = "*"): [CacheKey!]!
+  cacheKey(key: BigInt!): CacheKey!
+  cacheKeyTotal(pattern: BigInt = "*"): Int!
+  cacheKeys(limit: Int = 50, offset: Int = 0, pattern: BigInt = "*"): [CacheKey!]!
   cacheStats: CacheStats!
   dashboardDistribution: [DashboardDistItem!]!
   dashboardOperationLogs(page: Int! = 1, pageSize: Int! = 10): DashboardOpLogPage!
   dashboardStats: [DashboardStat!]!
-  dashboardTrend(range: String! = "week"): [DashboardTrendItem!]!
+  dashboardTrend(range: BigInt! = "week"): [DashboardTrendItem!]!
   exportAuditLogs(query: AuditLogQueryInput!): [AuditLogItem!]!
   me: AdminMe!
   menuTree: [AdminMenuNode!]!
@@ -324,43 +327,43 @@ type Query {
 }
 
 type SysDictItem {
-  createdAt: String!
+  createdAt: BigInt!
   enabled: Boolean!
   id: ID!
-  label: String!
-  remark: String
+  label: BigInt!
+  remark: BigInt
   sort: Int!
-  updatedAt: String!
-  value: String!
+  updatedAt: BigInt!
+  value: BigInt!
 }
 
 type SysDictType {
-  code: String!
-  createdAt: String!
+  code: BigInt!
+  createdAt: BigInt!
   enabled: Boolean!
   id: ID!
   items: [SysDictItem!]!
-  name: String!
-  remark: String
+  name: BigInt!
+  remark: BigInt
   sort: Int!
-  updatedAt: String!
+  updatedAt: BigInt!
 }
 
 type SystemConfig {
-  createdAt: String!
+  createdAt: BigInt!
   id: ID!
-  key: String!
-  remark: String
-  updatedAt: String!
-  updatedBy: String
+  key: BigInt!
+  remark: BigInt
+  updatedAt: BigInt!
+  updatedBy: BigInt
   value: JSON!
 }
 
 input UpdateAdminAccountInput {
-  email: String
+  email: BigInt
   enabled: Boolean
-  nickname: String
-  roleCodes: [String!]
+  nickname: BigInt
+  roleCodes: [BigInt!]
 }
 
 input UpdateConfigInput {
@@ -369,44 +372,44 @@ input UpdateConfigInput {
 
 input UpdateDictItemInput {
   enabled: Boolean
-  label: String
-  remark: String
+  label: BigInt
+  remark: BigInt
   sort: Int
 }
 
 input UpdateDictTypeInput {
   enabled: Boolean
-  name: String
-  remark: String
+  name: BigInt
+  remark: BigInt
   sort: Int
 }
 
 input UpdateMenuInput {
   enabled: Boolean
-  icon: String
-  name: String
+  icon: BigInt
+  name: BigInt
   parentId: ID
-  path: String
+  path: BigInt
   sort: Int
-  type: String
+  type: BigInt
   visible: Boolean
 }
 
 input UpdateRoleInput {
-  description: String
+  description: BigInt
   enabled: Boolean
-  name: String
-  permissionCodes: [String!]
+  name: BigInt
+  permissionCodes: [BigInt!]
 }
 
 type UploadFile {
-  accountId: String
-  createdAt: String!
-  deletedAt: String
+  accountId: BigInt
+  createdAt: BigInt!
+  deletedAt: BigInt
   id: ID!
-  mimeType: String!
-  originalName: String!
+  mimeType: BigInt!
+  originalName: BigInt!
   size: Int!
-  storedName: String!
-  url: String!
+  storedName: BigInt!
+  url: BigInt!
 }

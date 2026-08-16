@@ -66,7 +66,7 @@ jobs:
       - name: Generate OpenAPI
         run: pnpm exec nx run server:generate-openapi
 
-      # 生成 ERD（Prisma 关系图）—— prisma generate 会同时跑 client + erd generator
+      # 生成 ERD（Prisma 关系图，mermaid 格式 md，无需 puppeteer）
       - name: Generate ERD
         run: pnpm erd:generate
 
@@ -99,14 +99,14 @@ jobs:
             <h1>monorepo-starter 文档站</h1>
             <ul>
               <li><a href="./api-reference/">TypeDoc API 参考</a></li>
-              <li><a href="./erd.svg">数据库 ERD</a></li>
+              <li><a href="./erd.md">数据库 ERD（mermaid）</a></li>
               <li><a href="./openapi/openapi.json">OpenAPI spec（JSON）</a></li>
               <li><a href="./命名规范.md">命名规范</a></li>
             </ul>
           </body>
           </html>
           EOF
-          cp docs/erd.svg docs-site/erd.svg
+          cp docs/erd.md docs-site/erd.md
 
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3

@@ -2,11 +2,13 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { CacheModule } from '../common/cache/cache.module.js';
 import { GraphQLModule } from '../common/graphql/graphql.module.js';
 import { LoggerModule } from '../common/logger/logger.module.js';
+import { MetricsModule } from '../common/metrics/metrics.module.js';
+import { NotificationsModule } from '../common/notifications/notifications.module.js';
 import { StorageModule } from '../common/storage/storage.module.js';
+import { TasksModule } from '../common/tasks/tasks.module.js';
 import { PrismaModule } from '../common/prisma/prisma.module.js';
 import { GqlThrottlerGuard } from '../common/throttler/gql-throttler.guard.js';
 import { AuthModule } from '../modules/auth/auth.module.js';
@@ -41,8 +43,12 @@ import { HealthModule } from '../health/health.module.js';
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 100 }],
     }),
-    // Prometheus 监控：默认 /metrics 端点 + 默认指标（官方推荐集成）
-    PrometheusModule.register(),
+    // Prometheus 监控：默认 /metrics 端点 + 业务指标收集器（登录失败/限流/审计/上传）
+    MetricsModule,
+    // 定时任务：每日清理过期审计日志与 token 撤销记录
+    TasksModule,
+    // 通知服务：短信 / 邮件可插拔 Provider（默认 mock，生产替换真实实现）
+    NotificationsModule,
     GraphQLModule,
     AuthModule,
     AdminAccountModule,
