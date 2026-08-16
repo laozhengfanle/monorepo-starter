@@ -36,8 +36,7 @@ export {
   UpdateDictTypeSchema,
   CreateDictItemSchema,
   UpdateDictItemSchema,
-  AUDIT_ACTION_OPTIONS,
-  AUDIT_RESOURCE_TYPE_OPTIONS,
+  UploadFileSchema,
 } from '@starter/contracts';
 export type {
   AdminMe,
@@ -81,4 +80,6 @@ export type {
   UpdateDictTypeInput,
   CreateDictItemInput,
   UpdateDictItemInput,
+  UploadFile,
+  UploadResult,
 } from '@starter/contracts';

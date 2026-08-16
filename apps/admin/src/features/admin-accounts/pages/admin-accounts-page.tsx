@@ -32,6 +32,7 @@ import { ApolloError } from '@apollo/client';
 import { CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/api-client';
 
 import { usePermission } from '../../../app/auth/use-permission.js';
+import { useSystemConfig } from '../../../app/providers/system-config-provider.js';
 import { AccountPermissionModal } from '../account-permission-modal.js';
 import { hardRemoveAccountApi, restoreAccountApi } from '../api.js';
 import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
@@ -97,6 +98,7 @@ export function AdminAccountsPage(): React.JSX.Element {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const { settings: sysSettings } = useSystemConfig();
   const canCreate = usePermission('account:create');
   const canUpdate = usePermission('account:update');
   const canDelete = usePermission('account:delete');
@@ -534,8 +536,12 @@ export function AdminAccountsPage(): React.JSX.Element {
               <Form.Item label="用户名" name="username">
                 <Input placeholder="3-50 个字符（登录用）" />
               </Form.Item>
-              <Form.Item label="密码" name="password">
-                <Input.Password placeholder="至少 8 位" autoComplete="new-password" />
+              <Form.Item
+                label="密码"
+                name="password"
+                rules={[{ required: true, message: '请输入密码' }, { min: sysSettings.passwordMinLength, message: `密码至少 ${sysSettings.passwordMinLength} 位` }]}
+              >
+                <Input.Password placeholder={`至少 ${sysSettings.passwordMinLength} 位`} autoComplete="new-password" />
               </Form.Item>
             </>
           )}

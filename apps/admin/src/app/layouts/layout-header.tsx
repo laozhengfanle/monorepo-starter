@@ -16,6 +16,7 @@ import { useAuth } from '../auth/auth-context.js';
 import { useTheme } from '../providers/theme-provider.js';
 import { useFullscreen } from '../hooks/use-fullscreen.js';
 import { SettingsDrawer } from '../../features/settings/settings-drawer.js';
+import { useSystemConfig } from '../providers/system-config-provider.js';
 import heroPng from '../../assets/hero.png';
 
 const { Header } = Layout;
@@ -32,6 +33,7 @@ export function LayoutHeader(): React.JSX.Element {
   const { notification } = App.useApp();
   const { mode, setMode } = useTheme();
   const { user, logout } = useAuth();
+  const { settings } = useSystemConfig();
   const navigate = useNavigate();
   const { isFullscreen, toggle } = useFullscreen();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -83,8 +85,8 @@ export function LayoutHeader(): React.JSX.Element {
       }}
     >
       <div className="flex items-center gap-2" style={{ lineHeight: 'normal' }}>
-        <img src={heroPng} alt="logo" className="h-8" />
-        <span style={{ fontSize: 16, fontWeight: 600 }}>monorepo-starter</span>
+        <img src={settings.logo || heroPng} alt="logo" className="h-8" />
+        <span style={{ fontSize: 16, fontWeight: 600 }}>{settings.name || 'monorepo-starter'}</span>
       </div>
 
       <Space size={4}>

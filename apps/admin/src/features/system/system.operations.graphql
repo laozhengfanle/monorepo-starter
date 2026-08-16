@@ -124,3 +124,39 @@ mutation UpdateTurnstileConfig($input: UpdateConfigInput!) {
     ...SystemConfigFields
   }
 }
+
+fragment UploadFileFields on UploadFile {
+  id
+  originalName
+  storedName
+  mimeType
+  size
+  url
+  accountId
+  createdAt
+  deletedAt
+}
+
+query UploadFiles($page: Int, $pageSize: Int, $includeDeleted: Boolean) {
+  uploadFiles(page: $page, pageSize: $pageSize, includeDeleted: $includeDeleted) {
+    items {
+      ...UploadFileFields
+    }
+    total
+    page
+    pageSize
+  }
+}
+
+mutation DeleteUploadFile($id: ID!) {
+  deleteUploadFile(id: $id) {
+    id
+    deletedAt
+  }
+}
+
+query PublicConfigs {
+  publicConfigs {
+    ...SystemConfigFields
+  }
+}

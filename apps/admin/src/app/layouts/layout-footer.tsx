@@ -1,11 +1,13 @@
 import { Layout, theme } from 'antd';
 import { APP_VERSION } from '../version.js';
+import { useSystemConfig } from '../providers/system-config-provider.js';
 
 const { Footer } = Layout;
 
 /** 页脚 */
 export function LayoutFooter(): React.JSX.Element {
   const { token } = theme.useToken();
+  const { settings } = useSystemConfig();
 
   return (
     <Footer
@@ -15,7 +17,7 @@ export function LayoutFooter(): React.JSX.Element {
         color: token.colorTextSecondary,
       }}
     >
-      monorepo-starter v{APP_VERSION} ©{new Date().getFullYear()} zhengbo
+      {settings.footerText || `monorepo-starter v${APP_VERSION} ©${new Date().getFullYear()} zhengbo`}
     </Footer>
   );
 }

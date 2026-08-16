@@ -16,7 +16,7 @@ import type {
 } from '@starter/contracts';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { AuditService, AUDIT_ACTIONS } from '../auth/audit.service.js';
+import { AUDIT_ACTIONS, AuditService } from '../auth/audit.service.js';
 import { TokenBlacklistService } from '../auth/token-blacklist.service.js';
 
 /** Prisma 唯一约束冲突检测（P2002） */
@@ -181,7 +181,6 @@ export class AdminAccountService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ACCOUNT_CREATED,
-      resourceType: 'admin_account',
       resourceId: accountId,
       detail: { accountId, roleCodes: data.roleCodes },
     });
@@ -240,11 +239,10 @@ export class AdminAccountService {
       }
     });
 
-    // 审计：更新 + 启用/禁用状态变化
+    // 审计：更新 + 启用/禁用状态变化 + 角色分配/撤销（resourceType 由 action 映射自动补全）
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ACCOUNT_UPDATED,
-      resourceType: 'admin_account',
       resourceId: id,
       detail: { accountId: id },
     });
@@ -252,10 +250,30 @@ export class AdminAccountService {
       await this.audit.write({
         accountId: operatorId,
         action: data.enabled ? AUDIT_ACTIONS.ACCOUNT_ENABLED : AUDIT_ACTIONS.ACCOUNT_DISABLED,
-        resourceType: 'admin_account',
         resourceId: id,
         detail: { accountId: id, enabled: data.enabled },
       });
+    }
+    // 角色 diff：分配（新增角色）/ 撤销（移除角色）各写一条
+    if (data.roleCodes !== undefined) {
+      const added = nextRoleCodes.filter((c) => !currentRoleCodes.includes(c));
+      const removed = currentRoleCodes.filter((c) => !nextRoleCodes.includes(c));
+      if (added.length > 0) {
+        await this.audit.write({
+          accountId: operatorId,
+          action: AUDIT_ACTIONS.ROLE_ASSIGNED,
+          resourceId: id,
+          detail: { accountId: id, roleCodes: added },
+        });
+      }
+      if (removed.length > 0) {
+        await this.audit.write({
+          accountId: operatorId,
+          action: AUDIT_ACTIONS.ROLE_REVOKED,
+          resourceId: id,
+          detail: { accountId: id, roleCodes: removed },
+        });
+      }
     }
 
     return this.findById(id);
@@ -290,7 +308,6 @@ export class AdminAccountService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ACCOUNT_DELETED,
-      resourceType: 'admin_account',
       resourceId: id,
       detail: { accountId: id, roleIds },
     });
@@ -359,7 +376,6 @@ export class AdminAccountService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ACCOUNT_PERMISSION_CHANGED,
-      resourceType: 'admin_account',
       resourceId: accountId,
       detail: { accountId, overrides: data.items },
     });
@@ -413,7 +429,6 @@ export class AdminAccountService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ACCOUNT_RESTORED,
-      resourceType: 'admin_account',
       resourceId: id,
       detail: { accountId: id, roleIds },
     });
@@ -439,7 +454,6 @@ export class AdminAccountService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ACCOUNT_HARD_DELETED,
-      resourceType: 'admin_account',
       resourceId: id,
       detail: { accountId: id },
     });

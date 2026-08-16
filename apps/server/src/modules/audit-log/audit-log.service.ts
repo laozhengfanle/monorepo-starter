@@ -72,7 +72,6 @@ export class AuditLogService {
           id: newId(),
           accountId: operatorId,
           action: AUDIT_ACTIONS.AUDIT_CLEARED,
-          resourceType: 'audit_log',
           detail: { clearedCount: total, clearedAt: new Date().toISOString() } as never,
         },
       });

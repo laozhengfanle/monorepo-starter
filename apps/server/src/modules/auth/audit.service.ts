@@ -1,41 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { newId } from '@starter/server-core';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import {
+  AUDIT_ACTION_RESOURCE_MAP,
+  AUDIT_ACTIONS,
+  AUDIT_RESOURCES,
+} from './audit.constants.js';
 
-/** 审计动作词表 */
-export const AUDIT_ACTIONS = {
-  LOGIN_SUCCESS: 'login_success',
-  LOGIN_FAILED: 'login_failed',
-  LOGIN_LOCKED: 'login_locked',
-  LOGOUT: 'logout',
-  PASSWORD_CHANGED: 'password_changed',
-  ACCOUNT_CREATED: 'account_created',
-  ACCOUNT_UPDATED: 'account_updated',
-  ACCOUNT_ENABLED: 'account_enabled',
-  ACCOUNT_DISABLED: 'account_disabled',
-  ACCOUNT_DELETED: 'account_deleted',
-  ACCOUNT_RESTORED: 'account_restored',
-  ACCOUNT_HARD_DELETED: 'account_hard_deleted',
-  ROLE_CREATED: 'role_created',
-  ROLE_UPDATED: 'role_updated',
-  ROLE_DELETED: 'role_deleted',
-  MENU_CREATED: 'menu_created',
-  MENU_UPDATED: 'menu_updated',
-  MENU_DELETED: 'menu_deleted',
-  PERMISSION_CHANGED: 'permission_changed',
-  ACCOUNT_PERMISSION_CHANGED: 'account_permission_changed',
-  FILE_UPLOADED: 'file_uploaded',
-  FILE_DELETED: 'file_deleted',
-  CONFIG_UPDATED: 'config_updated',
-  AUDIT_CLEARED: 'audit_cleared',
-  DICT_CREATED: 'dict_created',
-  DICT_UPDATED: 'dict_updated',
-  DICT_DELETED: 'dict_deleted',
-} as const;
+/** 审计动作词表（单一事实源见 audit.constants.ts） */
+export { AUDIT_ACTIONS, AUDIT_RESOURCES } from './audit.constants.js';
 
 export interface AuditEntry {
   accountId?: string;
+  /** 审计动作（必须 ∈ AUDIT_ACTIONS；新增动作需同步词表与字典） */
   action: string;
+  /** 资源类型：缺省时按 AUDIT_ACTION_RESOURCE_MAP 自动补全（DICT_* 的 sys_dict_item 场景需显式传） */
   resourceType?: string;
   resourceId?: string;
   detail?: Record<string, unknown>;
@@ -45,7 +24,10 @@ export interface AuditEntry {
 
 /**
  * 安全审计：写入 audit_log 表（异步不阻塞主流程）。
- * 阶段 3 精简版：登录成功/失败/锁定/登出；后续扩展业务操作审计。
+ * - 动作词表单一事实源：action/resourceType 收敛到 audit.constants.ts（字典由它生成）
+ * - 自动补全：未传 resourceType 时按 action 映射补全（如 login_* → auth），杜绝漏填不对称
+ * - fail-open 校验：action/resourceType 不在词表内仅 Logger.error，不阻塞主流程
+ *   （安全敏感路径如登录失败/锁定：审计失败只损失日志本身，不影响既定安全判定）
  */
 @Injectable()
 export class AuditService {
@@ -57,17 +39,30 @@ export class AuditService {
    * 写入审计日志 —— 业务审计容错（fail-open）：
    * create 失败仅 Logger.error，不抛出，避免审计旁路记录失败阻塞/回滚主流程
    * （如登录失败、配置更新、改密等）。
-   * 安全敏感路径（登录失败/锁定）保持现状：这些路径在 write 之后才抛 BizException，
-   * 审计失败只损失日志本身，不影响既定的安全判定结果（不会把“密码错误”变成 500）。
    */
   async write(entry: AuditEntry): Promise<void> {
+    // 动作词表校验（fail-open：仅告警，不阻断写入，保证字典可扩展）
+    if (!(Object.values(AUDIT_ACTIONS) as string[]).includes(entry.action)) {
+      this.logger.error(
+        `审计动作不在词表中 (action=${entry.action})，请同步 audit.constants.ts 与字典 audit_action`,
+      );
+    }
+    // 资源类型自动补全：未传时按 action 映射取默认（如 login_* → auth）
+    const resourceType =
+      entry.resourceType ??
+      AUDIT_ACTION_RESOURCE_MAP[entry.action as keyof typeof AUDIT_ACTION_RESOURCE_MAP];
+    if (resourceType && !(Object.values(AUDIT_RESOURCES) as string[]).includes(resourceType)) {
+      this.logger.error(
+        `审计资源类型不在词表中 (resourceType=${resourceType})，请同步 audit.constants.ts 与字典 audit_resource`,
+      );
+    }
     try {
       await this.prisma.client.auditLog.create({
         data: {
           id: newId(),
           accountId: entry.accountId,
           action: entry.action,
-          resourceType: entry.resourceType,
+          resourceType,
           resourceId: entry.resourceId,
           detail: entry.detail as never,
           ip: entry.ip,

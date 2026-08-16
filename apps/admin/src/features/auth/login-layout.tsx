@@ -2,6 +2,7 @@ import { Button, Dropdown, Layout, Space, theme as antdTheme } from 'antd';
 import { ExpandOutlined, LaptopOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import { useTheme } from '../../app/providers/theme-provider.js';
+import { useSystemConfig } from '../../app/providers/system-config-provider.js';
 import { APP_VERSION } from '../../app/version.js';
 import heroPng from '../../assets/hero.png';
 
@@ -20,6 +21,7 @@ const themeIconMap: Record<'system' | 'light' | 'dark', ReactNode> = {
 export function LoginLayout({ children }: { children: ReactNode }): React.JSX.Element {
   const { token } = antdTheme.useToken();
   const { mode, setMode } = useTheme();
+  const { settings } = useSystemConfig();
 
   const themeMenuItems = [
     { key: 'system', icon: <LaptopOutlined />, label: '跟随系统' },
@@ -38,8 +40,8 @@ export function LoginLayout({ children }: { children: ReactNode }): React.JSX.El
         }}
       >
         <div className="flex items-center gap-2">
-          <img src={heroPng} alt="logo" className="h-8" />
-          <span className="text-lg font-semibold">monorepo-starter</span>
+          <img src={settings.logo || heroPng} alt="logo" className="h-8" />
+          <span className="text-lg font-semibold">{settings.name || 'monorepo-starter'}</span>
         </div>
 
         <Space>
@@ -73,7 +75,7 @@ export function LoginLayout({ children }: { children: ReactNode }): React.JSX.El
           padding: `${token.paddingSM}px ${token.paddingLG}px`,
         }}
       >
-        monorepo-starter v{APP_VERSION} ©{new Date().getFullYear()} zhengbo
+        {settings.footerText || `monorepo-starter v${APP_VERSION} ©${new Date().getFullYear()} zhengbo`}
       </Footer>
     </Layout>
   );

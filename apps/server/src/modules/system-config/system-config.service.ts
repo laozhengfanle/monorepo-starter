@@ -128,7 +128,6 @@ export class SystemConfigService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.CONFIG_UPDATED,
-      resourceType: 'system_config',
       resourceId: config.id,
       detail: { key },
     });
@@ -144,8 +143,7 @@ export class SystemConfigService {
       await this.audit.write({
         accountId: operatorId,
         action: AUDIT_ACTIONS.CONFIG_UPDATED,
-        resourceType: 'system_config',
-        resourceId: config.id,
+          resourceId: config.id,
         detail: { key: item.key },
       });
       results.push(config);
@@ -169,7 +167,6 @@ export class SystemConfigService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.CONFIG_UPDATED,
-      resourceType: 'system_config',
       resourceId: existing.id,
       detail: { key, deleted: true },
     });

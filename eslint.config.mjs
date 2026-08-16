@@ -7,6 +7,8 @@ export default [
   ...nx.configs['flat/base'],
   {
     ignores: [
+      '.tmp/**',
+      'uploads/**',
       '**/dist',
       '**/generated',
       '**/test-output',

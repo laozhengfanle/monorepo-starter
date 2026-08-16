@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { UploadOutlined } from '@ant-design/icons';
 import {
   App,
   Button,
@@ -12,8 +13,10 @@ import {
   Select,
   Spin,
   Typography,
+  Upload,
 } from 'antd';
 import { useAdminConfigsQuery, useBatchUpdateConfigsMutation } from '../../../generated/graphql';
+import { uploadFileApi } from '../../../shared/utils/upload.js';
 
 const { Text } = Typography;
 
@@ -99,25 +102,33 @@ export function SystemSettingsPage(): React.JSX.Element {
   }, [data, form]);
 
   /** Logo 选择：客户端 FileReader → base64（白名单 + 大小限制） */
-  const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  /** Logo 选择：antd Upload 拦截校验 → 走存储驱动上传（folder=logos）→ 存 url */
+  const handleLogoSelect = (file: File): boolean => {
     if (!LOGO_ALLOWED_TYPES.includes(file.type)) {
       void message.error('仅支持 PNG、JPG、WebP 格式的图片');
-      return;
+      return false;
     }
     if (file.size > LOGO_MAX_SIZE) {
       void message.error(`文件大小不能超过 ${LOGO_MAX_SIZE / 1024 / 1024}MB`);
-      return;
+      return false;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setLogoPreview(result);
-      form.setFieldValue('logo', result);
-    };
-    reader.readAsDataURL(file);
-    void message.success('Logo 已选择，保存后生效');
+    void (async () => {
+      try {
+        const result = await uploadFileApi(file, 'logos');
+        setLogoPreview(result.url);
+        form.setFieldValue('logo', result.url);
+        void message.success('Logo 已上传，保存后生效');
+      } catch (error) {
+        void message.error(error instanceof Error ? error.message : 'Logo 上传失败，请重试');
+      }
+    })();
+    return false; // 阻止 antd 自动上传（走上面的 uploadFileApi）
+  };
+
+  /** 移除 Logo */
+  const handleLogoRemove = (): void => {
+    setLogoPreview('');
+    form.setFieldValue('logo', '');
   };
 
   const handleSubmit = async (): Promise<void> => {
@@ -195,41 +206,28 @@ export function SystemSettingsPage(): React.JSX.Element {
               name="logo"
               extra="支持 PNG、JPG、WebP 格式，建议尺寸 48x48"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Upload
+                accept="image/png,image/jpeg,image/webp"
+                showUploadList={false}
+                beforeUpload={handleLogoSelect}
+                fileList={[]}
+              >
                 {logoPreview ? (
-                  <img
-                    src={logoPreview}
-                    alt="logo"
-                    style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'contain' }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 6,
-                      background: 'rgba(0,0,0,0.06)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 12,
-                      color: 'rgba(0,0,0,0.45)',
-                    }}
-                  >
-                    Logo
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img
+                      src={logoPreview}
+                      alt="logo"
+                      style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid rgba(0,0,0,0.1)' }}
+                    />
+                    <Button size="small">更换 Logo</Button>
+                    <Button size="small" danger onClick={(e) => { e.stopPropagation(); handleLogoRemove(); }}>
+                      移除
+                    </Button>
                   </div>
+                ) : (
+                  <Button icon={<UploadOutlined />}>上传 Logo</Button>
                 )}
-                <Button size="small" onClick={() => document.getElementById('settings-logo-input')?.click()}>
-                  更换 Logo
-                </Button>
-                <input
-                  id="settings-logo-input"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  style={{ display: 'none' }}
-                  onChange={onLogoChange}
-                />
-              </div>
+              </Upload>
             </Form.Item>
           </Col>
         </Row>

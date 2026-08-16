@@ -117,9 +117,10 @@ export class AuthService {
     return this.tokenIssuance.issueTokens(identity.accountId, identity.account.userType);
   }
 
-  /** 刷新 token（refresh → 新双 token） */
-  async refresh(refreshToken: string): Promise<IssuedTokens> {
-    return this.tokenIssuance.refresh(refreshToken);
+  /** 刷新 token（refresh → 新双 token；成功/重用均写审计） */
+  async refresh(refreshToken: string, req?: Request): Promise<IssuedTokens> {
+    const info = req ? clientInfo(req) : undefined;
+    return this.tokenIssuance.refresh(refreshToken, info);
   }
 
   /** 登出：撤销账号所有 token + 审计 */
@@ -225,7 +226,6 @@ export class AuthService {
     await this.audit.write({
       accountId,
       action: AUDIT_ACTIONS.PASSWORD_CHANGED,
-      resourceType: 'account_identity',
       resourceId: accountId,
       ip,
       userAgent,

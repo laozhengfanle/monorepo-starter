@@ -6,6 +6,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { CacheModule } from '../common/cache/cache.module.js';
 import { GraphQLModule } from '../common/graphql/graphql.module.js';
 import { LoggerModule } from '../common/logger/logger.module.js';
+import { StorageModule } from '../common/storage/storage.module.js';
 import { PrismaModule } from '../common/prisma/prisma.module.js';
 import { GqlThrottlerGuard } from '../common/throttler/gql-throttler.guard.js';
 import { AuthModule } from '../modules/auth/auth.module.js';
@@ -19,6 +20,7 @@ import { AuditLogModule } from '../modules/audit-log/audit-log.module.js';
 import { CacheAdminModule } from '../modules/cache-admin/cache-admin.module.js';
 import { TurnstileModule } from '../modules/turnstile/turnstile.module.js';
 import { SysDictModule } from '../modules/system-dict/system-dict.module.js';
+import { FileManagerModule } from '../modules/file-manager/file-manager.module.js';
 import { validateEnv } from '../config/env.validation.js';
 import { HealthModule } from '../health/health.module.js';
 
@@ -28,6 +30,7 @@ import { HealthModule } from '../health/health.module.js';
     LoggerModule,
     PrismaModule,
     CacheModule,
+    StorageModule,
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
@@ -51,6 +54,7 @@ import { HealthModule } from '../health/health.module.js';
     CacheAdminModule,
     TurnstileModule,
     SysDictModule,
+    FileManagerModule,
     HealthModule,
   ],
   providers: [

@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { LoginSchema } from '@starter/api-client';
 import { useAuth } from '../../../app/auth/auth-context.js';
 import { LoginLayout } from '../login-layout.js';
+import { useSystemConfig } from '../../../app/providers/system-config-provider.js';
 import heroPng from '../../../assets/hero.png';
 
 /** 开发测试账号（点击快速填充） */
@@ -24,6 +25,7 @@ export function LoginPage(): React.JSX.Element {
   const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+  const { settings } = useSystemConfig();
   // 防重复提交：setLoading 是异步的，快速连点/回车会在重渲染前二次触发 onFinish；
   // ref 读写同步，入口处检查彻底杜绝竞态
   const submittingRef = useRef(false);
@@ -184,9 +186,9 @@ export function LoginPage(): React.JSX.Element {
             styles={{ body: { padding: 40 } }}
           >
             <div className="text-center" style={{ marginBottom: 32 }}>
-              <img src={heroPng} alt="logo" style={{ height: 56, margin: '0 auto 16px' }} />
+              <img src={settings.logo || heroPng} alt="logo" style={{ height: 56, margin: '0 auto 16px' }} />
               <h1 className="m-0" style={{ fontSize: 22, fontWeight: 600, color: token.colorTextHeading }}>
-                monorepo-starter
+                {settings.name || 'monorepo-starter'}
               </h1>
               <p className="m-0" style={{ marginTop: 8, fontSize: 14, color: token.colorTextSecondary }}>
                 企业级后台管理系统

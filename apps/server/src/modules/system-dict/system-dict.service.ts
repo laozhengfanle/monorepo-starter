@@ -126,8 +126,7 @@ export class SysDictService {
       await this.audit.write({
         accountId: operatorId,
         action: AUDIT_ACTIONS.DICT_CREATED,
-        resourceType: 'sys_dict_type',
-        resourceId: row.id,
+          resourceId: row.id,
         detail: { dictTypeId: row.id, code: row.code },
       });
       return toType(row);
@@ -159,7 +158,6 @@ export class SysDictService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.DICT_UPDATED,
-      resourceType: 'sys_dict_type',
       resourceId: id,
       detail: { dictTypeId: id, code: row.code },
     });
@@ -176,7 +174,6 @@ export class SysDictService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.DICT_DELETED,
-      resourceType: 'sys_dict_type',
       resourceId: id,
       detail: { dictTypeId: id, code: existing.code },
     });

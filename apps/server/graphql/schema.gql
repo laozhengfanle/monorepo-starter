@@ -190,6 +190,7 @@ type Mutation {
   deleteDictType(id: ID!): Boolean!
   deleteMenu(id: ID!): AdminMenuNode!
   deleteRole(id: ID!): AdminRole!
+  deleteUploadFile(id: ID!): UploadFile!
   login(input: LoginInput!): AuthResult!
   updateAdminAccount(id: ID!, input: UpdateAdminAccountInput!): AdminAccount!
   updateDictItem(id: ID!, input: UpdateDictItemInput!): SysDictItem!
@@ -208,6 +209,13 @@ type PaginatedAdminAccounts {
 
 type PaginatedAuditLogs {
   items: [AuditLogItem!]!
+  page: Int!
+  pageSize: Int!
+  total: Int!
+}
+
+type PaginatedUploadFiles {
+  items: [UploadFile!]!
   page: Int!
   pageSize: Int!
   total: Int!
@@ -233,9 +241,11 @@ type Query {
   me: AdminMe!
   menuTree: [AdminMenuNode!]!
   permissionCodes: [PermissionCode!]!
+  publicConfigs: [SystemConfig!]!
   storageConfig: SystemConfig
   sysDictTypes: [SysDictType!]!
   turnstileConfig: SystemConfig
+  uploadFiles(includeDeleted: Boolean = false, page: Int = 1, pageSize: Int = 20): PaginatedUploadFiles!
 }
 
 type SysDictItem {
@@ -312,4 +322,16 @@ input UpdateRoleInput {
   enabled: Boolean
   name: String
   permissionCodes: [String!]
+}
+
+type UploadFile {
+  accountId: String
+  createdAt: String!
+  deletedAt: String
+  id: ID!
+  mimeType: String!
+  originalName: String!
+  size: Int!
+  storedName: String!
+  url: String!
 }

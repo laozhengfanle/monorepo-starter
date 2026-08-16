@@ -22,6 +22,11 @@ export default defineConfig(() => ({
         target: 'http://localhost:3301',
         changeOrigin: true,
       },
+      // 上传文件静态访问：/uploads/* → server（3301）的 express.static
+      '/uploads': {
+        target: 'http://localhost:3301',
+        changeOrigin: true,
+      },
     },
   },
   preview: {

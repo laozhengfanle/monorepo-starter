@@ -87,7 +87,6 @@ export class AdminRoleService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ROLE_CREATED,
-      resourceType: 'admin_role',
       resourceId: roleId,
       detail: { roleId, code: data.code },
     });
@@ -96,7 +95,10 @@ export class AdminRoleService {
 
   async update(id: string, input: UpdateRoleInput, operatorId: string): Promise<AdminRole> {
     const data = UpdateRoleSchema.parse(input);
-    const role = await this.prisma.client.adminRole.findUnique({ where: { id } });
+    const role = await this.prisma.client.adminRole.findUnique({
+      where: { id },
+      include: { roleMenus: { include: { menu: true } } },
+    });
     if (!role) {
       throw new BizException({ code: 'ROLE_NOT_FOUND', message: '角色不存在' });
     }
@@ -104,6 +106,8 @@ export class AdminRoleService {
     if (role.code === 'super_admin' && data.enabled === false) {
       throw new BizException({ code: 'SUPER_ADMIN_PROTECTED', message: '内置超管角色不允许禁用' });
     }
+    // 权限点 diff 基准：更新前的权限点编码
+    const prevPermissionCodes = role.roleMenus.map((rm) => rm.menu.code).sort();
 
     await this.prisma.client.$transaction(async (tx) => {
       await tx.adminRole.update({
@@ -124,10 +128,28 @@ export class AdminRoleService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ROLE_UPDATED,
-      resourceType: 'admin_role',
       resourceId: id,
       detail: { roleId: id, code: role.code },
     });
+    // 权限点变更审计（仅当本次显式更新了权限点且与旧值不同）
+    if (data.permissionCodes !== undefined) {
+      const nextPermissionCodes = [...data.permissionCodes].sort();
+      const changed =
+        nextPermissionCodes.length !== prevPermissionCodes.length ||
+        nextPermissionCodes.some((c, i) => c !== prevPermissionCodes[i]);
+      if (changed) {
+        await this.audit.write({
+          accountId: operatorId,
+          action: AUDIT_ACTIONS.PERMISSION_CHANGED,
+          resourceId: id,
+          detail: {
+            roleId: id,
+            code: role.code,
+            permissionCodes: nextPermissionCodes,
+          },
+        });
+      }
+    }
     return this.findById(id);
   }
 
@@ -151,7 +173,6 @@ export class AdminRoleService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.ROLE_DELETED,
-      resourceType: 'admin_role',
       resourceId: id,
       detail: { roleId: id, code: role.code },
     });

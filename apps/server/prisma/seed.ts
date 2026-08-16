@@ -4,6 +4,10 @@ import { Pool } from 'pg';
 import { newId } from '@starter/server-core';
 import { PrismaClient } from '../src/generated/prisma-client/client.js';
 import bcrypt from 'bcrypt';
+import {
+  AUDIT_ACTION_LABELS,
+  AUDIT_RESOURCE_LABELS,
+} from '../src/modules/auth/audit.constants.js';
 
 for (const envFile of ['.env', 'apps/server/.env']) {
   try {
@@ -198,6 +202,9 @@ async function main(): Promise<void> {
           path: '/admin/storage',
           icon: 'FolderOutlined',
           sort: 3,
+          children: [
+            { code: 'config:file:delete', name: '删除文件', type: 'button', sort: 1 },
+          ],
         },
         {
           code: 'config:cache:view',
@@ -475,51 +482,19 @@ async function main(): Promise<void> {
     {
       code: 'audit_action',
       name: '审计操作类型',
-      remark: '审计日志 action 的可选项（audit_log.action）',
-      items: [
-        { label: '登录成功', value: 'login_success', sort: 1 },
-        { label: '登录失败', value: 'login_failed', sort: 2 },
-        { label: '登录锁定', value: 'login_locked', sort: 3 },
-        { label: '退出登录', value: 'logout', sort: 4 },
-        { label: '修改密码', value: 'password_changed', sort: 5 },
-        { label: '创建账户', value: 'account_created', sort: 10 },
-        { label: '更新账户', value: 'account_updated', sort: 11 },
-        { label: '启用账户', value: 'account_enabled', sort: 12 },
-        { label: '禁用账户', value: 'account_disabled', sort: 13 },
-        { label: '删除账户', value: 'account_deleted', sort: 14 },
-        { label: '恢复账户', value: 'account_restored', sort: 15 },
-        { label: '彻底删除账户', value: 'account_hard_deleted', sort: 16 },
-        { label: '创建角色', value: 'role_created', sort: 20 },
-        { label: '更新角色', value: 'role_updated', sort: 21 },
-        { label: '删除角色', value: 'role_deleted', sort: 22 },
-        { label: '创建菜单', value: 'menu_created', sort: 30 },
-        { label: '更新菜单', value: 'menu_updated', sort: 31 },
-        { label: '删除菜单', value: 'menu_deleted', sort: 32 },
-        { label: '权限变更', value: 'permission_changed', sort: 33 },
-        { label: '账户权限变更', value: 'account_permission_changed', sort: 34 },
-        { label: '上传文件', value: 'file_uploaded', sort: 40 },
-        { label: '删除文件', value: 'file_deleted', sort: 41 },
-        { label: '配置更新', value: 'config_updated', sort: 50 },
-        { label: '清空审计', value: 'audit_cleared', sort: 51 },
-        { label: '创建字典', value: 'dict_created', sort: 52 },
-        { label: '更新字典', value: 'dict_updated', sort: 53 },
-        { label: '删除字典', value: 'dict_deleted', sort: 54 },
-      ],
+      remark: '审计日志 action 的可选项（audit_log.action）—— 由 audit.constants.ts 单一事实源生成',
+      // 与 AUDIT_ACTIONS 常量严格一致：新增动作只改 audit.constants.ts，勿在此手写
+      items: (Object.entries(AUDIT_ACTION_LABELS) as [string, string][]).map(
+        ([value, label], index) => ({ label, value, sort: index + 1 }),
+      ),
     },
     {
       code: 'audit_resource',
       name: '审计资源类型',
-      remark: '审计日志 resourceType 的可选项',
-      items: [
-        { label: '管理账户', value: 'admin_account', sort: 1 },
-        { label: '管理角色', value: 'admin_role', sort: 2 },
-        { label: '管理菜单', value: 'admin_menu', sort: 3 },
-        { label: '系统配置', value: 'system_config', sort: 4 },
-        { label: '上传文件', value: 'upload_file', sort: 5 },
-        { label: '账户身份', value: 'account_identity', sort: 6 },
-        { label: '认证', value: 'auth', sort: 7 },
-        { label: '审计日志', value: 'audit_log', sort: 8 },
-      ],
+      remark: '审计日志 resourceType 的可选项 —— 由 audit.constants.ts 单一事实源生成',
+      items: (Object.entries(AUDIT_RESOURCE_LABELS) as [string, string][]).map(
+        ([value, label], index) => ({ label, value, sort: index + 1 }),
+      ),
     },
     {
       code: 'menu_type',
@@ -600,6 +575,23 @@ async function main(): Promise<void> {
             sort: item.sort ?? 0,
           },
         });
+      }
+    }
+    // 审计词表对齐：audit_action / audit_resource 由 audit.constants.ts 单一事实源驱动，
+    // 已从词表移除的旧项（如 reset_password）在此显式清理，避免幽灵项残留在筛选下拉。
+    if (dict.code === 'audit_action' || dict.code === 'audit_resource') {
+      const allowed = new Set(dict.items.map((i) => i.value));
+      const stale = await prisma.sysDictItem.findMany({
+        where: { dictTypeId: type.id, value: { notIn: [...allowed] } },
+        select: { id: true, value: true },
+      });
+      if (stale.length > 0) {
+        await prisma.sysDictItem.deleteMany({
+          where: { id: { in: stale.map((s) => s.id) } },
+        });
+        console.log(
+          `🧹 已清理字典 ${dict.code} 的过期项: ${stale.map((s) => s.value).join(', ')}`,
+        );
       }
     }
   }

@@ -77,8 +77,7 @@ export class AdminMenuService {
       await this.audit.write({
         accountId: operatorId,
         action: AUDIT_ACTIONS.MENU_CREATED,
-        resourceType: 'admin_menu',
-        resourceId: row.id,
+          resourceId: row.id,
         detail: { menuId: row.id, code: row.code },
       });
       return toNode(row);
@@ -122,7 +121,6 @@ export class AdminMenuService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.MENU_UPDATED,
-      resourceType: 'admin_menu',
       resourceId: id,
       detail: { menuId: id, code: row.code },
     });
@@ -148,7 +146,6 @@ export class AdminMenuService {
     await this.audit.write({
       accountId: operatorId,
       action: AUDIT_ACTIONS.MENU_DELETED,
-      resourceType: 'admin_menu',
       resourceId: id,
       detail: { menuId: id, code: existing.code },
     });

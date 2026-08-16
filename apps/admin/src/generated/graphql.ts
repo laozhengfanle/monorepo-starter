@@ -215,6 +215,7 @@ export type Mutation = {
   deleteDictType: Scalars['Boolean']['output'];
   deleteMenu: AdminMenuNode;
   deleteRole: AdminRole;
+  deleteUploadFile: UploadFile;
   login: AuthResult;
   updateAdminAccount: AdminAccount;
   updateDictItem: SysDictItem;
@@ -300,6 +301,11 @@ export type MutationDeleteRoleArgs = {
 };
 
 
+export type MutationDeleteUploadFileArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationLoginArgs = {
   input: LoginInput;
 };
@@ -355,6 +361,14 @@ export type PaginatedAuditLogs = {
   total: Scalars['Int']['output'];
 };
 
+export type PaginatedUploadFiles = {
+  __typename?: 'PaginatedUploadFiles';
+  items: Array<UploadFile>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+};
+
 export type PermissionCode = {
   __typename?: 'PermissionCode';
   code: Scalars['String']['output'];
@@ -377,9 +391,11 @@ export type Query = {
   me: AdminMe;
   menuTree: Array<AdminMenuNode>;
   permissionCodes: Array<PermissionCode>;
+  publicConfigs: Array<SystemConfig>;
   storageConfig?: Maybe<SystemConfig>;
   sysDictTypes: Array<SysDictType>;
   turnstileConfig?: Maybe<SystemConfig>;
+  uploadFiles: PaginatedUploadFiles;
 };
 
 
@@ -412,6 +428,13 @@ export type QueryCacheKeysArgs = {
 
 export type QueryExportAuditLogsArgs = {
   query: AuditLogQueryInput;
+};
+
+
+export type QueryUploadFilesArgs = {
+  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type SysDictItem = {
@@ -491,6 +514,19 @@ export type UpdateRoleInput = {
   enabled?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   permissionCodes?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type UploadFile = {
+  __typename?: 'UploadFile';
+  accountId?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['String']['output'];
+  deletedAt?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  mimeType: Scalars['String']['output'];
+  originalName: Scalars['String']['output'];
+  size: Scalars['Int']['output'];
+  storedName: Scalars['String']['output'];
+  url: Scalars['String']['output'];
 };
 
 export type AdminAccountsQueryVariables = Exact<{
@@ -761,6 +797,29 @@ export type UpdateTurnstileConfigMutationVariables = Exact<{
 
 export type UpdateTurnstileConfigMutation = { __typename?: 'Mutation', updateTurnstileConfig: { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string } };
 
+export type UploadFileFieldsFragment = { __typename?: 'UploadFile', id: string, originalName: string, storedName: string, mimeType: string, size: number, url: string, accountId?: string | null, createdAt: string, deletedAt?: string | null };
+
+export type UploadFilesQueryVariables = Exact<{
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
+}>;
+
+
+export type UploadFilesQuery = { __typename?: 'Query', uploadFiles: { __typename?: 'PaginatedUploadFiles', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'UploadFile', id: string, originalName: string, storedName: string, mimeType: string, size: number, url: string, accountId?: string | null, createdAt: string, deletedAt?: string | null }> } };
+
+export type DeleteUploadFileMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteUploadFileMutation = { __typename?: 'Mutation', deleteUploadFile: { __typename?: 'UploadFile', id: string, deletedAt?: string | null } };
+
+export type PublicConfigsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type PublicConfigsQuery = { __typename?: 'Query', publicConfigs: Array<{ __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string }> };
+
 export const MenuNodeFieldsFragmentDoc = gql`
     fragment MenuNodeFields on AdminMenuNode {
   id
@@ -835,6 +894,19 @@ export const CacheKeyFieldsFragmentDoc = gql`
   ttl
   value
   size
+}
+    `;
+export const UploadFileFieldsFragmentDoc = gql`
+    fragment UploadFileFields on UploadFile {
+  id
+  originalName
+  storedName
+  mimeType
+  size
+  url
+  accountId
+  createdAt
+  deletedAt
 }
     `;
 export const AdminAccountsDocument = gql`
@@ -2341,3 +2413,129 @@ export function useUpdateTurnstileConfigMutation(baseOptions?: Apollo.MutationHo
 export type UpdateTurnstileConfigMutationHookResult = ReturnType<typeof useUpdateTurnstileConfigMutation>;
 export type UpdateTurnstileConfigMutationResult = Apollo.MutationResult<UpdateTurnstileConfigMutation>;
 export type UpdateTurnstileConfigMutationOptions = Apollo.BaseMutationOptions<UpdateTurnstileConfigMutation, UpdateTurnstileConfigMutationVariables>;
+export const UploadFilesDocument = gql`
+    query UploadFiles($page: Int, $pageSize: Int, $includeDeleted: Boolean) {
+  uploadFiles(page: $page, pageSize: $pageSize, includeDeleted: $includeDeleted) {
+    items {
+      ...UploadFileFields
+    }
+    total
+    page
+    pageSize
+  }
+}
+    ${UploadFileFieldsFragmentDoc}`;
+
+/**
+ * __useUploadFilesQuery__
+ *
+ * To run a query within a React component, call `useUploadFilesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useUploadFilesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUploadFilesQuery({
+ *   variables: {
+ *      page: // value for 'page'
+ *      pageSize: // value for 'pageSize'
+ *      includeDeleted: // value for 'includeDeleted'
+ *   },
+ * });
+ */
+export function useUploadFilesQuery(baseOptions?: Apollo.QueryHookOptions<UploadFilesQuery, UploadFilesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<UploadFilesQuery, UploadFilesQueryVariables>(UploadFilesDocument, options);
+      }
+export function useUploadFilesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<UploadFilesQuery, UploadFilesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<UploadFilesQuery, UploadFilesQueryVariables>(UploadFilesDocument, options);
+        }
+// @ts-ignore
+export function useUploadFilesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<UploadFilesQuery, UploadFilesQueryVariables>): Apollo.UseSuspenseQueryResult<UploadFilesQuery, UploadFilesQueryVariables>;
+export function useUploadFilesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<UploadFilesQuery, UploadFilesQueryVariables>): Apollo.UseSuspenseQueryResult<UploadFilesQuery | undefined, UploadFilesQueryVariables>;
+export function useUploadFilesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<UploadFilesQuery, UploadFilesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<UploadFilesQuery, UploadFilesQueryVariables>(UploadFilesDocument, options);
+        }
+export type UploadFilesQueryHookResult = ReturnType<typeof useUploadFilesQuery>;
+export type UploadFilesLazyQueryHookResult = ReturnType<typeof useUploadFilesLazyQuery>;
+export type UploadFilesSuspenseQueryHookResult = ReturnType<typeof useUploadFilesSuspenseQuery>;
+export type UploadFilesQueryResult = Apollo.QueryResult<UploadFilesQuery, UploadFilesQueryVariables>;
+export const DeleteUploadFileDocument = gql`
+    mutation DeleteUploadFile($id: ID!) {
+  deleteUploadFile(id: $id) {
+    id
+    deletedAt
+  }
+}
+    `;
+export type DeleteUploadFileMutationFn = Apollo.MutationFunction<DeleteUploadFileMutation, DeleteUploadFileMutationVariables>;
+
+/**
+ * __useDeleteUploadFileMutation__
+ *
+ * To run a mutation, you first call `useDeleteUploadFileMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteUploadFileMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteUploadFileMutation, { data, loading, error }] = useDeleteUploadFileMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteUploadFileMutation(baseOptions?: Apollo.MutationHookOptions<DeleteUploadFileMutation, DeleteUploadFileMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteUploadFileMutation, DeleteUploadFileMutationVariables>(DeleteUploadFileDocument, options);
+      }
+export type DeleteUploadFileMutationHookResult = ReturnType<typeof useDeleteUploadFileMutation>;
+export type DeleteUploadFileMutationResult = Apollo.MutationResult<DeleteUploadFileMutation>;
+export type DeleteUploadFileMutationOptions = Apollo.BaseMutationOptions<DeleteUploadFileMutation, DeleteUploadFileMutationVariables>;
+export const PublicConfigsDocument = gql`
+    query PublicConfigs {
+  publicConfigs {
+    ...SystemConfigFields
+  }
+}
+    ${SystemConfigFieldsFragmentDoc}`;
+
+/**
+ * __usePublicConfigsQuery__
+ *
+ * To run a query within a React component, call `usePublicConfigsQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePublicConfigsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePublicConfigsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function usePublicConfigsQuery(baseOptions?: Apollo.QueryHookOptions<PublicConfigsQuery, PublicConfigsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<PublicConfigsQuery, PublicConfigsQueryVariables>(PublicConfigsDocument, options);
+      }
+export function usePublicConfigsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PublicConfigsQuery, PublicConfigsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<PublicConfigsQuery, PublicConfigsQueryVariables>(PublicConfigsDocument, options);
+        }
+// @ts-ignore
+export function usePublicConfigsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<PublicConfigsQuery, PublicConfigsQueryVariables>): Apollo.UseSuspenseQueryResult<PublicConfigsQuery, PublicConfigsQueryVariables>;
+export function usePublicConfigsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PublicConfigsQuery, PublicConfigsQueryVariables>): Apollo.UseSuspenseQueryResult<PublicConfigsQuery | undefined, PublicConfigsQueryVariables>;
+export function usePublicConfigsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PublicConfigsQuery, PublicConfigsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<PublicConfigsQuery, PublicConfigsQueryVariables>(PublicConfigsDocument, options);
+        }
+export type PublicConfigsQueryHookResult = ReturnType<typeof usePublicConfigsQuery>;
+export type PublicConfigsLazyQueryHookResult = ReturnType<typeof usePublicConfigsLazyQuery>;
+export type PublicConfigsSuspenseQueryHookResult = ReturnType<typeof usePublicConfigsSuspenseQuery>;
+export type PublicConfigsQueryResult = Apollo.QueryResult<PublicConfigsQuery, PublicConfigsQueryVariables>;

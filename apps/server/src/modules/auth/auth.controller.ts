@@ -34,8 +34,8 @@ export class AuthController {
 
   @Post('refresh')
   @ApiOkResponse({ description: '刷新 access token' })
-  refresh(@Body() body: RefreshInput): Promise<IssuedTokens> {
-    return this.authService.refresh(body.refreshToken);
+  refresh(@Body() body: RefreshInput, @Req() req: Request): Promise<IssuedTokens> {
+    return this.authService.refresh(body.refreshToken, req);
   }
 
   @Post('logout')

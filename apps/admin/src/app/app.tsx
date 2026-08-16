@@ -8,6 +8,7 @@ import { AuthProvider } from './auth/auth-context.js';
 import { ProtectedRoute } from './auth/protected-route.js';
 import { MainLayout } from './layouts/main-layout.js';
 import { AppProviders } from './providers/index.js';
+import { SystemConfigProvider } from './providers/system-config-provider.js';
 import { APP_ROUTES, RouteGuard } from './route-registry.js';
 import { apolloClient } from './apollo-client';
 
@@ -31,6 +32,7 @@ export function App() {
     <AppProviders>
       <AuthProvider>
         <ApolloProvider client={apolloClient}>
+          <SystemConfigProvider>
           <QueryClientProvider client={queryClient}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
@@ -63,6 +65,7 @@ export function App() {
               />
             </Routes>
           </QueryClientProvider>
+          </SystemConfigProvider>
         </ApolloProvider>
       </AuthProvider>
     </AppProviders>

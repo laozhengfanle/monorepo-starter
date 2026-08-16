@@ -14,17 +14,21 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { AuditLogItem } from '@starter/api-client';
-import { AUDIT_ACTION_OPTIONS, AUDIT_RESOURCE_TYPE_OPTIONS } from '@starter/api-client';
 import {
   useAdminLogsQuery,
   useClearAuditLogsMutation,
   useDeleteAuditLogMutation,
   useExportAuditLogsLazyQuery,
+  useSysDictTypesQuery,
 } from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { downloadBlob, toCSV } from '../../../shared/utils/export.js';
 
 const { RangePicker } = DatePicker;
+
+/** 字典类型编码（审计操作 / 审计资源类型） */
+const DICT_ACTION = 'audit_action';
+const DICT_RESOURCE = 'audit_resource';
 
 /** ISO 时间 → 'YYYY-MM-DD HH:mm:ss'（本地时区，无 dayjs 依赖） */
 function formatDateTime(iso: string): string {
@@ -41,17 +45,32 @@ const actionColor: Record<string, string> = {
   login_locked: 'orange',
   logout: 'default',
   password_changed: 'blue',
+  token_refreshed: 'cyan',
+  token_reused: 'red',
   account_created: 'green',
   account_updated: 'blue',
+  account_enabled: 'green',
+  account_disabled: 'orange',
   account_deleted: 'red',
+  account_restored: 'green',
+  account_hard_deleted: 'red',
+  role_assigned: 'green',
+  role_revoked: 'orange',
+  account_permission_changed: 'purple',
   role_created: 'green',
   role_updated: 'blue',
   role_deleted: 'red',
+  permission_changed: 'purple',
   menu_created: 'green',
   menu_updated: 'blue',
   menu_deleted: 'red',
+  file_uploaded: 'cyan',
+  file_deleted: 'red',
   config_updated: 'purple',
   audit_cleared: 'orange',
+  dict_created: 'green',
+  dict_updated: 'blue',
+  dict_deleted: 'red',
 };
 
 /** 审计日志页（对标老项目 配置中心/审计日志）：分页列表 + 筛选 + 导出 + 清空 + 详情/删除 */
@@ -67,7 +86,6 @@ export function AuditLogsPage(): React.JSX.Element {
     endDate?: string;
   }>({});
   const [detail, setDetail] = useState<AuditLogItem | null>(null);
-  const [expanded, setExpanded] = useState(false);
 
   const canExport = usePermission('config:audit:export');
   const canClear = usePermission('config:audit:clear');
@@ -89,6 +107,31 @@ export function AuditLogsPage(): React.JSX.Element {
   const [clearAuditLogs, { loading: clearing }] = useClearAuditLogsMutation();
   const [deleteAuditLog] = useDeleteAuditLogMutation();
   const [exportLogs] = useExportAuditLogsLazyQuery();
+
+  // 筛选下拉选项来自数据字典（audit_action / audit_resource，字典管理页可维护）
+  const { data: dictData } = useSysDictTypesQuery();
+  const dictOptions = useMemo(() => {
+    const types = (dictData?.sysDictTypes ?? []) as {
+      code: string;
+      items: { label: string; value: string }[];
+    }[];
+    const find = (code: string) => {
+      const t = types.find((x) => x.code === code);
+      return (t?.items ?? []).map((i) => ({ value: i.value, label: i.label }));
+    };
+    return { actions: find(DICT_ACTION), resources: find(DICT_RESOURCE) };
+  }, [dictData]);
+  // value → label 映射（操作列/详情显示中文标签）
+  const actionLabelMap = useMemo(
+    () => new Map(dictOptions.actions.map((o) => [o.value, o.label])),
+    [dictOptions],
+  );
+  const resourceLabelMap = useMemo(
+    () => new Map(dictOptions.resources.map((o) => [o.value, o.label])),
+    [dictOptions],
+  );
+  const actionLabel = (v: string): string => actionLabelMap.get(v) ?? v;
+  const resourceLabel = (v: string): string => resourceLabelMap.get(v) ?? v;
 
   const logs = useMemo(() => (data?.adminLogs.items ?? []) as AuditLogItem[], [data]);
 
@@ -133,15 +176,14 @@ export function AuditLogsPage(): React.JSX.Element {
       fetchPolicy: 'network-only',
     });
     const items = res.data?.exportAuditLogs ?? [];
-    const header = ['时间', '操作者', '操作', '资源类型', '资源ID', 'IP', '详情'];
+    const header = ['操作者', '时间', '操作', '资源类型', '资源ID', 'IP'];
     const rows = items.map((item) => [
-      formatDateTime(item.createdAt),
       item.accountUsername ?? '系统',
+      formatDateTime(item.createdAt),
       item.action,
       item.resourceType ?? '-',
       item.resourceId ?? '-',
       item.ip ?? '-',
-      item.detail ?? '',
     ]);
     const ts = new Date().toISOString().slice(0, 10);
     downloadBlob(toCSV([header, ...rows]), `audit-logs-${ts}.csv`, 'text/csv;charset=utf-8;');
@@ -172,13 +214,6 @@ export function AuditLogsPage(): React.JSX.Element {
 
   const columns: ColumnsType<AuditLogItem> = [
     {
-      title: '时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 170,
-      render: (v: string) => <span>{formatDateTime(v)}</span>,
-    },
-    {
       title: '操作者',
       dataIndex: 'accountUsername',
       key: 'accountUsername',
@@ -187,18 +222,25 @@ export function AuditLogsPage(): React.JSX.Element {
         v ? <span>{v}</span> : <Tag color="default">系统</Tag>,
     },
     {
+      title: '时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 170,
+      render: (v: string) => <span>{formatDateTime(v)}</span>,
+    },
+    {
       title: '操作',
       dataIndex: 'action',
       key: 'action',
       width: 180,
-      render: (v: string) => <Tag color={actionColor[v] ?? 'default'}>{v}</Tag>,
+      render: (v: string) => <Tag color={actionColor[v] ?? 'default'}>{actionLabel(v)}</Tag>,
     },
     {
       title: '资源类型',
       dataIndex: 'resourceType',
       key: 'resourceType',
       width: 150,
-      render: (v: string | null) => (v ? <Tag>{v}</Tag> : <span>-</span>),
+      render: (v: string | null) => (v ? <Tag>{resourceLabel(v)}</Tag> : <span>-</span>),
     },
     {
       title: '资源ID',
@@ -214,14 +256,6 @@ export function AuditLogsPage(): React.JSX.Element {
       key: 'ip',
       width: 130,
       render: (v: string | null) => (v ? <span>{v}</span> : <span>-</span>),
-    },
-    {
-      title: '详情',
-      dataIndex: 'detail',
-      key: 'detail',
-      width: 220,
-      ellipsis: true,
-      render: (v: string | null) => (v ? <span>{v.slice(0, 80)}</span> : <span>-</span>),
     },
     {
       title: '操作',
@@ -278,7 +312,7 @@ export function AuditLogsPage(): React.JSX.Element {
             allowClear
             placeholder="全部操作"
             style={{ width: 200 }}
-            options={AUDIT_ACTION_OPTIONS.map((a) => ({ value: a, label: a }))}
+            options={dictOptions.actions}
           />
         </Form.Item>
         <Form.Item name="resourceType" label="资源类型">
@@ -286,7 +320,7 @@ export function AuditLogsPage(): React.JSX.Element {
             allowClear
             placeholder="全部资源"
             style={{ width: 160 }}
-            options={AUDIT_RESOURCE_TYPE_OPTIONS.map((r) => ({ value: r, label: r }))}
+            options={dictOptions.resources}
           />
         </Form.Item>
         <Form.Item name="range" label="时间">
@@ -298,9 +332,6 @@ export function AuditLogsPage(): React.JSX.Element {
               查询
             </Button>
             <Button onClick={handleReset}>重置</Button>
-            <Button type="link" size="small" onClick={() => setExpanded((prev) => !prev)}>
-              {expanded ? '收起' : '展开'}
-            </Button>
           </Space>
         </Form.Item>
       </Form>
@@ -310,7 +341,7 @@ export function AuditLogsPage(): React.JSX.Element {
         columns={columns}
         dataSource={logs}
         loading={loading}
-        scroll={{ x: 1300 }}
+        scroll={{ x: 1100 }}
         pagination={{
           current: page,
           pageSize,
@@ -340,9 +371,9 @@ export function AuditLogsPage(): React.JSX.Element {
             <span style={{ color: 'rgba(0,0,0,0.45)' }}>操作者</span>
             <span>{detail.accountUsername ?? '系统'}</span>
             <span style={{ color: 'rgba(0,0,0,0.45)' }}>操作</span>
-            <Tag color={actionColor[detail.action] ?? 'default'}>{detail.action}</Tag>
+            <Tag color={actionColor[detail.action] ?? 'default'}>{actionLabel(detail.action)}</Tag>
             <span style={{ color: 'rgba(0,0,0,0.45)' }}>资源类型</span>
-            <span>{detail.resourceType ?? '-'}</span>
+            <span>{detail.resourceType ? resourceLabel(detail.resourceType) : '-'}</span>
             {detail.resourceId && (
               <>
                 <span style={{ color: 'rgba(0,0,0,0.45)' }}>资源 ID</span>
