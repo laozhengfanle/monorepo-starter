@@ -24,11 +24,6 @@
     "format:check": "prettier --check .",
     "erd:generate": "cd apps/server && DISABLE_ERD=false pnpm exec prisma generate --generator erd"
   },
-  "lint-staged": {
-    "*.{ts,tsx,js,mjs,cjs,json,md,css,yml,yaml}": "prettier --write",
-    "*.{ts,tsx}": "oxlint --fix",
-    "!pnpm-lock.yaml": []
-  },
   "private": true,
   "dependencies": {
     "@apollo/server": "catalog:",
