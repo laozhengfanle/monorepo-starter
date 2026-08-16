@@ -4,14 +4,14 @@
 
 ## 技术栈
 
-| 层 | 选型 |
-|---|---|
-| 单仓编排 | [Nx](https://nx.dev) 23 + pnpm 11 workspaces |
-| 后端 | NestJS 11 + Express（zod-first 契约、Swagger、Orval 代码生成） |
-| 前端 | React 19 + Vite 8 + Ant Design 6 + TanStack Query |
-| 数据 | Prisma 7（PostgreSQL，driver adapter + UUIDv7 + 分页/软删除扩展） |
-| Lint | oxlint（代码规则，Rust 极速）+ ESLint（仅 Nx 模块边界规则） |
-| 测试 | Vitest 4 + Playwright（80% 覆盖率阈值） |
+| 层       | 选型                                                              |
+| -------- | ----------------------------------------------------------------- |
+| 单仓编排 | [Nx](https://nx.dev) 23 + pnpm 11 workspaces                      |
+| 后端     | NestJS 11 + Express（zod-first 契约、Swagger、Orval 代码生成）    |
+| 前端     | React 19 + Vite 8 + Ant Design 6 + TanStack Query                 |
+| 数据     | Prisma 7（PostgreSQL，driver adapter + UUIDv7 + 分页/软删除扩展） |
+| Lint     | oxlint（代码规则，Rust 极速）+ ESLint（仅 Nx 模块边界规则）       |
+| 测试     | Vitest 4 + Playwright（80% 覆盖率阈值）                           |
 
 ## 目录结构
 
@@ -68,10 +68,10 @@ pnpm exec nx g @nx/react:lib my-lib --directory=packages/shared/my-lib   # 生�
 
 本仓库按顺序编号分配端口（3301 起），避开常见开发端口与本地其他项目冲突：
 
-| 应用 | 端口 | 修改位置 |
-|---|---|---|
-| server | 3301 | [apps/server/.env](apps/server/.env) 的 `PORT` |
-| admin | 3302 | [apps/admin/vite.config.mts](apps/admin/vite.config.mts) 的 `server.port` |
+| 应用   | 端口 | 修改位置                                                                  |
+| ------ | ---- | ------------------------------------------------------------------------- |
+| server | 3301 | [apps/server/.env](apps/server/.env) 的 `PORT`                            |
+| admin  | 3302 | [apps/admin/vite.config.mts](apps/admin/vite.config.mts) 的 `server.port` |
 
 新增应用依次使用 3303、3304…；前端代理后端用环境变量（`VITE_API_BASE_URL`），不硬编码端口。
 
@@ -105,4 +105,77 @@ pnpm exec nx g @nx/react:lib my-lib --directory=packages/shared/my-lib   # 生�
 - [x] 文件上传（Multer 本地磁盘 + UploadFile 元数据 + 静态访问 + 10MB 限制）
 - [x] WebSocket（socket.io 网关 + 握手 JWT 鉴权 + 示例事件）
 - [x] 监控（Prometheus /metrics + 登录计数业务指标）
-- [x] 后台权限闭环（角色管理 CRUD + 权限点分配，role:*；菜单与权限同一张表：me 下发菜单树 + 侧栏动态渲染 + 菜单管理页 menu:*）
+- [x] 后台权限闭环（角色管理 CRUD + 权限点分配，role:_；菜单与权限同一张表：me 下发菜单树 + 侧栏动态渲染 + 菜单管理页 menu:_）
+
+## 部署
+
+```bash
+# 开发编排（postgres/redis/server/admin/adminer）
+docker compose up -d
+
+# 生产编排（read_only + no-new-privileges + 资源限制；先建 .env.production）
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+# 单镜像构建
+docker build -f apps/server/Dockerfile -t monorepo-starter-server .
+docker build -f apps/admin/Dockerfile -t monorepo-starter-admin .
+
+# K8s（namespace + postgres/redis statefulset + server/admin deployment + ingress）
+kubectl apply -k k8s/
+```
+
+编排端口统一在根 [.env.example](.env.example) 管理（SERVER_PORT=3301 / ADMIN_PORT=3302 / POSTGRES_PORT=5432 / REDIS_PORT=6379）。
+
+## CI/CD
+
+GitHub Actions（[.github/workflows](.github/workflows)）：
+
+| workflow | 触发                   | 内容                                                                                                           |
+| -------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| ci       | push main / PR         | lint + boundaries + typecheck + test + build + e2e + `pnpm audit` + Docker 构建 + Trivy 镜像扫描（SARIF 上传） |
+| docs     | push main（docs 路径） | 生成 OpenAPI + ERD + TypeDoc → GitHub Pages                                                                    |
+| release  | tag `v*.*.*`           | 构建 server/admin 镜像推 GHCR + GitHub Release（changelog）                                                    |
+| deploy   | tag / 手动             | SSH 部署 + 健康检查 + 失败自动回滚                                                                             |
+
+## 监控与运维
+
+- **健康检查**：`/health`（基础信息）、`/health/liveness`（存活探针，k8s 用）、`/health/readiness`（terminus：DB + 内存）
+- **指标**：`/metrics`（Prometheus），含业务指标：登录失败/锁定、限流拦截、审计写入、文件上传、缓存命中率、WS 连接数
+- **定时任务**：每日 3 点自动清理过期审计日志（90 天）与 token 撤销记录
+- **通知服务**：短信/邮件可插拔 Provider（默认 mock，生产可接阿里云短信 / nodemailer，见 [docs/开发文档/通知服务.md](docs/开发文档/通知服务.md)）
+
+## 文档
+
+- 架构图：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)（认证/限流/审计链路 + 数据流 + 部署拓扑）
+- 开发文档：[docs/开发文档](docs/开发文档)（16 篇：API 规范、认证安全、权限、审计、数据库、缓存、监控、定时任务、通知、测试策略、扩展指南、CI-CD 等）
+- 用户指南：[docs/用户指南](docs/用户指南)（9 篇：快速上手、配置参考、部署运维、故障排查等）
+- 数据库 ERD：[docs/erd.md](docs/erd.md)（`pnpm erd:generate` 重新生成）
+- 文档站（CI 自动发布）：TypeDoc API 参考 + OpenAPI + ERD → GitHub Pages
+
+## Roadmap
+
+- [x] 骨架：Nx + pnpm workspace、catalog、契约种子包、CI
+- [x] oxlint 接管代码规则 + ESLint 边界检查分层
+- [x] NestJS + Express API（zod 契约、env fail-fast、health/users CRUD、Swagger、e2e、pino 日志）
+- [x] OpenAPI 发射 + Orval 生成 react-query client
+- [x] ui 库（antd 主题）+ web 管理页
+- [x] Prisma 7 数据层（driver adapter + UUIDv7 + 软删除扩展，users 换 Prisma 仓储）
+- [x] GraphQL 双协议（code-first + zod 单一来源契约层 + ZodArgsPipe + users resolver）
+- [x] 前端 GraphQL（Apollo Client + graphql-codegen 类型化 hooks，users 页面切 GraphQL）
+- [x] 用户体系基础（Account/Identity/Profile + 最小 RBAC + JWT 认证 login/me，REST+GraphQL 双协议）
+- [x] 认证增强（双 token access+refresh、tokenVersion 撤销、jti 黑名单、登录锁定、审计日志）
+- [x] 权限控制（AdminMenu permissionCode + PermissionGuard + @RequirePermission，super_admin 绕过）
+- [x] 前端认证接入（登录页 + AuthContext + 路由守卫 + Apollo 认证 header + header 用户/登出）
+- [x] 管理端账户管理（Account CRUD + 角色分配，REST+GraphQL，权限 account:*）
+- [x] 限流（@nestjs/throttler，全局 100/分 + 登录 5/分 + GraphQL 兼容守卫）
+- [x] 健康检查完善（@nestjs/terminus，/health/readiness：DB + 内存探活）
+- [x] 文件上传（Multer 本地磁盘 + UploadFile 元数据 + 静态访问 + 10MB 限制）
+- [x] WebSocket（socket.io 网关 + 握手 JWT 鉴权 + 示例事件）
+- [x] 监控（Prometheus /metrics + 登录计数业务指标）
+- [x] 后台权限闭环（角色管理 CRUD + 权限点分配，role:_；菜单与权限同一张表：me 下发菜单树 + 侧栏动态渲染 + 菜单管理页 menu:_）
+- [x] Git 工程规范（husky + commitlint + lint-staged）
+- [x] 部署资产（Dockerfile + nginx + docker-compose dev/prod + k8s manifests）
+- [x] CI/CD 全链路（audit + Trivy 扫描 + GHCR release + SSH 部署回滚 + docs Pages）
+- [x] 后端基础设施增强（业务指标收集器、定时清理任务、GraphQL DataLoader、BigInt Scalar、短信/邮件可插拔抽象）
+- [x] 测试补强（server 66 + admin 13 + e2e，覆盖 metrics/tasks/dataloader/通知/配置/仪表盘等）
+- [x] 文档体系（架构图 + 开发文档 16 篇 + 用户指南 9 篇 + ERD）
