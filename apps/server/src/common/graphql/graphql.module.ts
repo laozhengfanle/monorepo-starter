@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { GraphQLModule as NestGraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, type ApolloDriverConfig } from '@nestjs/apollo';
 import { unwrapResolverError } from '@apollo/server/errors';
+import depthLimit from 'graphql-depth-limit';
 import type { Request, Response } from 'express';
 import { join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -9,7 +10,6 @@ import {
   buildDataLoaders,
   type DataLoaders,
 } from '../dataloader/dataloader.factory.js';
-import { BigIntScalar } from './bigint.scalar.js';
 import { JsonScalar } from './json.scalar.js';
 
 /**
@@ -23,12 +23,23 @@ export interface GraphQLContext {
 }
 
 /**
+ * GraphQL 查询深度上限：防止 AdminMenuNode.children 等自引用字段
+ * 被递归展开构造深查询造成 DoS（深度炸弹）。
+ * - 10 层足够覆盖菜单树等常规嵌套（一般 2~3 层），且能阻断恶意递归
+ * - 由 graphql-depth-limit 在验证阶段拦截（validationRules），
+ *   超限请求在到达 resolver 前即被拒绝
+ */
+const QUERY_MAX_DEPTH = 10;
+
+/**
  * GraphQL 模块（应用级，Code-First 模式）。
  *
  * 挂载 Apollo Server 驱动 + 自动生成 schema.gql + 统一错误映射。
  * - DataLoader：每请求注入 dataloaders（菜单树/角色码批量查询，修复 N+1）
- * - 自定义 Scalar：JSON + BigInt
- * - 安全规则（深度/复杂度限制）在后续阶段接入。
+ * - 自定义 Scalar：JSON
+ * - 安全规则：validationRules 注入深度限制（QUERY_MAX_DEPTH），
+ *   复杂度（query cost）限制暂未接入——当前 schema 无高开销计算字段，
+ *   且深度限制已覆盖自引用递归 DoS；后续如需可加 @graphql-query-complexity 插件。
  */
 @Module({
   imports: [
@@ -38,6 +49,9 @@ export interface GraphQLContext {
         // 自动生成 schema.gql，便于 review 完整 schema（生成物，勿手改）
         autoSchemaFile: join(process.cwd(), 'graphql/schema.gql'),
         sortSchema: true,
+        // 深度限制：递归自引用字段（AdminMenuNode.children）的最大查询深度，
+        // 超限请求在验证阶段被拒（防递归炸弹 DoS）
+        validationRules: [depthLimit(QUERY_MAX_DEPTH)],
         // 生产关闭内省；playground 用 Apollo Sandbox（dev 通过 /graphql 访问）
         introspection: process.env.NODE_ENV !== 'production',
         playground: false,
@@ -84,6 +98,6 @@ export interface GraphQLContext {
       inject: [PrismaService],
     }),
   ],
-  providers: [JsonScalar, BigIntScalar],
+  providers: [JsonScalar],
 })
 export class GraphQLModule {}

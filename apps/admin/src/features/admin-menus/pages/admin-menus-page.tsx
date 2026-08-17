@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import {  App,
+import {
+  App,
   Button,
   Card,
   Checkbox,
@@ -19,7 +20,6 @@ import {  App,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import type { MessageInstance } from 'antd/es/message/interface';
 import {
   DeliveredProcedureOutlined,
   FileExcelOutlined,
@@ -28,12 +28,16 @@ import {
   PlusOutlined,
   RedoOutlined,
 } from '@ant-design/icons';
-import { ApolloError } from '@apollo/client';
 import { CreateMenuSchema, UpdateMenuSchema } from '@starter/api-client';
 
 import type { MenuType } from '@starter/api-client';
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
+import {
+  applyZodErrors,
+  showMutationError,
+} from '../../../shared/utils/form-errors.js';
+import { ICON_OPTIONS } from '../../../shared/utils/menu-icons.js';
 import { useAuth } from '../../../app/auth/auth-context.js';
 import {
   useMenuTreeQuery,
@@ -41,7 +45,10 @@ import {
   useUpdateMenuMutation,
   useDeleteMenuMutation,
 } from '../../../generated/graphql';
-import type { CreateMenuInput, UpdateMenuInput } from '../../../generated/graphql';
+import type {
+  CreateMenuInput,
+  UpdateMenuInput,
+} from '../../../generated/graphql';
 
 const TYPE_LABELS: Record<string, string> = {
   directory: '目录',
@@ -79,56 +86,22 @@ interface MenuRowItem {
   children?: MenuRowItem[];
 }
 
-/** 预设图标（与侧栏 ICON_MAP 保持一致） */
-const ICON_OPTIONS = [
-  { value: 'TeamOutlined', label: 'TeamOutlined（团队）' },
-  { value: 'UserOutlined', label: 'UserOutlined（用户）' },
-  { value: 'SafetyOutlined', label: 'SafetyOutlined（安全）' },
-  { value: 'MenuOutlined', label: 'MenuOutlined（菜单）' },
-  { value: 'SettingOutlined', label: 'SettingOutlined（设置）' },
-  { value: 'DashboardOutlined', label: 'DashboardOutlined（仪表盘）' },
-  { value: 'FileOutlined', label: 'FileOutlined（文件）' },
-  { value: 'AppstoreOutlined', label: 'AppstoreOutlined（应用）' },
-  { value: 'DeleteOutlined', label: 'DeleteOutlined（删除）' },
-  { value: 'GlobalOutlined', label: 'GlobalOutlined（全局）' },
-  { value: 'FileTextOutlined', label: 'FileTextOutlined（文本）' },
-  { value: 'FolderOutlined', label: 'FolderOutlined（文件夹）' },
-  { value: 'ThunderboltOutlined', label: 'ThunderboltOutlined（闪电）' },
-  { value: 'SafetyCertificateOutlined', label: 'SafetyCertificateOutlined（证书）' },
-  { value: 'BookOutlined', label: 'BookOutlined（书本）' },
-];
-
-/** GraphQL 错误 → 用户提示 */
-function showMutationError(message: MessageInstance, error: unknown): void {
-  if (error instanceof ApolloError) {
-    void message.error(error.graphQLErrors[0]?.message ?? '操作失败，请稍后重试');
-    return;
-  }
-  void message.error('操作失败，请稍后重试');
-}
-
-/** 把 zod 校验失败映射为 antd 表单字段错误 */
-function applyZodErrors(
-  form: ReturnType<typeof Form.useForm>[0],
-  result: { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } }
-): void {
-  form.setFields(
-    result.error.issues.map((issue) => ({
-      name: issue.path.map(String),
-      errors: [issue.message],
-    }))
-  );
-}
-
 /** 菜单树 → TreeSelect 数据；按 allowedTypes 过滤可选的父节点（祖先链保留但禁用） */
 function toTreeSelectData(
   nodes: MenuRowItem[],
   allowedTypes: MenuType[] | null,
-): { value: string; title: string; disabled?: boolean; children: ReturnType<typeof toTreeSelectData> }[] {
+): {
+  value: string;
+  title: string;
+  disabled?: boolean;
+  children: ReturnType<typeof toTreeSelectData>;
+}[] {
   return nodes
     .map((n) => {
       const children = toTreeSelectData(n.children ?? [], allowedTypes);
-      const selfMatch = allowedTypes ? allowedTypes.includes(n.type as MenuType) : true;
+      const selfMatch = allowedTypes
+        ? allowedTypes.includes(n.type as MenuType)
+        : true;
       // 自身不匹配但存在匹配后代时：保留为禁用节点（展示层级，不可选为父）
       if (!selfMatch && children.length === 0) {
         return null;
@@ -152,7 +125,18 @@ export function AdminMenusPage(): React.JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
-    () => new Set(['name', 'code', 'type', 'path', 'icon', 'sort', 'enabled', 'visible', 'actions']),
+    () =>
+      new Set([
+        'name',
+        'code',
+        'type',
+        'path',
+        'icon',
+        'sort',
+        'enabled',
+        'visible',
+        'actions',
+      ]),
   );
   const [form] = Form.useForm();
   const menuType = Form.useWatch('type', form) as MenuType | undefined;
@@ -186,7 +170,9 @@ export function AdminMenusPage(): React.JSX.Element {
   }, [tree]);
 
   // 数据异步加载后默认全展开（defaultExpandAllRows 只对首次渲染生效）
-  const [expandedKeys, setExpandedKeys] = useState<string[] | undefined>(undefined);
+  const [expandedKeys, setExpandedKeys] = useState<string[] | undefined>(
+    undefined,
+  );
   useEffect(() => {
     if (tree.length > 0 && expandedKeys === undefined) {
       setExpandedKeys(collectParentIds(tree));
@@ -194,7 +180,9 @@ export function AdminMenusPage(): React.JSX.Element {
   }, [tree, expandedKeys]);
 
   // TreeSelect 展开态（异步数据下 treeDefaultExpandAll 不生效，改为受控）
-  const [treeExpandedKeys, setTreeExpandedKeys] = useState<(string | number)[]>([]);
+  const [treeExpandedKeys, setTreeExpandedKeys] = useState<(string | number)[]>(
+    [],
+  );
 
   const refreshList = async (): Promise<void> => {
     await refetch();
@@ -203,7 +191,12 @@ export function AdminMenusPage(): React.JSX.Element {
   const openCreate = (): void => {
     setEditingId(null);
     form.resetFields();
-    form.setFieldsValue({ type: 'menu', sort: 1, enabled: true, visible: true });
+    form.setFieldsValue({
+      type: 'menu',
+      sort: 1,
+      enabled: true,
+      visible: true,
+    });
     setTreeExpandedKeys(collectParentIds(tree));
     setModalOpen(true);
   };
@@ -240,7 +233,10 @@ export function AdminMenusPage(): React.JSX.Element {
         void message.success('创建成功');
       } else {
         await updateMenu({
-          variables: { id: editingId, input: parsed.data as unknown as UpdateMenuInput },
+          variables: {
+            id: editingId,
+            input: parsed.data as unknown as UpdateMenuInput,
+          },
         });
         void message.success('更新成功');
       }
@@ -282,12 +278,23 @@ export function AdminMenusPage(): React.JSX.Element {
       key: 'type',
       width: 80,
       render: (type: string) => {
-        const color = type === 'directory' ? 'gold' : type === 'menu' ? 'blue' : 'default';
+        const color =
+          type === 'directory' ? 'gold' : type === 'menu' ? 'blue' : 'default';
         return <Tag color={color}>{TYPE_LABELS[type] ?? type}</Tag>;
       },
     },
-    { title: '路由', dataIndex: 'path', key: 'path', render: (p: string | null) => p ?? '-' },
-    { title: '图标', dataIndex: 'icon', key: 'icon', render: (i: string | null) => i ?? '-' },
+    {
+      title: '路由',
+      dataIndex: 'path',
+      key: 'path',
+      render: (p: string | null) => p ?? '-',
+    },
+    {
+      title: '图标',
+      dataIndex: 'icon',
+      key: 'icon',
+      render: (i: string | null) => i ?? '-',
+    },
     { title: '排序', dataIndex: 'sort', key: 'sort', width: 70 },
     {
       title: '启用',
@@ -319,12 +326,14 @@ export function AdminMenusPage(): React.JSX.Element {
               title="确认删除该菜单/权限点？角色将同时失去该权限"
               onConfirm={() => handleRemove(node.id)}
             >
-              <Button type="link" size="small" danger>
+              <Button color="danger" variant="link" size="small">
                 删除
               </Button>
             </Popconfirm>
           )}
-          {!canUpdate && !canDelete && <Typography.Text type="secondary">无权限</Typography.Text>}
+          {!canUpdate && !canDelete && (
+            <Typography.Text type="secondary">无权限</Typography.Text>
+          )}
         </Space>
       ),
     },
@@ -365,7 +374,10 @@ export function AdminMenusPage(): React.JSX.Element {
   const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
 
   // 树形数据扁平化（导出用）
-  const flattenTree = (nodes: MenuRowItem[], acc: MenuRowItem[] = []): MenuRowItem[] => {
+  const flattenTree = (
+    nodes: MenuRowItem[],
+    acc: MenuRowItem[] = [],
+  ): MenuRowItem[] => {
     for (const n of nodes) {
       acc.push(n);
       if (n.children?.length) flattenTree(n.children, acc);
@@ -374,7 +386,9 @@ export function AdminMenusPage(): React.JSX.Element {
   };
 
   const handleExport = (format: 'excel' | 'csv'): void => {
-    const exportCols = fullColumns.filter((c) => visibleKeys.has(c.key as string) && c.key !== 'actions');
+    const exportCols = fullColumns.filter(
+      (c) => visibleKeys.has(c.key as string) && c.key !== 'actions',
+    );
     const header = exportCols.map((c) => String(c.title));
     const rows: (string | number | boolean | null | undefined)[][] = [
       header,
@@ -383,7 +397,8 @@ export function AdminMenusPage(): React.JSX.Element {
           if (c.key === 'enabled') return n.enabled ? '正常' : '禁用';
           if (c.key === 'visible') return n.visible ? '显示' : '隐藏';
           if (c.key === 'type') return TYPE_LABELS[n.type] ?? n.type;
-          const dataIdx = (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
+          const dataIdx =
+            (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
           const v = (n as unknown as Record<string, unknown>)[dataIdx];
           return (v as string | number | boolean | null | undefined) ?? '';
         }),
@@ -391,9 +406,17 @@ export function AdminMenusPage(): React.JSX.Element {
     ];
     const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
     if (format === 'excel') {
-      downloadBlob(toExcel(rows), `菜单管理_${ts}.xls`, 'application/vnd.ms-excel;charset=utf-8;');
+      downloadBlob(
+        toExcel(rows),
+        `菜单管理_${ts}.xls`,
+        'application/vnd.ms-excel;charset=utf-8;',
+      );
     } else {
-      downloadBlob(toCSV(rows), `菜单管理_${ts}.csv`, 'text/csv;charset=utf-8;');
+      downloadBlob(
+        toCSV(rows),
+        `菜单管理_${ts}.csv`,
+        'text/csv;charset=utf-8;',
+      );
     }
     void message.success(`已导出 ${flattenTree(tree).length} 条`);
   };
@@ -405,14 +428,21 @@ export function AdminMenusPage(): React.JSX.Element {
         extra={
           <Space size="small">
             {canCreate && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openCreate}
+              >
                 新建菜单
               </Button>
             )}
             <Dropdown
               trigger={['click']}
               arrow
-              menu={{ items: columnMenuItems, onClick: (info) => info.domEvent.stopPropagation() }}
+              menu={{
+                items: columnMenuItems,
+                onClick: (info) => info.domEvent.stopPropagation(),
+              }}
             >
               <Button icon={<FilterOutlined />} aria-label="列控制" />
             </Dropdown>
@@ -421,7 +451,11 @@ export function AdminMenusPage(): React.JSX.Element {
               arrow
               menu={{
                 items: [
-                  { key: 'excel', label: '导出 Excel', icon: <FileExcelOutlined /> },
+                  {
+                    key: 'excel',
+                    label: '导出 Excel',
+                    icon: <FileExcelOutlined />,
+                  },
                   { key: 'csv', label: '导出 CSV', icon: <FileTextOutlined /> },
                 ],
                 onClick: ({ key }) => handleExport(key as 'excel' | 'csv'),
@@ -429,22 +463,26 @@ export function AdminMenusPage(): React.JSX.Element {
             >
               <Button icon={<DeliveredProcedureOutlined />} aria-label="导出" />
             </Dropdown>
-            <Button icon={<RedoOutlined />} onClick={() => void refreshList()} aria-label="刷新" />
+            <Button
+              icon={<RedoOutlined />}
+              onClick={() => void refreshList()}
+              aria-label="刷新"
+            />
           </Space>
         }
       >
-      <Table<MenuRowItem>
-        rowKey="id"
-        columns={columns}
-        dataSource={tableData}
-        loading={loading}
-        locale={{ emptyText: '暂无数据' }}
-        pagination={false}
-        expandable={{
-          expandedRowKeys: expandedKeys,
-          onExpandedRowsChange: (keys) => setExpandedKeys(keys as string[]),
-        }}
-      />
+        <Table<MenuRowItem>
+          rowKey="id"
+          columns={columns}
+          dataSource={tableData}
+          loading={loading}
+          locale={{ emptyText: '暂无数据' }}
+          pagination={false}
+          expandable={{
+            expandedRowKeys: expandedKeys,
+            onExpandedRowsChange: (keys) => setExpandedKeys(keys as string[]),
+          }}
+        />
       </Card>
 
       <Modal
@@ -463,14 +501,20 @@ export function AdminMenusPage(): React.JSX.Element {
               placeholder="不选则为顶级（目录）"
               allowClear
               treeExpandedKeys={treeExpandedKeys}
-              onTreeExpand={(keys) => setTreeExpandedKeys(keys as (string | number)[])}
+              onTreeExpand={(keys) =>
+                setTreeExpandedKeys(keys as (string | number)[])
+              }
             />
           </Form.Item>
           <Form.Item label="名称" name="name">
             <Input placeholder="如：报表中心" />
           </Form.Item>
           {editingId === null && (
-            <Form.Item label="编码" name="code" extra="按钮即权限点编码，如 report:list">
+            <Form.Item
+              label="编码"
+              name="code"
+              extra="按钮即权限点编码，如 report:list"
+            >
               <Input placeholder="小写字母开头，如 report:list" />
             </Form.Item>
           )}
@@ -485,13 +529,21 @@ export function AdminMenusPage(): React.JSX.Element {
             />
           </Form.Item>
           {menuType === 'menu' && (
-            <Form.Item label="路由" name="path" extra="前端页面路径，如 /admin/reports">
+            <Form.Item
+              label="路由"
+              name="path"
+              extra="前端页面路径，如 /admin/reports"
+            >
               <Input placeholder="/admin/reports" />
             </Form.Item>
           )}
           {menuType !== 'button' && (
             <Form.Item label="图标" name="icon">
-              <Select options={ICON_OPTIONS} placeholder="选择侧栏图标（可选）" allowClear />
+              <Select
+                options={ICON_OPTIONS}
+                placeholder="选择侧栏图标（可选）"
+                allowClear
+              />
             </Form.Item>
           )}
           <Form.Item label="排序" name="sort">

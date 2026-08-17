@@ -10,10 +10,13 @@ import { useSystemConfig } from '../../../app/providers/system-config-provider.j
 import { TurnstileWidget } from '../../../shared/components/turnstile-widget.js';
 import heroPng from '../../../assets/hero.png';
 
-/** 开发测试账号（点击快速填充） */
-const TEST_ACCOUNTS = [
-  { label: '超级管理员', username: 'root', password: 'Root!123' },
-];
+/**
+ * 开发测试账号（点击快速填充）。
+ * 仅开发构建渲染（import.meta.env.DEV），生产 bundle 不包含任何明文凭据。
+ */
+const TEST_ACCOUNTS = import.meta.env.DEV
+  ? [{ label: '超级管理员', username: 'root', password: 'Root!123' }]
+  : [];
 
 /**
  * 登录页（对标 antd-admin LoginPage）：
@@ -23,7 +26,7 @@ export function LoginPage(): React.JSX.Element {
   const { login } = useAuth();
   const { token } = antdTheme.useToken();
   const { resolved: themeIsDark } = useTheme();
-  const { message, notification } = App.useApp();
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -34,9 +37,14 @@ export function LoginPage(): React.JSX.Element {
   // ref 读写同步，入口处检查彻底杜绝竞态
   const submittingRef = useRef(false);
 
-  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
+  const from =
+    (location.state as { from?: { pathname: string } } | null)?.from
+      ?.pathname ?? '/';
 
-  const handleSubmit = async (values: { username: string; password: string }): Promise<void> => {
+  const handleSubmit = async (values: {
+    username: string;
+    password: string;
+  }): Promise<void> => {
     if (submittingRef.current) {
       return;
     }
@@ -54,20 +62,28 @@ export function LoginPage(): React.JSX.Element {
     setLoading(true);
     let loggedIn = false;
     try {
-      await login(parsed.data.username, parsed.data.password, turnstileToken || undefined);
+      await login(
+        parsed.data.username,
+        parsed.data.password,
+        turnstileToken || undefined,
+      );
       loggedIn = true;
-      notification.success({
-        title: '登录成功',
-        description: `欢迎回来，${parsed.data.username}`,
-      });
+      void message.success(`登录成功，欢迎回来，${parsed.data.username}`);
       navigate(from, { replace: true });
     } catch (err) {
       // 解析后端 envelope：error.details.remainingAttempts（登录失败剩余次数）
-      const errorData = (err as {
-        response?: { data?: { error?: { message?: string; details?: Record<string, string[]> } } };
-      }).response?.data?.error;
+      const errorData = (
+        err as {
+          response?: {
+            data?: {
+              error?: { message?: string; details?: Record<string, string[]> };
+            };
+          };
+        }
+      ).response?.data?.error;
       const remainingRaw = errorData?.details?.remainingAttempts?.[0];
-      const remaining = remainingRaw !== undefined ? Number(remainingRaw) : null;
+      const remaining =
+        remainingRaw !== undefined ? Number(remainingRaw) : null;
       if (remaining !== null && Number.isFinite(remaining)) {
         if (remaining <= 0) {
           void message.error('登录失败次数过多，账号已锁定，请稍后再试');
@@ -187,15 +203,23 @@ export function LoginPage(): React.JSX.Element {
 
         {/* 散落的小元素（4 个尺寸档 × 多种动画） */}
         <div className="bg-deco" aria-hidden>
-          <span className="d d-1" /><span className="d d-2" />
-          <span className="d d-3" /><span className="d d-4" />
-          <span className="d d-5" /><span className="d d-6" />
-          <span className="d d-7" /><span className="d d-8" />
-          <span className="d d-9"  /><span className="d d-10" />
-          <span className="d d-11" /><span className="d d-12" />
-          <span className="d d-13" /><span className="d d-14" />
+          <span className="d d-1" />
+          <span className="d d-2" />
+          <span className="d d-3" />
+          <span className="d d-4" />
+          <span className="d d-5" />
+          <span className="d d-6" />
+          <span className="d d-7" />
+          <span className="d d-8" />
+          <span className="d d-9" />
+          <span className="d d-10" />
+          <span className="d d-11" />
+          <span className="d d-12" />
+          <span className="d d-13" />
+          <span className="d d-14" />
           <span className="d d-15" />
-          <span className="d d-16" /><span className="d d-17" />
+          <span className="d d-16" />
+          <span className="d d-17" />
         </div>
 
         {/* 居中登录卡片 */}
@@ -209,35 +233,54 @@ export function LoginPage(): React.JSX.Element {
             styles={{ body: { padding: 40 } }}
           >
             <div className="text-center" style={{ marginBottom: 32 }}>
-              <img src={settings.logo || heroPng} alt="logo" style={{ height: 56, margin: '0 auto 16px' }} />
-              <h1 className="m-0" style={{ fontSize: 22, fontWeight: 600, color: token.colorTextHeading }}>
+              <img
+                src={settings.logo || heroPng}
+                alt="logo"
+                style={{ height: 56, margin: '0 auto 16px' }}
+              />
+              <h1
+                className="m-0"
+                style={{
+                  fontSize: 22,
+                  fontWeight: 600,
+                  color: token.colorTextHeading,
+                }}
+              >
                 {settings.name || 'monorepo-starter'}
               </h1>
-              <p className="m-0" style={{ marginTop: 8, fontSize: 14, color: token.colorTextSecondary }}>
+              <p
+                className="m-0"
+                style={{
+                  marginTop: 8,
+                  fontSize: 14,
+                  color: token.colorTextSecondary,
+                }}
+              >
                 企业级后台管理系统
               </p>
             </div>
 
-            <Form
-              form={form}
-              onFinish={handleSubmit}
-              size="large"
-              initialValues={{ username: 'root', password: 'Root!123' }}
-            >
-              <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+            <Form form={form} onFinish={handleSubmit} size="large">
+              <Form.Item
+                name="username"
+                rules={[{ required: true, message: '请输入用户名' }]}
+              >
                 <Input
                   allowClear
                   prefix={<UserOutlined />}
-                  placeholder="用户名"
+                  placeholder="请输入用户名"
                   autoComplete="username"
                   style={{ width: '100%' }}
                 />
               </Form.Item>
-              <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: '请输入密码' }]}
+              >
                 <Input.Password
                   allowClear
                   prefix={<LockOutlined />}
-                  placeholder="密码"
+                  placeholder="请输入密码"
                   autoComplete="current-password"
                   style={{ width: '100%' }}
                 />
@@ -252,56 +295,66 @@ export function LoginPage(): React.JSX.Element {
                 </Form.Item>
               )}
               <Form.Item style={{ marginBottom: 12 }}>
-                <Button type="primary" htmlType="submit" block loading={loading}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  loading={loading}
+                >
                   登 录
                 </Button>
               </Form.Item>
             </Form>
 
-            {/* 测试账号提示 */}
-            <div
-              style={{
-                marginTop: 8,
-                padding: 12,
-                background: token.colorFillAlter,
-                border: `1px solid ${token.colorBorderSecondary}`,
-                borderRadius: token.borderRadius,
-              }}
-            >
+            {/* 开发测试账号提示（仅开发构建渲染，生产不出现） */}
+            {import.meta.env.DEV && TEST_ACCOUNTS.length > 0 && (
               <div
                 style={{
-                  fontSize: 12,
-                  color: token.colorTextSecondary,
-                  marginBottom: 8,
-                  fontWeight: 500,
+                  marginTop: 8,
+                  padding: 12,
+                  background: token.colorFillAlter,
+                  border: `1px solid ${token.colorBorderSecondary}`,
+                  borderRadius: token.borderRadius,
                 }}
               >
-                开发测试账号（点击快速填充）
-              </div>
-              {TEST_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.username}
-                  type="button"
-                  onClick={() => fillTestAccount(acc.username, acc.password)}
+                <div
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    width: '100%',
                     fontSize: 12,
-                    color: token.colorText,
-                    padding: '4px 0',
-                    cursor: 'pointer',
-                    background: 'none',
-                    border: 'none',
-                    textAlign: 'left',
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    color: token.colorTextSecondary,
+                    marginBottom: 8,
+                    fontWeight: 500,
                   }}
                 >
-                  <span>{acc.label}</span>
-                  <span>{acc.username} / {acc.password}</span>
-                </button>
-              ))}
-            </div>
+                  开发测试账号（点击快速填充）
+                </div>
+                {TEST_ACCOUNTS.map((acc) => (
+                  <button
+                    key={acc.username}
+                    type="button"
+                    onClick={() => fillTestAccount(acc.username, acc.password)}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      fontSize: 12,
+                      color: token.colorText,
+                      padding: '4px 0',
+                      cursor: 'pointer',
+                      background: 'none',
+                      border: 'none',
+                      textAlign: 'left',
+                      fontFamily:
+                        'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    }}
+                  >
+                    <span>{acc.label}</span>
+                    <span>
+                      {acc.username} / {acc.password}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       </div>

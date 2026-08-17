@@ -26,6 +26,17 @@ describe('toCSV', () => {
     const csv = toCSV([[123456789]]);
     expect(csv).toContain('\t123456789');
   });
+
+  it('公式注入前缀 = + - @ 加单引号防护', () => {
+    const csv = toCSV([['=SUM(A1:A2)', '+1+1', '-2+3', '@cmd', '正常文本']]);
+    // guardFormula 只加单引号前缀；值含逗号/引号/换行时才额外包引号
+    expect(csv).toBe("'=SUM(A1:A2),'+1+1,'-2+3,'@cmd,正常文本");
+  });
+
+  it('制表符/回车开头同样加单引号防护', () => {
+    // guard 后 '\r\n' 含换行 → 额外包引号；\t 是真实制表符
+    expect(toCSV([['\t5', '\r\n']])).toBe('\'\t5,"\'\r\n"');
+  });
 });
 
 describe('toExcel', () => {
@@ -49,5 +60,16 @@ describe('toExcel', () => {
 
     expect(excel).not.toContain('<script>');
     expect(excel).toContain('&lt;script&gt;');
+  });
+
+  it('公式注入前缀 = + - @ 加单引号防护', () => {
+    // toExcel：首行是 thead（<th>），数据行才是 <td>
+    const excel = toExcel([['col'], ['=1+1', '+cmd', '-2', '@import']]);
+
+    expect(excel).toContain("<td>'=1+1</td>");
+    expect(excel).toContain("'+cmd");
+    expect(excel).toContain("'-2");
+    expect(excel).toContain("'@import");
+    expect(excel).not.toContain('<td>=1+1</td>');
   });
 });

@@ -1,33 +1,25 @@
-import { Button, Dropdown, Layout, Space, theme as antdTheme } from 'antd';
-import { ExpandOutlined, LaptopOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+import { Button, Layout, Space, theme as antdTheme } from 'antd';
+import { ExpandOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
-import { useTheme } from '../../app/providers/theme-provider.js';
 import { useSystemConfig } from '../../app/providers/system-config-provider.js';
 import { APP_VERSION } from '../../app/version.js';
+import { ThemeToggle } from '../../shared/components/theme-toggle.js';
+import { HealthStatus } from '../health/health-status.js';
 import heroPng from '../../assets/hero.png';
 
 const { Header, Footer, Content } = Layout;
-
-const themeIconMap: Record<'system' | 'light' | 'dark', ReactNode> = {
-  system: <LaptopOutlined />,
-  light: <SunOutlined />,
-  dark: <MoonOutlined />,
-};
 
 /**
  * 登录页布局（对标 antd-admin LoginLayout）：
  * 透明 Header（品牌 + 主题切换）+ 内容区 + Footer，背景走 token。
  */
-export function LoginLayout({ children }: { children: ReactNode }): React.JSX.Element {
+export function LoginLayout({
+  children,
+}: {
+  children: ReactNode;
+}): React.JSX.Element {
   const { token } = antdTheme.useToken();
-  const { mode, setMode } = useTheme();
   const { settings } = useSystemConfig();
-
-  const themeMenuItems = [
-    { key: 'system', icon: <LaptopOutlined />, label: '跟随系统' },
-    { key: 'light', icon: <SunOutlined />, label: '亮色' },
-    { key: 'dark', icon: <MoonOutlined />, label: '暗色' },
-  ];
 
   return (
     <Layout style={{ minHeight: '100vh', background: token.colorBgLayout }}>
@@ -41,21 +33,13 @@ export function LoginLayout({ children }: { children: ReactNode }): React.JSX.El
       >
         <div className="flex items-center gap-2">
           <img src={settings.logo || heroPng} alt="logo" className="h-8" />
-          <span className="text-lg font-semibold">{settings.name || 'monorepo-starter'}</span>
+          <span className="text-lg font-semibold">
+            {settings.name || 'monorepo-starter'}
+          </span>
         </div>
 
         <Space>
-          <Dropdown
-            trigger={['hover']}
-            arrow
-            placement="bottomRight"
-            menu={{
-              items: themeMenuItems,
-              onClick: ({ key }) => setMode(key as 'system' | 'light' | 'dark'),
-            }}
-          >
-            <Button icon={themeIconMap[mode]} aria-label="主题切换" />
-          </Dropdown>
+          <ThemeToggle />
           <Button icon={<ExpandOutlined />} aria-label="全屏" />
         </Space>
       </Header>
@@ -72,10 +56,26 @@ export function LoginLayout({ children }: { children: ReactNode }): React.JSX.El
         style={{
           background: 'transparent',
           color: token.colorTextSecondary,
+          fontSize: 13,
           padding: `${token.paddingSM}px ${token.paddingLG}px`,
         }}
       >
-        {settings.footerText || `monorepo-starter v${APP_VERSION} ©${new Date().getFullYear()} zhengbo`}
+        <Space
+          separator={<span style={{ color: token.colorTextTertiary }}>·</span>}
+          wrap
+          size={4}
+        >
+          <span>{settings.name || 'monorepo-starter'}</span>
+          <span>v{APP_VERSION}</span>
+          {settings.footerText && <span>{settings.footerText}</span>}
+          {!(settings.footerText ?? '').includes('©') && (
+            <span>© {new Date().getFullYear()} zhengbo</span>
+          )}
+        </Space>
+        {/* 后端健康状态（登录页可见，便于部署后自检） */}
+        <div style={{ marginTop: 8 }}>
+          <HealthStatus />
+        </div>
       </Footer>
     </Layout>
   );

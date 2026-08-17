@@ -1,22 +1,22 @@
 /** access token 存储 key */
 const ACCESS_TOKEN_KEY = 'admin_access_token';
-/** refresh token 存储 key（阶段 3 简化：localStorage；后续可改 httpOnly cookie） */
-const REFRESH_TOKEN_KEY = 'admin_refresh_token';
+/**
+ * 旧版 refresh token 存储 key（历史遗留）。
+ * 当前无刷新流程消费 refresh token，纯增 XSS 暴露面，已不再写入；
+ * clear() 时顺带清理旧值，避免跨账号残留。
+ */
+const LEGACY_REFRESH_TOKEN_KEY = 'admin_refresh_token';
 
-/** token 存取：登录状态持久化 */
+/** token 存取：登录状态持久化（仅存 access token） */
 export const authStorage = {
   getAccessToken(): string | null {
     return localStorage.getItem(ACCESS_TOKEN_KEY);
   },
-  getRefreshToken(): string | null {
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
-  },
-  setTokens(accessToken: string, refreshToken: string): void {
+  setAccessToken(accessToken: string): void {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   },
   clear(): void {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
   },
 };

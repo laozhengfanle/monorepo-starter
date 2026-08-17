@@ -55,14 +55,20 @@ export class FileManagerService {
     if (!query.includeDeleted) {
       where.deletedAt = null;
     }
-    const [rows, total] = await this.prisma.client.$transaction([
-      this.prisma.client.uploadFile.findMany({
+    // UploadFile 已在 SOFT_DELETE_MODELS：client 会自动过滤 deletedAt=null；
+    // includeDeleted=true 需绕过扩展（否则 where 为空时扩展会强制补 deletedAt=null），
+    // 用 rawClient（仅 UUID 注入、无软删过滤）查询含已删行。
+    const db = query.includeDeleted
+      ? this.prisma.rawClient
+      : this.prisma.client;
+    const [rows, total] = await db.$transaction([
+      db.uploadFile.findMany({
         where,
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.client.uploadFile.count({ where }),
+      db.uploadFile.count({ where }),
     ]);
     return {
       items: rows.map(toFile),
@@ -74,7 +80,9 @@ export class FileManagerService {
 
   /** 软删文件：物理文件交给驱动删除（默认本地 unlink），元数据置 deletedAt */
   async remove(id: string, operatorId: string): Promise<UploadFile> {
-    const file = await this.prisma.client.uploadFile.findUnique({ where: { id } });
+    const file = await this.prisma.client.uploadFile.findUnique({
+      where: { id },
+    });
     if (!file || file.deletedAt) {
       throw new BizException({ code: 'FILE_NOT_FOUND', message: '文件不存在' });
     }

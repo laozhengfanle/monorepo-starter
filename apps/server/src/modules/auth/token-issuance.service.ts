@@ -2,7 +2,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { CACHE_SERVICE_TOKEN, type ICacheService } from '../../common/cache/cache.interface.js';
+import {
+  CACHE_SERVICE_TOKEN,
+  type ICacheService,
+} from '../../common/cache/cache.interface.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AuditService, AUDIT_ACTIONS } from './audit.service.js';
 import { TokenBlacklistService } from './token-blacklist.service.js';
@@ -42,7 +45,10 @@ export class TokenIssuanceService {
     private readonly audit: AuditService,
   ) {}
 
-  async issueTokens(accountId: string, userType: string): Promise<IssuedTokens> {
+  async issueTokens(
+    accountId: string,
+    userType: string,
+  ): Promise<IssuedTokens> {
     const account = await this.prisma.client.account.findUnique({
       where: { id: accountId },
       select: { tokenVersion: true },
@@ -52,17 +58,28 @@ export class TokenIssuanceService {
     const payload: JwtPayload = { sub: accountId, userType, tokenVersion, jti };
 
     const accessTtl = this.configService.get<number>('JWT_ACCESS_TTL') ?? 900;
-    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: accessTtl });
-    const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: REFRESH_TTL });
+    const accessToken = await this.jwtService.signAsync(payload, {
+      expiresIn: accessTtl,
+    });
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      expiresIn: REFRESH_TTL,
+    });
 
     // refresh token 状态缓存（reuse 检测）：active 表示可用
-    await this.cache.setex(`auth:refresh:${accountId}:${this.hash(refreshToken)}`, REFRESH_TTL, 'active');
+    await this.cache.setex(
+      `auth:refresh:${accountId}:${this.hash(refreshToken)}`,
+      REFRESH_TTL,
+      'active',
+    );
 
     return { accessToken, refreshToken, expiresIn: accessTtl };
   }
 
   /** 刷新 token：校验签名 → 黑名单 → reuse 检测 → 签发新双 token（成功/重用均写审计） */
-  async refresh(oldRefreshToken: string, clientInfo?: ClientInfo): Promise<IssuedTokens> {
+  async refresh(
+    oldRefreshToken: string,
+    clientInfo?: ClientInfo,
+  ): Promise<IssuedTokens> {
     let payload: JwtPayload;
     try {
       payload = await this.jwtService.verifyAsync<JwtPayload>(oldRefreshToken);
@@ -76,10 +93,15 @@ export class TokenIssuanceService {
     if (await this.tokenBlacklist.isRevoked(payload.jti, payload.sub)) {
       throw new UnauthorizedException('Refresh Token 已撤销');
     }
-    // reuse 检测：refresh token 只能使用一次
-    const state = await this.cache.get<string>(`auth:refresh:${payload.sub}:${this.hash(oldRefreshToken)}`);
-    if (state !== 'active') {
-      // token 已被使用或不存在 → 疑似重用，先审计后撤销账号所有 token
+    // reuse 检测：SET NX 原子认领 —— 仅当 key 不存在（从未使用过）时认领成功并标记为 used；
+    // 并发刷新时只有一个请求能认领成功，其余视为重用，杜绝 get→set 两步竞态导致的双签
+    const claimed = await this.cache.setnx(
+      `auth:refresh:${payload.sub}:${this.hash(oldRefreshToken)}`,
+      'used',
+      REFRESH_TTL,
+    );
+    if (!claimed) {
+      // 认领失败（token 已被使用/并发重放）→ 疑似重用，先审计后撤销账号所有 token
       await this.audit.write({
         accountId: payload.sub,
         action: AUDIT_ACTIONS.TOKEN_REUSED,
@@ -90,8 +112,7 @@ export class TokenIssuanceService {
       await this.tokenBlacklist.revokeAccountTokens(payload.sub, 'token_reuse');
       throw new UnauthorizedException('Refresh Token 已被使用，请重新登录');
     }
-    // 标记为 used，再签发新双 token
-    await this.cache.setex(`auth:refresh:${payload.sub}:${this.hash(oldRefreshToken)}`, REFRESH_TTL, 'used');
+    // 认领成功：签发新双 token
     const tokens = await this.issueTokens(payload.sub, payload.userType);
     await this.audit.write({
       accountId: payload.sub,

@@ -17,11 +17,9 @@ import {
   ArrowUpOutlined,
   BarChartOutlined,
   DesktopOutlined,
-  FileTextOutlined,
   GlobalOutlined,
   SafetyCertificateOutlined,
   ScheduleOutlined,
-  SettingOutlined,
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -29,13 +27,17 @@ import type { ColumnsType } from 'antd/es/table';
 import type { AdminMenuNode } from '@starter/api-client';
 import { useAuth } from '../../../app/auth/auth-context.js';
 import { usePermission } from '../../../app/auth/use-permission.js';
+import { getMenuIcon } from '../../../shared/utils/menu-icons.js';
 import {
   useDashboardDistributionQuery,
   useDashboardOperationLogsQuery,
   useDashboardStatsQuery,
   useDashboardTrendQuery,
 } from '../../../generated/graphql';
-import { EChart, type EChartsCoreOption } from '../../../shared/components/echart';
+import {
+  EChart,
+  type EChartsCoreOption,
+} from '../../../shared/components/echart';
 
 /** 风险等级颜色（沿用 antd 色板） */
 const RISK_COLORS = {
@@ -68,18 +70,10 @@ interface OpLogRow {
   time: string;
 }
 
-/** 菜单图标名 → antd 图标（me.menus 的 icon 字段存的是菜单表里的图标名） */
-const MENU_ICONS: Record<string, React.ReactNode> = {
-  UserOutlined: <TeamOutlined />,
-  SafetyOutlined: <SafetyCertificateOutlined />,
-  SettingOutlined: <SettingOutlined />,
-  FileTextOutlined: <FileTextOutlined />,
-  BarChartOutlined: <BarChartOutlined />,
-  DatabaseOutlined: <ScheduleOutlined />,
-  CloudUploadOutlined: <ScheduleOutlined />,
-  AuditOutlined: <ScheduleOutlined />,
-  KeyOutlined: <ScheduleOutlined />,
-};
+/** 菜单图标名 → antd 图标（统一走 shared/utils/menu-icons.ts 单一来源） */
+function resolveMenuIcon(name?: string | null): React.ReactNode {
+  return getMenuIcon(name) ?? <ScheduleOutlined />;
+}
 
 /** 递归收集菜单树中所有可跳转的 menu 节点（顶层是 directory，menu 在 children 里） */
 function collectMenuNodes(
@@ -91,7 +85,7 @@ function collectMenuNodes(
       out.push({
         title: node.name,
         desc: node.path,
-        icon: node.icon ? (MENU_ICONS[node.icon] ?? <ScheduleOutlined />) : <ScheduleOutlined />,
+        icon: resolveMenuIcon(node.icon),
         route: node.path,
       });
     }
@@ -102,17 +96,32 @@ function collectMenuNodes(
 }
 
 /** 从 me.menus 派生快捷入口（递归取有 path 的 menu 节点，跟随权限裁剪） */
-function useQuickEntries(): { title: string; desc: string; icon: React.ReactNode; route: string }[] {
+function useQuickEntries(): {
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+  route: string;
+}[] {
   const { user } = useAuth();
   return useMemo(() => {
-    const entries: { title: string; desc: string; icon: React.ReactNode; route: string }[] = [];
+    const entries: {
+      title: string;
+      desc: string;
+      icon: React.ReactNode;
+      route: string;
+    }[] = [];
     collectMenuNodes(user?.menus ?? [], entries);
     return entries.slice(0, 6);
   }, [user]);
 }
 
 /** 浏览器/系统信息（纯前端 navigator 探测） */
-function useSystemInfo(): { os: string; browser: string; resolution: string; timezone: string } {
+function useSystemInfo(): {
+  os: string;
+  browser: string;
+  resolution: string;
+  timezone: string;
+} {
   return useMemo(() => {
     const ua = navigator.userAgent;
     let os = '未知系统';
@@ -152,7 +161,11 @@ export function DashboardPage(): React.JSX.Element {
     variables: { range },
   });
   const { data: distData } = useDashboardDistributionQuery({ skip: !canAudit });
-  const { data: opData, loading: opLoading, refetch } = useDashboardOperationLogsQuery({
+  const {
+    data: opData,
+    loading: opLoading,
+    refetch,
+  } = useDashboardOperationLogsQuery({
     variables: { page: 1, pageSize: 10 },
     skip: !canAudit,
   });
@@ -160,15 +173,39 @@ export function DashboardPage(): React.JSX.Element {
   // ── 欢迎英雄卡 ──
   const now = new Date();
   const hour = now.getHours();
-  const greeting = hour < 6 ? '夜深了' : hour < 9 ? '早上好' : hour < 12 ? '上午好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好';
-  const weekday = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][now.getDay()];
+  const greeting =
+    hour < 6
+      ? '夜深了'
+      : hour < 9
+        ? '早上好'
+        : hour < 12
+          ? '上午好'
+          : hour < 14
+            ? '中午好'
+            : hour < 18
+              ? '下午好'
+              : '晚上好';
+  const weekday = [
+    '星期日',
+    '星期一',
+    '星期二',
+    '星期三',
+    '星期四',
+    '星期五',
+    '星期六',
+  ][now.getDay()];
   const roleLabel = user?.roleCodes.includes('super_admin')
     ? '超级管理员'
     : (user?.roleCodes ?? []).join('、') || '管理员';
 
   // ── 统计卡片（含较上周趋势） ──
   const stats = statsData?.dashboardStats ?? [];
-  const statIcons = [<TeamOutlined key="a" />, <SafetyCertificateOutlined key="r" />, <ScheduleOutlined key="m" />, <BarChartOutlined key="o" />];
+  const statIcons = [
+    <TeamOutlined key="a" />,
+    <SafetyCertificateOutlined key="r" />,
+    <ScheduleOutlined key="m" />,
+    <BarChartOutlined key="o" />,
+  ];
   const statColors = ['#2080f0', '#18a058', '#f0a020', '#722ed1'];
 
   // ── 趋势折线图 ──
@@ -202,7 +239,11 @@ export function DashboardPage(): React.JSX.Element {
           smooth: 0.4,
           symbol: 'circle',
           symbolSize: 6,
-          itemStyle: { color: '#fff', borderColor: RISK_COLORS.high, borderWidth: 1.5 },
+          itemStyle: {
+            color: '#fff',
+            borderColor: RISK_COLORS.high,
+            borderWidth: 1.5,
+          },
           lineStyle: { color: RISK_COLORS.high, width: 2 },
           areaStyle: {
             color: {
@@ -225,7 +266,11 @@ export function DashboardPage(): React.JSX.Element {
           smooth: 0.4,
           symbol: 'circle',
           symbolSize: 6,
-          itemStyle: { color: '#fff', borderColor: RISK_COLORS.mid, borderWidth: 1.5 },
+          itemStyle: {
+            color: '#fff',
+            borderColor: RISK_COLORS.mid,
+            borderWidth: 1.5,
+          },
           lineStyle: { color: RISK_COLORS.mid, width: 2 },
           areaStyle: {
             color: {
@@ -248,7 +293,11 @@ export function DashboardPage(): React.JSX.Element {
           smooth: 0.4,
           symbol: 'circle',
           symbolSize: 6,
-          itemStyle: { color: '#fff', borderColor: RISK_COLORS.low, borderWidth: 1.5 },
+          itemStyle: {
+            color: '#fff',
+            borderColor: RISK_COLORS.low,
+            borderWidth: 1.5,
+          },
           lineStyle: { color: RISK_COLORS.low, width: 2 },
           areaStyle: {
             color: {
@@ -271,37 +320,51 @@ export function DashboardPage(): React.JSX.Element {
 
   // ── 分布饼图 ──
   const distItems = distData?.dashboardDistribution ?? [];
-  const distOption = useMemo<EChartsCoreOption>(() => ({
-    tooltip: {
-      trigger: 'item',
-      formatter: '{b}<br/>占比: {d}%',
-    },
-    legend: { bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8 },
-    series: [
-      {
-        name: '操作类型',
-        type: 'pie',
-        radius: ['45%', '70%'],
-        center: ['50%', '42%'],
-        avoidLabelOverlap: true,
-        itemStyle: { borderColor: '#fff', borderWidth: 2 },
-        label: { show: true, position: 'outside', formatter: '{b}\n{d}%', fontSize: 11 },
-        labelLine: { length: 8, length2: 8 },
-        data: (distData?.dashboardDistribution ?? []).map((d) => ({ name: d.label, value: d.percent, itemStyle: { color: d.color } })),
+  const distOption = useMemo<EChartsCoreOption>(
+    () => ({
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}<br/>占比: {d}%',
       },
-    ],
-  }), [distData?.dashboardDistribution]);
+      legend: { bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8 },
+      series: [
+        {
+          name: '操作类型',
+          type: 'pie',
+          radius: ['45%', '70%'],
+          center: ['50%', '42%'],
+          avoidLabelOverlap: true,
+          itemStyle: { borderColor: '#fff', borderWidth: 2 },
+          label: {
+            show: true,
+            position: 'outside',
+            formatter: '{b}\n{d}%',
+            fontSize: 11,
+          },
+          labelLine: { length: 8, length2: 8 },
+          data: (distData?.dashboardDistribution ?? []).map((d) => ({
+            name: d.label,
+            value: d.percent,
+            itemStyle: { color: d.color },
+          })),
+        },
+      ],
+    }),
+    [distData?.dashboardDistribution],
+  );
 
   // ── 操作记录表格 ──
-  const opRows: OpLogRow[] = (opData?.dashboardOperationLogs.list ?? []).map((r) => ({
-    seq: r.seq,
-    user: r.user,
-    content: r.content,
-    module: r.module,
-    type: r.type,
-    ip: r.ip,
-    time: r.time,
-  }));
+  const opRows: OpLogRow[] = (opData?.dashboardOperationLogs.list ?? []).map(
+    (r) => ({
+      seq: r.seq,
+      user: r.user,
+      content: r.content,
+      module: r.module,
+      type: r.type,
+      ip: r.ip,
+      time: r.time,
+    }),
+  );
   const opColumns: ColumnsType<OpLogRow> = [
     { title: '#', dataIndex: 'seq', width: 50 },
     { title: '操作者', dataIndex: 'user', width: 120 },
@@ -315,7 +378,11 @@ export function DashboardPage(): React.JSX.Element {
       title: '模块',
       dataIndex: 'module',
       width: 120,
-      render: (v: string) => <Tag color="blue" variant="filled">{v}</Tag>,
+      render: (v: string) => (
+        <Tag color="blue" variant="filled">
+          {v}
+        </Tag>
+      ),
     },
     {
       title: '类型',
@@ -330,17 +397,40 @@ export function DashboardPage(): React.JSX.Element {
       title: 'IP',
       dataIndex: 'ip',
       width: 130,
-      render: (v: string) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v || '—'}</span>,
+      render: (v: string) => (
+        <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+          {v || '—'}
+        </span>
+      ),
     },
     { title: '时间', dataIndex: 'time', width: 170 },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: token.marginMD }}>
+    <div
+      style={{ display: 'flex', flexDirection: 'column', gap: token.marginMD }}
+    >
       {/* ── 欢迎英雄卡 ── */}
-      <Card variant="borderless" styles={{ body: { padding: token.paddingLG } }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: token.marginMD }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: token.marginMD }}>
+      <Card
+        variant="borderless"
+        styles={{ body: { padding: token.paddingLG } }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: token.marginMD,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: token.marginMD,
+            }}
+          >
             <div
               style={{
                 width: 56,
@@ -355,23 +445,62 @@ export function DashboardPage(): React.JSX.Element {
                 flexShrink: 0,
               }}
             >
-              {user?.avatar ? <img src={user.avatar} alt="avatar" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }} /> : <UserOutlined />}
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt="avatar"
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                  }}
+                />
+              ) : (
+                <UserOutlined />
+              )}
             </div>
             <div>
               <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4 }}>
                 {greeting}，{user?.nickname || user?.username || '管理员'}
               </div>
-              <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  marginTop: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
                 <span style={{ color: token.colorSuccess }}>
-                  <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: token.colorSuccess, marginRight: 6 }} />
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: token.colorSuccess,
+                      marginRight: 6,
+                    }}
+                  />
                   系统运行正常
                 </span>
-                <Tag color="blue" variant="filled">{roleLabel}</Tag>
+                <Tag color="blue" variant="filled">
+                  {roleLabel}
+                </Tag>
               </div>
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 40, fontWeight: 700, lineHeight: 1, color: token.colorText }}>
+            <div
+              style={{
+                fontSize: 40,
+                fontWeight: 700,
+                lineHeight: 1,
+                color: token.colorText,
+              }}
+            >
               {now.getDate()}
             </div>
             <div style={{ color: token.colorTextSecondary, marginTop: 4 }}>
@@ -385,11 +514,16 @@ export function DashboardPage(): React.JSX.Element {
       <Row gutter={[token.marginMD, token.marginMD]}>
         {stats.map((s, i) => (
           <Col xs={12} lg={6} key={s.label}>
-            <Card variant="borderless" styles={{ body: { padding: token.paddingLG } }}>
+            <Card
+              variant="borderless"
+              styles={{ body: { padding: token.paddingLG } }}
+            >
               <Statistic
                 title={s.label}
                 value={s.value}
-                prefix={<span style={{ color: statColors[i] }}>{statIcons[i]}</span>}
+                prefix={
+                  <span style={{ color: statColors[i] }}>{statIcons[i]}</span>
+                }
                 suffix={
                   <span
                     style={{
@@ -398,8 +532,13 @@ export function DashboardPage(): React.JSX.Element {
                       color: s.trend > 0 ? '#d03050' : '#18a058',
                     }}
                   >
-                    {s.trend > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(s.trend)}%
-                    <span style={{ color: token.colorTextTertiary, marginLeft: 4 }}>较上周</span>
+                    {s.trend > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}{' '}
+                    {Math.abs(s.trend)}%
+                    <span
+                      style={{ color: token.colorTextTertiary, marginLeft: 4 }}
+                    >
+                      较上周
+                    </span>
                   </span>
                 }
               />
@@ -428,7 +567,16 @@ export function DashboardPage(): React.JSX.Element {
               }
             >
               {trendItems.length === 0 && !trendLoading ? (
-                <Empty description="暂无数据" style={{ padding: '48px 0' }} />
+                <Empty
+                  description="暂无数据"
+                  styles={{ image: { height: 80 } }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    height: 300,
+                  }}
+                />
               ) : (
                 <EChart option={trendOption} height={300} />
               )}
@@ -437,7 +585,16 @@ export function DashboardPage(): React.JSX.Element {
           <Col xs={24} lg={8}>
             <Card variant="borderless" title="操作类型分布">
               {distItems.length === 0 ? (
-                <Empty description="暂无数据" style={{ padding: '48px 0' }} />
+                <Empty
+                  description="暂无数据"
+                  styles={{ image: { height: 80 } }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    height: 300,
+                  }}
+                />
               ) : (
                 <EChart option={distOption} height={300} />
               )}
@@ -486,88 +643,129 @@ export function DashboardPage(): React.JSX.Element {
             {quickEntries.map((e) => (
               <Col xs={12} sm={8} key={e.route}>
                 <button
-                    type="button"
-                    aria-label={`进入 ${e.title}`}
-                    onClick={() => navigate(e.route)}
-                    style={{
-                      width: '100%',
-                      padding: 0,
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      font: 'inherit',
-                      color: 'inherit',
-                    }}
+                  type="button"
+                  aria-label={`进入 ${e.title}`}
+                  onClick={() => navigate(e.route)}
+                  style={{
+                    width: '100%',
+                    padding: 0,
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    font: 'inherit',
+                    color: 'inherit',
+                  }}
+                >
+                  <Card
+                    hoverable
+                    variant="borderless"
+                    styles={{ body: { padding: token.paddingSM } }}
+                    style={{ background: token.colorFillTertiary }}
                   >
-                    <Card
-                      hoverable
-                      variant="borderless"
-                      styles={{ body: { padding: token.paddingSM } }}
-                      style={{ background: token.colorFillTertiary }}
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 10 }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          background: token.colorPrimaryBg,
+                          color: token.colorPrimary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 18,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {e.icon}
+                      </div>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>
+                          {e.title}
+                        </div>
                         <div
                           style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 8,
-                            background: token.colorPrimaryBg,
-                            color: token.colorPrimary,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 18,
-                            flexShrink: 0,
+                            fontSize: 11,
+                            color: token.colorTextTertiary,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                           }}
                         >
-                          {e.icon}
-                        </div>
-                        <div style={{ overflow: 'hidden' }}>
-                          <div style={{ fontSize: 13, fontWeight: 500 }}>{e.title}</div>
-                          <div style={{ fontSize: 11, color: token.colorTextTertiary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {e.desc}
-                          </div>
+                          {e.desc}
                         </div>
                       </div>
-                    </Card>
-                  </button>
-                </Col>
-              ))}
-            </Row>
-          </Card>
+                    </div>
+                  </Card>
+                </button>
+              </Col>
+            ))}
+          </Row>
+        </Card>
         <Card variant="borderless" title="系统环境" style={{ height: '100%' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: token.marginSM }}>
-              {[
-                { label: '操作系统', value: systemInfo.os, icon: <DesktopOutlined /> },
-                { label: '浏览器', value: systemInfo.browser, icon: <GlobalOutlined /> },
-                { label: '屏幕分辨率', value: systemInfo.resolution, icon: <BarChartOutlined /> },
-                { label: '时区', value: systemInfo.timezone, icon: <ScheduleOutlined /> },
-              ].map((info) => (
-                <div key={info.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      background: token.colorFillTertiary,
-                      color: token.colorTextSecondary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {info.icon}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: token.marginSM,
+            }}
+          >
+            {[
+              {
+                label: '操作系统',
+                value: systemInfo.os,
+                icon: <DesktopOutlined />,
+              },
+              {
+                label: '浏览器',
+                value: systemInfo.browser,
+                icon: <GlobalOutlined />,
+              },
+              {
+                label: '屏幕分辨率',
+                value: systemInfo.resolution,
+                icon: <BarChartOutlined />,
+              },
+              {
+                label: '时区',
+                value: systemInfo.timezone,
+                icon: <ScheduleOutlined />,
+              },
+            ].map((info) => (
+              <div
+                key={info.label}
+                style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: token.colorFillTertiary,
+                    color: token.colorTextSecondary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {info.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: token.colorTextTertiary }}>
+                    {info.label}
                   </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: token.colorTextTertiary }}>{info.label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{info.value}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>
+                    {info.value}
                   </div>
                 </div>
-              ))}
-            </div>
-          </Card>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     </div>
   );

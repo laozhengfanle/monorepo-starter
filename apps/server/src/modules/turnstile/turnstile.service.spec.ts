@@ -1,0 +1,109 @@
+import { Test } from '@nestjs/testing';
+import { BizException } from '@starter/server-core';
+import { BadRequestException } from '@nestjs/common';
+import { vi, describe, expect, it, beforeEach } from 'vitest';
+import { TurnstileService } from './turnstile.service.js';
+import { CACHE_SERVICE_TOKEN } from '../../common/cache/cache.interface.js';
+import { SystemConfigService } from '../system-config/system-config.service.js';
+
+describe('TurnstileService', () => {
+  let service: TurnstileService;
+  let cache: {
+    exists: ReturnType<typeof vi.fn<any>>;
+    setex: ReturnType<typeof vi.fn<any>>;
+  };
+  let systemConfig: { getValue: ReturnType<typeof vi.fn<any>> };
+  const origFetch = globalThis.fetch;
+
+  /** 配置注入辅助 */
+  function configure(config: { enabled?: boolean; secretKey?: string }) {
+    systemConfig.getValue.mockResolvedValue({
+      enabled: config.enabled ?? false,
+      siteKey: 'site-key',
+      secretKey: config.secretKey ?? '',
+    });
+  }
+
+  beforeEach(async () => {
+    cache = {
+      exists: vi.fn<any>().mockResolvedValue(false),
+      setex: vi.fn<any>().mockResolvedValue(undefined),
+    };
+    systemConfig = { getValue: vi.fn<any>().mockResolvedValue(null) };
+    delete process.env['TURNSTILE_SECRET_KEY'];
+    process.env['NODE_ENV'] = 'test';
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        TurnstileService,
+        { provide: CACHE_SERVICE_TOKEN, useValue: cache },
+        { provide: SystemConfigService, useValue: systemConfig },
+      ],
+    }).compile();
+    service = moduleRef.get(TurnstileService);
+  });
+
+  afterEach(() => {
+    globalThis.fetch = origFetch;
+  });
+
+  it('未配置（enabled=false 且无 secret）→ 跳过验证直接放行', async () => {
+    configure({ enabled: false });
+
+    await expect(service.verify(undefined)).resolves.toBeUndefined();
+  });
+
+  it('已启用但缺 token → 抛 TURNSTILE_FAILED', async () => {
+    configure({ enabled: true, secretKey: 'real-secret' });
+
+    await expect(service.verify(undefined)).rejects.toMatchObject({
+      code: 'TURNSTILE_FAILED',
+    });
+  });
+
+  it('测试密钥 → 快速通道放行（不调 siteverify）', async () => {
+    configure({
+      enabled: true,
+      secretKey: '1x0000000000000000000000000000000AA',
+    });
+    const fetchSpy = vi.fn<any>();
+    globalThis.fetch = fetchSpy as never;
+
+    await expect(service.verify('any-token')).resolves.toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('防重放：token 已用过 → 拒绝', async () => {
+    configure({ enabled: true, secretKey: 'real-secret' });
+    cache.exists.mockResolvedValue(true);
+
+    await expect(service.verify('used-token')).rejects.toBeInstanceOf(
+      BizException,
+    );
+  });
+
+  it('siteverify 失败 → 抛 BadRequestException', async () => {
+    configure({ enabled: true, secretKey: 'real-secret' });
+    globalThis.fetch = vi.fn<any>().mockResolvedValue({
+      json: () => Promise.resolve({ success: false }),
+    }) as never;
+
+    await expect(
+      service.verify('fresh-token', '1.2.3.4'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('siteverify 成功 → 标记已用（5 分钟防重放 TTL）', async () => {
+    configure({ enabled: true, secretKey: 'real-secret' });
+    globalThis.fetch = vi.fn<any>().mockResolvedValue({
+      json: () => Promise.resolve({ success: true }),
+    }) as never;
+
+    await expect(service.verify('fresh-token')).resolves.toBeUndefined();
+    expect(cache.setex).toHaveBeenCalledWith(
+      'turnstile:used:fresh-token',
+      300,
+      true,
+    );
+  });
+});

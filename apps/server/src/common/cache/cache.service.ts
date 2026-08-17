@@ -1,16 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import { CACHE_SERVICE_TOKEN, type CacheStatsInfo, type ICacheService } from './cache.interface.js';
+import {
+  CACHE_SERVICE_TOKEN,
+  type CacheStatsInfo,
+  type ICacheService,
+} from './cache.interface.js';
 
 /** 通配符模式 → 正则（* → .*，其余转义） */
 function patternToRegex(pattern: string): RegExp {
-  return new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+  return new RegExp(
+    `^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`,
+  );
 }
 
 /** 内存后端（Redis 不可用时的降级实现） */
 class MemoryCacheBackend implements ICacheService {
-  private readonly store = new Map<string, { value: unknown; expiresAt: number }>();
+  private readonly store = new Map<
+    string,
+    { value: unknown; expiresAt: number }
+  >();
   /** 创建时间戳（uptime 统计用） */
   private readonly createdAt = Date.now();
 
@@ -29,11 +38,23 @@ class MemoryCacheBackend implements ICacheService {
   }
 
   async set(key: string, value: unknown, ttl?: number): Promise<void> {
-    this.store.set(key, { value, expiresAt: ttl ? Date.now() + ttl * 1000 : Infinity });
+    this.store.set(key, {
+      value,
+      expiresAt: ttl ? Date.now() + ttl * 1000 : Infinity,
+    });
   }
 
   async setex(key: string, ttl: number, value: unknown): Promise<void> {
     await this.set(key, value, ttl);
+  }
+
+  async setnx(key: string, value: unknown, ttl?: number): Promise<boolean> {
+    // 已存在（未过期）则认领失败；JS 单线程下「检查 + 写入」之间无并发窗口，天然原子
+    if (await this.exists(key)) {
+      return false;
+    }
+    await this.set(key, value, ttl);
+    return true;
   }
 
   async del(key: string): Promise<void> {
@@ -112,6 +133,15 @@ class RedisCacheBackend implements ICacheService {
     await this.client.set(key, JSON.stringify(value), 'EX', ttl);
   }
 
+  async setnx(key: string, value: unknown, ttl?: number): Promise<boolean> {
+    // SET key value EX ttl NX：仅当 key 不存在时写入，Redis 单命令原子
+    const raw = JSON.stringify(value);
+    const result = ttl
+      ? await this.client.set(key, raw, 'EX', ttl, 'NX')
+      : await this.client.set(key, raw, 'NX');
+    return result === 'OK';
+  }
+
   async del(key: string): Promise<void> {
     await this.client.del(key);
   }
@@ -119,7 +149,13 @@ class RedisCacheBackend implements ICacheService {
   async delByPattern(pattern: string): Promise<void> {
     let cursor = '0';
     do {
-      const [nextCursor, keys] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      const [nextCursor, keys] = await this.client.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      );
       cursor = nextCursor;
       if (keys.length > 0) {
         await this.client.del(...keys);
@@ -144,7 +180,13 @@ class RedisCacheBackend implements ICacheService {
     let cursor = '0';
     do {
       // SCAN 游标 + MATCH + COUNT（禁用 KEYS *，避免阻塞生产 Redis）
-      const [nextCursor, batch] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      const [nextCursor, batch] = await this.client.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      );
       cursor = nextCursor;
       keys.push(...batch);
     } while (cursor !== '0');
@@ -171,7 +213,10 @@ class RedisCacheBackend implements ICacheService {
 
     const hits = Number(parse(info, 'keyspace_hits')) || 0;
     const misses = Number(parse(info, 'keyspace_misses')) || 0;
-    const hitRate = hits + misses > 0 ? ((hits / (hits + misses)) * 100).toFixed(2) + '%' : '—';
+    const hitRate =
+      hits + misses > 0
+        ? ((hits / (hits + misses)) * 100).toFixed(2) + '%'
+        : '—';
     const uptimeSeconds = Number(parse(serverRaw, 'uptime_in_seconds')) || 0;
     return {
       usedMemory: formatBytes(Number(parse(usedMemoryRaw, 'used_memory')) || 0),
@@ -185,7 +230,8 @@ class RedisCacheBackend implements ICacheService {
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
@@ -200,75 +246,112 @@ function formatUptime(seconds: number): string {
 }
 
 /**
- * 缓存服务：Redis 优先（配置 REDIS_URL），未配置/连接失败自动降级内存。
+ * 缓存服务：Redis 优先（配置 REDIS_URL），未配置/连接失败/运行中不可用自动降级内存。
  * - 认证增强（token 黑名单 / 登录锁定 / refresh 存储）统一走此接口
+ * - 降级策略：构造后主动 ping 探测 + 首次操作失败即切换内存（记录告警日志），
+ *   后续请求全部走内存，保证登录/锁定/黑名单路径在 Redis 挂掉时不 500
  */
 @Injectable()
 export class CacheService implements ICacheService {
   private readonly logger = new Logger(CacheService.name);
-  private readonly backend: ICacheService;
+  private backend: ICacheService;
+  /** 内存降级后端（恒存在：未配置 Redis 或 Redis 故障时兜底） */
+  private readonly memoryBackend = new MemoryCacheBackend();
+  /** 是否已降级内存（一旦降级不再回退，避免在故障/恢复间抖动） */
+  private fallbackActive = false;
 
   constructor(configService: ConfigService) {
     const url = configService.get<string>('REDIS_URL');
     if (url) {
-      try {
-        const client = new Redis(url, { lazyConnect: true, maxRetriesPerRequest: 1 });
-        // 主动探测连接，失败即降级内存
-        client.on('error', () => undefined);
-        this.backend = new RedisCacheBackend(client);
-        this.logger.log('Cache: Redis 模式');
-      } catch {
-        this.backend = new MemoryCacheBackend();
-        this.logger.warn('Cache: Redis 初始化失败，降级内存');
-      }
+      const client = new Redis(url, {
+        lazyConnect: true,
+        maxRetriesPerRequest: 1,
+      });
+      // 必须监听 error：连接拒绝/断线时 ioredis 会 emit error，未监听会抛未捕获异常
+      client.on('error', () => undefined);
+      this.backend = new RedisCacheBackend(client);
+      this.logger.log('Cache: Redis 模式（故障自动降级内存）');
+      // 主动探测：构造后立即 ping，失败即刻切内存，避免首个请求被连接超时拖慢/抛错
+      void client.ping().catch((err) => {
+        this.fallbackToMemory(`连接探测失败: ${(err as Error).message}`);
+      });
     } else {
-      this.backend = new MemoryCacheBackend();
+      this.backend = this.memoryBackend;
       this.logger.log('Cache: 内存模式（未配置 REDIS_URL）');
     }
   }
 
+  /** 统一执行入口：Redis 操作失败即降级内存并重放该操作（fail-open，不抛 500） */
+  private async withBackend<T>(
+    op: (backend: ICacheService) => Promise<T>,
+  ): Promise<T> {
+    if (this.fallbackActive) {
+      return op(this.memoryBackend);
+    }
+    try {
+      return await op(this.backend);
+    } catch (err) {
+      this.fallbackToMemory(`操作失败: ${(err as Error).message}`);
+      return op(this.memoryBackend);
+    }
+  }
+
+  /** 切换内存后端（幂等，只告警一次） */
+  private fallbackToMemory(reason: string): void {
+    if (this.fallbackActive) {
+      return;
+    }
+    this.fallbackActive = true;
+    this.backend = this.memoryBackend;
+    this.logger.warn(`Cache: Redis 不可用（${reason}），已降级内存模式`);
+  }
+
   get<T>(key: string): Promise<T | null> {
-    return this.backend.get<T>(key);
+    return this.withBackend((b) => b.get<T>(key));
   }
 
   set(key: string, value: unknown, ttl?: number): Promise<void> {
-    return this.backend.set(key, value, ttl);
+    return this.withBackend((b) => b.set(key, value, ttl));
   }
 
   setex(key: string, ttl: number, value: unknown): Promise<void> {
-    return this.backend.setex(key, ttl, value);
+    return this.withBackend((b) => b.setex(key, ttl, value));
+  }
+
+  setnx(key: string, value: unknown, ttl?: number): Promise<boolean> {
+    return this.withBackend((b) => b.setnx(key, value, ttl));
   }
 
   del(key: string): Promise<void> {
-    return this.backend.del(key);
+    return this.withBackend((b) => b.del(key));
   }
 
   delByPattern(pattern: string): Promise<void> {
-    return this.backend.delByPattern(pattern);
+    return this.withBackend((b) => b.delByPattern(pattern));
   }
 
   incr(key: string, ttl: number): Promise<number> {
-    return this.backend.incr(key, ttl);
+    return this.withBackend((b) => b.incr(key, ttl));
   }
 
   exists(key: string): Promise<boolean> {
-    return this.backend.exists(key);
+    return this.withBackend((b) => b.exists(key));
   }
 
   scanKeys(pattern: string): Promise<string[]> {
-    return this.backend.scanKeys(pattern);
+    return this.withBackend((b) => b.scanKeys(pattern));
   }
 
   getKeyType(key: string): Promise<string> {
-    return this.backend.getKeyType(key);
+    return this.withBackend((b) => b.getKeyType(key));
   }
 
   ttl(key: string): Promise<number> {
-    return this.backend.ttl(key);
+    return this.withBackend((b) => b.ttl(key));
   }
 
   getStats(): Promise<CacheStatsInfo> {
-    return this.backend.getStats();
+    return this.withBackend((b) => b.getStats());
   }
 }
 

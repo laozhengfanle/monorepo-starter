@@ -29,7 +29,6 @@
     "@ant-design/icons": "catalog:",
     "@apollo/client": "catalog:",
     "@starter/api-client": "workspace:*",
-    "@starter/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "antd": "catalog:",
     "echarts": "catalog:",

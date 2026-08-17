@@ -2,6 +2,7 @@ import 'reflect-metadata';
 
 import { type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { type NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import express from 'express';
@@ -49,8 +50,14 @@ function corsOriginsFromEnv(): string[] {
  * - Swagger UI + JSON 端点
  */
 export async function createApp(): Promise<INestApplication> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
   app.useLogger(app.get(Logger));
+  // 信任一层反向代理：Express 从受信 X-Forwarded-For 解析真实客户端 IP（req.ip），
+  // 供 IP 锁定/限流/审计使用，防止客户端伪造 XFF 头绕过（此前 XFF 首段被无条件采信）。
+  // 生产环境若代理层数变化（如 LB → nginx 两层），请按实际跳数调整该值（如 trust proxy 2）。
+  app.set('trust proxy', 1);
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());

@@ -24,7 +24,8 @@ export const autoIdExtension = {
         return query(args);
       },
       async createMany({ args, query }: QueryParams) {
-        const data = args.data as Record<string, unknown>[] | Record<string, unknown>;
+        const data = args.data as
+          Record<string, unknown>[] | Record<string, unknown>;
         if (Array.isArray(data)) {
           data.forEach((row: Record<string, unknown>) => {
             if (!row.id) {
@@ -39,7 +40,13 @@ export const autoIdExtension = {
 };
 
 /** 有 deleted_at 字段的模型名称集合（只有这些模型应用软删除过滤） */
-const SOFT_DELETE_MODELS = new Set(['User', 'Account', 'AdminProfile']);
+const SOFT_DELETE_MODELS = new Set([
+  'User',
+  'Account',
+  'AdminProfile',
+  'UploadFile',
+  'SystemConfig',
+]);
 
 interface ModelUpdateOps {
   update: (args: Record<string, unknown>) => Promise<unknown>;
@@ -47,10 +54,25 @@ interface ModelUpdateOps {
 }
 
 /**
+ * 追加软删除过滤：where 已显式包含 deletedAt 时原样保留（调用方意图优先，
+ * 如 includeDeleted / SystemConfig 复用软删行）；否则自动补 deletedAt: null。
+ */
+function withSoftDeleteFilter(
+  where: Record<string, unknown>,
+): Record<string, unknown> {
+  if (where && where.deletedAt !== undefined) {
+    return where;
+  }
+  return { ...where, deletedAt: null };
+}
+
+/**
  * 软删除 Extension
  * - findUnique / findFirst / findMany 自动过滤 deletedAt IS NULL
  * - delete → update deletedAt（软删除）；deleteMany → updateMany deletedAt
  * - 只对 SOFT_DELETE_MODELS 中的模型生效
+ * - 调用方显式传了 deletedAt 条件时（如 includeDeleted 场景）尊重显式条件，
+ *   不覆盖——保证「查已删/含已删」语义不被扩展吞掉
  */
 export const createSoftDeleteExtension = (extendedClient: unknown) => ({
   name: 'softDelete' as const,
@@ -58,22 +80,25 @@ export const createSoftDeleteExtension = (extendedClient: unknown) => ({
     $allModels: {
       async findUnique({ args, query, model }: QueryParams) {
         if (model && SOFT_DELETE_MODELS.has(model)) {
-          const where = args.where as Record<string, unknown>;
-          args.where = { ...where, deletedAt: null };
+          args.where = withSoftDeleteFilter(
+            (args.where as Record<string, unknown>) ?? {},
+          );
         }
         return query(args);
       },
       async findFirst({ args, query, model }: QueryParams) {
         if (model && SOFT_DELETE_MODELS.has(model)) {
-          const where = args.where as Record<string, unknown>;
-          args.where = { ...where, deletedAt: null };
+          args.where = withSoftDeleteFilter(
+            (args.where as Record<string, unknown>) ?? {},
+          );
         }
         return query(args);
       },
       async findMany({ args, query, model }: QueryParams) {
         if (model && SOFT_DELETE_MODELS.has(model)) {
-          const where = args.where as Record<string, unknown>;
-          args.where = { ...where, deletedAt: null };
+          args.where = withSoftDeleteFilter(
+            (args.where as Record<string, unknown>) ?? {},
+          );
         }
         return query(args);
       },

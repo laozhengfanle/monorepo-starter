@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ApolloProvider } from '@apollo/client';
 import { useEffect } from 'react';
 import { useNavigate, Route, Routes } from 'react-router-dom';
@@ -11,12 +11,7 @@ import { AppProviders } from './providers/index.js';
 import { SystemConfigProvider } from './providers/system-config-provider.js';
 import { APP_ROUTES, RouteGuard } from './route-registry.js';
 import { apolloClient } from './apollo-client';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, refetchOnWindowFocus: false },
-  },
-});
+import { queryClient } from './query-client.js';
 
 /** /redirect：标签页"重新加载"的中转路由（卸载再挂载当前页触发重新请求） */
 function RedirectPage(): React.JSX.Element | null {
@@ -33,38 +28,42 @@ export function App() {
       <AuthProvider>
         <ApolloProvider client={apolloClient}>
           <SystemConfigProvider>
-          <QueryClientProvider client={queryClient}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/redirect" element={<RedirectPage />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <Routes>
-                        {APP_ROUTES.map((route) => (
+            <QueryClientProvider client={queryClient}>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/redirect" element={<RedirectPage />} />
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <Routes>
+                          {APP_ROUTES.map((route) => (
+                            <Route
+                              key={route.path}
+                              path={route.path}
+                              element={
+                                <RouteGuard permission={route.permission}>
+                                  {route.element}
+                                </RouteGuard>
+                              }
+                            />
+                          ))}
                           <Route
-                            key={route.path}
-                            path={route.path}
+                            path="*"
                             element={
-                              <RouteGuard permission={route.permission}>{route.element}</RouteGuard>
+                              <Typography.Text type="secondary">
+                                页面不存在或无权访问
+                              </Typography.Text>
                             }
                           />
-                        ))}
-                        <Route
-                          path="*"
-                          element={
-                            <Typography.Text type="secondary">页面不存在或无权访问</Typography.Text>
-                          }
-                        />
-                      </Routes>
-                    </MainLayout>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </QueryClientProvider>
+                        </Routes>
+                      </MainLayout>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </QueryClientProvider>
           </SystemConfigProvider>
         </ApolloProvider>
       </AuthProvider>

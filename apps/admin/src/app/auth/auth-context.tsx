@@ -1,14 +1,26 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import type { ReactNode } from 'react';
 import type { AdminMe } from '@starter/api-client';
 import { authStorage } from './auth-storage.js';
 import { fetchMe, loginApi, logoutApi } from './auth-api.js';
+import { apolloClient } from '../apollo-client.js';
+import { queryClient } from '../query-client.js';
 
 interface AuthContextValue {
   user: AdminMe | null;
   /** 初始化时校验 token（读 /auth/me）的加载态 */
   loading: boolean;
-  login: (username: string, password: string, turnstileToken?: string) => Promise<void>;
+  login: (
+    username: string,
+    password: string,
+    turnstileToken?: string,
+  ) => Promise<void>;
   logout: () => Promise<void>;
   /** 重新拉取当前用户（菜单/权限变更后刷新侧栏） */
   refreshMe: () => Promise<void>;
@@ -38,12 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (username: string, password: string, turnstileToken?: string) => {
-    const result = await loginApi({ username, password, turnstileToken });
-    authStorage.setTokens(result.accessToken, result.refreshToken);
-    const me = await fetchMe(result.accessToken);
-    setUser(me);
-  }, []);
+  const login = useCallback(
+    async (username: string, password: string, turnstileToken?: string) => {
+      const result = await loginApi({ username, password, turnstileToken });
+      // 只存 access token（refresh token 无刷新流程消费，不落 localStorage）
+      authStorage.setAccessToken(result.accessToken);
+      const me = await fetchMe(result.accessToken);
+      setUser(me);
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
     const token = authStorage.getAccessToken();
@@ -52,6 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     authStorage.clear();
     setUser(null);
+    // 清空 Apollo 缓存与 TanStack Query 缓存，防止跨账号数据残留
+    await apolloClient.clearStore().catch(() => undefined);
+    queryClient.clear();
   }, []);
 
   const refreshMe = useCallback(async () => {

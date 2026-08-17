@@ -113,26 +113,54 @@ export class DashboardService {
       opsCountPrev,
     ] = await Promise.all([
       // 当前启用且未软删的管理员
-      this.prisma.client.account.count({ where: { userType: 'admin', deletedAt: null } }),
+      this.prisma.client.account.count({
+        where: { userType: 'admin', deletedAt: null },
+      }),
       // 上周（7 天前已创建且未软删）
       this.prisma.client.account.count({
-        where: { userType: 'admin', deletedAt: null, createdAt: { lte: weekAgo } },
+        where: {
+          userType: 'admin',
+          deletedAt: null,
+          createdAt: { lte: weekAgo },
+        },
       }),
       this.prisma.client.adminRole.count(),
-      this.prisma.client.adminRole.count({ where: { createdAt: { lte: weekAgo } } }),
+      this.prisma.client.adminRole.count({
+        where: { createdAt: { lte: weekAgo } },
+      }),
       this.prisma.client.adminMenu.count(),
-      this.prisma.client.adminMenu.count({ where: { createdAt: { lte: weekAgo } } }),
-      this.prisma.client.auditLog.count({ where: { createdAt: { gte: weekAgo } } }),
+      this.prisma.client.adminMenu.count({
+        where: { createdAt: { lte: weekAgo } },
+      }),
+      this.prisma.client.auditLog.count({
+        where: { createdAt: { gte: weekAgo } },
+      }),
       this.prisma.client.auditLog.count({
         where: { createdAt: { gte: twoWeeksAgo, lt: weekAgo } },
       }),
     ]);
 
     return [
-      { label: '管理员', value: adminCount, trend: this.calcTrend(adminCount, adminCountPrev) },
-      { label: '角色', value: roleCount, trend: this.calcTrend(roleCount, roleCountPrev) },
-      { label: '菜单项', value: menuCount, trend: this.calcTrend(menuCount, menuCountPrev) },
-      { label: '近7日操作', value: opsCount, trend: this.calcTrend(opsCount, opsCountPrev) },
+      {
+        label: '管理员',
+        value: adminCount,
+        trend: this.calcTrend(adminCount, adminCountPrev),
+      },
+      {
+        label: '角色',
+        value: roleCount,
+        trend: this.calcTrend(roleCount, roleCountPrev),
+      },
+      {
+        label: '菜单项',
+        value: menuCount,
+        trend: this.calcTrend(menuCount, menuCountPrev),
+      },
+      {
+        label: '近7日操作',
+        value: opsCount,
+        trend: this.calcTrend(opsCount, opsCountPrev),
+      },
     ];
   }
 
@@ -142,11 +170,18 @@ export class DashboardService {
   }
 
   /** 敏感操作趋势：按周/月/年聚合 audit_log，按风险等级拆分 */
-  async getTrend(range: 'week' | 'month' | 'year'): Promise<DashboardTrendItemType[]> {
+  async getTrend(
+    range: 'week' | 'month' | 'year',
+  ): Promise<DashboardTrendItemType[]> {
     const now = new Date();
-    const buckets = new Map<string, { highRisk: number; midRisk: number; lowRisk: number }>();
+    const buckets = new Map<
+      string,
+      { highRisk: number; midRisk: number; lowRisk: number }
+    >();
 
-    const addBucket = (key: string): { highRisk: number; midRisk: number; lowRisk: number } => {
+    const addBucket = (
+      key: string,
+    ): { highRisk: number; midRisk: number; lowRisk: number } => {
       let b = buckets.get(key);
       if (!b) {
         b = { highRisk: 0, midRisk: 0, lowRisk: 0 };
@@ -158,7 +193,8 @@ export class DashboardService {
     if (range === 'year') {
       for (let m = 0; m < 12; m++) addBucket(`${m + 1}月`);
     } else if (range === 'month') {
-      for (let d = 1; d <= now.getDate(); d++) addBucket(`${now.getMonth() + 1}/${d}`);
+      for (let d = 1; d <= now.getDate(); d++)
+        addBucket(`${now.getMonth() + 1}/${d}`);
     } else {
       const dow = (now.getDay() + 6) % 7; // 周一=0
       const monday = new Date(now);
@@ -184,9 +220,15 @@ export class DashboardService {
               return monday;
             })();
 
+    // 已知限制：Prisma groupBy 不支持日期截断（无法按天/月做 SQL 时间桶），
+    // 这里保持按天分桶 + JS 归类的实现（90 天保留期内数据量可控）。
+    // take 上限防 OOM：极端流量下宁可截断统计也不拉爆内存；
+    // 若未来审计量级超出保留期内可控范围，需改用 SQL 日期截断聚合（如 $queryRaw，
+    // 注意项目规范禁止字符串拼接 SQL，需参数化）。
     const logs = await this.prisma.client.auditLog.findMany({
       where: { createdAt: { gte: since } },
       select: { action: true, createdAt: true },
+      take: 200_000,
     });
 
     for (const log of logs) {
@@ -212,17 +254,29 @@ export class DashboardService {
       orderBy: { _count: { action: 'desc' } },
       take: 6,
     });
-    const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
+    const colors = [
+      '#1890ff',
+      '#52c41a',
+      '#faad14',
+      '#f5222d',
+      '#722ed1',
+      '#13c2c2',
+    ];
     const total = rows.reduce((sum, r) => sum + r['_count'].action, 0);
     return rows.map((r, i) => ({
-      label: AUDIT_ACTION_LABELS[r.action as keyof typeof AUDIT_ACTION_LABELS] ?? r.action,
+      label:
+        AUDIT_ACTION_LABELS[r.action as keyof typeof AUDIT_ACTION_LABELS] ??
+        r.action,
       percent: total > 0 ? Math.round((r['_count'].action / total) * 100) : 0,
       color: colors[i % colors.length],
     }));
   }
 
   /** 最近操作记录（分页） */
-  async getOperationLogs(page: number, pageSize: number): Promise<DashboardOpLogPageType> {
+  async getOperationLogs(
+    page: number,
+    pageSize: number,
+  ): Promise<DashboardOpLogPageType> {
     const safePage = Math.max(1, page);
     const safeSize = Math.min(50, Math.max(1, pageSize));
     const [total, rows] = await Promise.all([
@@ -235,7 +289,9 @@ export class DashboardService {
     ]);
 
     // 批量 join 操作者用户名
-    const accountIds = [...new Set(rows.map((r) => r.accountId).filter(Boolean))] as string[];
+    const accountIds = [
+      ...new Set(rows.map((r) => r.accountId).filter(Boolean)),
+    ] as string[];
     let userMap = new Map<string, string>();
     if (accountIds.length > 0) {
       const identities = await this.prisma.client.accountIdentity.findMany({
@@ -248,10 +304,14 @@ export class DashboardService {
     const list: DashboardOpLogType[] = rows.map((r, index) => ({
       seq: (safePage - 1) * safeSize + index + 1,
       user: r.accountId ? (userMap.get(r.accountId) ?? '未知用户') : '系统',
-      content: AUDIT_ACTION_LABELS[r.action as keyof typeof AUDIT_ACTION_LABELS] ?? r.action,
+      content:
+        AUDIT_ACTION_LABELS[r.action as keyof typeof AUDIT_ACTION_LABELS] ??
+        r.action,
       module:
         (r.resourceType &&
-          AUDIT_RESOURCE_LABELS[r.resourceType as keyof typeof AUDIT_RESOURCE_LABELS]) ||
+          AUDIT_RESOURCE_LABELS[
+            r.resourceType as keyof typeof AUDIT_RESOURCE_LABELS
+          ]) ||
         r.resourceType ||
         '系统',
       type: ACTION_TYPE_MAP[r.action] ?? 'approve',

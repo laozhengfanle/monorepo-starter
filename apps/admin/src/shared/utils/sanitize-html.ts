@@ -29,7 +29,15 @@ const FORBID_TAGS = [
 const ALLOWED_URI_REGEXP = /^(?:(?:https?|mailto|tel):|#|\/)/i;
 
 /** wangEditor/Tiptap 常用额外属性（DOMPurify 默认不含） */
-const ADD_ATTR = ['target', 'width', 'height', 'colspan', 'rowspan', 'checked', 'disabled'];
+const ADD_ATTR = [
+  'target',
+  'width',
+  'height',
+  'colspan',
+  'rowspan',
+  'checked',
+  'disabled',
+];
 
 /**
  * 富文本 HTML 清洗（黑名单 + 协议白名单）
@@ -43,7 +51,8 @@ export function sanitizeRichHtml(html: string): string {
     FORBID_TAGS,
     FORBID_ATTR: [],
     ALLOWED_URI_REGEXP,
-    ALLOW_UNKNOWN_PROTOCOLS: true,
+    // 注意：不能开 ALLOW_UNKNOWN_PROTOCOLS，否则协议白名单被架空
+    //（javascript:/data:/file: 等危险协议会被放行）
     ADD_ATTR,
     ALLOW_DATA_ATTR: true,
     KEEP_CONTENT: true,

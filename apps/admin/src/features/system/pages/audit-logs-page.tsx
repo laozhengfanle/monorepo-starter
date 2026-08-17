@@ -23,6 +23,7 @@ import {
 } from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { downloadBlob, toCSV } from '../../../shared/utils/export.js';
+import { safeParseJson } from '../../../shared/utils/json.js';
 
 const { RangePicker } = DatePicker;
 
@@ -76,7 +77,11 @@ const actionColor: Record<string, string> = {
 /** 审计日志页（对标老项目 配置中心/审计日志）：分页列表 + 筛选 + 导出 + 清空 + 详情/删除 */
 export function AuditLogsPage(): React.JSX.Element {
   const { message } = App.useApp();
-  const [searchForm] = Form.useForm<{ action?: string; resourceType?: string; range?: unknown[] }>();
+  const [searchForm] = Form.useForm<{
+    action?: string;
+    resourceType?: string;
+    range?: unknown[];
+  }>();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filters, setFilters] = useState<{
@@ -133,7 +138,10 @@ export function AuditLogsPage(): React.JSX.Element {
   const actionLabel = (v: string): string => actionLabelMap.get(v) ?? v;
   const resourceLabel = (v: string): string => resourceLabelMap.get(v) ?? v;
 
-  const logs = useMemo(() => (data?.adminLogs.items ?? []) as AuditLogItem[], [data]);
+  const logs = useMemo(
+    () => (data?.adminLogs.items ?? []) as AuditLogItem[],
+    [data],
+  );
 
   const load = useCallback(async () => {
     await refetch();
@@ -168,7 +176,9 @@ export function AuditLogsPage(): React.JSX.Element {
       variables: {
         query: {
           ...(filters.action ? { action: filters.action } : {}),
-          ...(filters.resourceType ? { resourceType: filters.resourceType } : {}),
+          ...(filters.resourceType
+            ? { resourceType: filters.resourceType }
+            : {}),
           ...(filters.startDate ? { startDate: filters.startDate } : {}),
           ...(filters.endDate ? { endDate: filters.endDate } : {}),
         },
@@ -186,7 +196,11 @@ export function AuditLogsPage(): React.JSX.Element {
       item.ip ?? '-',
     ]);
     const ts = new Date().toISOString().slice(0, 10);
-    downloadBlob(toCSV([header, ...rows]), `audit-logs-${ts}.csv`, 'text/csv;charset=utf-8;');
+    downloadBlob(
+      toCSV([header, ...rows]),
+      `audit-logs-${ts}.csv`,
+      'text/csv;charset=utf-8;',
+    );
   };
 
   /** 清空日志（二次确认 → 清空 → 页码重置 1 → 重载） */
@@ -198,7 +212,9 @@ export function AuditLogsPage(): React.JSX.Element {
       setPage(1);
       await load();
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '清空失败，请重试');
+      void message.error(
+        error instanceof Error ? error.message : '清空失败，请重试',
+      );
     }
   };
 
@@ -208,7 +224,9 @@ export function AuditLogsPage(): React.JSX.Element {
       void message.success('删除成功');
       await load();
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '删除失败，请重试');
+      void message.error(
+        error instanceof Error ? error.message : '删除失败，请重试',
+      );
     }
   };
 
@@ -233,14 +251,17 @@ export function AuditLogsPage(): React.JSX.Element {
       dataIndex: 'action',
       key: 'action',
       width: 180,
-      render: (v: string) => <Tag color={actionColor[v] ?? 'default'}>{actionLabel(v)}</Tag>,
+      render: (v: string) => (
+        <Tag color={actionColor[v] ?? 'default'}>{actionLabel(v)}</Tag>
+      ),
     },
     {
       title: '资源类型',
       dataIndex: 'resourceType',
       key: 'resourceType',
       width: 150,
-      render: (v: string | null) => (v ? <Tag>{resourceLabel(v)}</Tag> : <span>-</span>),
+      render: (v: string | null) =>
+        v ? <Tag>{resourceLabel(v)}</Tag> : <span>-</span>,
     },
     {
       title: '资源ID',
@@ -268,8 +289,11 @@ export function AuditLogsPage(): React.JSX.Element {
             详情
           </Button>
           {canDelete && (
-            <Popconfirm title="确认删除该条审计日志？" onConfirm={() => void handleDelete(record.id)}>
-              <Button type="link" size="small" danger>
+            <Popconfirm
+              title="确认删除该条审计日志？"
+              onConfirm={() => void handleDelete(record.id)}
+            >
+              <Button color="danger" variant="link" size="small">
                 删除
               </Button>
             </Popconfirm>
@@ -295,12 +319,14 @@ export function AuditLogsPage(): React.JSX.Element {
               </Button>
             </Popconfirm>
           )}
-          {canExport && <Button onClick={() => void handleExport()}>导出</Button>}
+          {canExport && (
+            <Button onClick={() => void handleExport()}>导出</Button>
+          )}
           <Button onClick={() => void load()}>刷新</Button>
         </Space>
       }
     >
-            {/* 筛选区 */}
+      {/* 筛选区 */}
       <Form
         form={searchForm}
         layout="inline"
@@ -365,15 +391,25 @@ export function AuditLogsPage(): React.JSX.Element {
         footer={<Button onClick={() => setDetail(null)}>关闭</Button>}
       >
         {detail && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr',
+              gap: '8px 16px',
+            }}
+          >
             <span style={{ color: 'rgba(0,0,0,0.45)' }}>时间</span>
             <span>{formatDateTime(detail.createdAt)}</span>
             <span style={{ color: 'rgba(0,0,0,0.45)' }}>操作者</span>
             <span>{detail.accountUsername ?? '系统'}</span>
             <span style={{ color: 'rgba(0,0,0,0.45)' }}>操作</span>
-            <Tag color={actionColor[detail.action] ?? 'default'}>{actionLabel(detail.action)}</Tag>
+            <Tag color={actionColor[detail.action] ?? 'default'}>
+              {actionLabel(detail.action)}
+            </Tag>
             <span style={{ color: 'rgba(0,0,0,0.45)' }}>资源类型</span>
-            <span>{detail.resourceType ? resourceLabel(detail.resourceType) : '-'}</span>
+            <span>
+              {detail.resourceType ? resourceLabel(detail.resourceType) : '-'}
+            </span>
             {detail.resourceId && (
               <>
                 <span style={{ color: 'rgba(0,0,0,0.45)' }}>资源 ID</span>
@@ -389,21 +425,8 @@ export function AuditLogsPage(): React.JSX.Element {
             {detail.detail && (
               <>
                 <span style={{ color: 'rgba(0,0,0,0.45)' }}>详情</span>
-                <pre
-                  style={{
-                    margin: 0,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-all',
-                    background: 'rgba(0,0,0,0.03)',
-                    padding: 8,
-                    borderRadius: 4,
-                    fontSize: 12,
-                    maxHeight: 240,
-                    overflow: 'auto',
-                  }}
-                >
-                  {JSON.stringify(JSON.parse(detail.detail), null, 2)}
-                </pre>
+                {/* 脏数据兜底：JSON.parse 失败时按纯文本展示原始字符串，避免白屏 */}
+                <DetailContent raw={detail.detail} />
               </>
             )}
           </div>
@@ -423,6 +446,31 @@ interface DayjsLike {
 function toIso(value: DayjsLike): string {
   if (typeof value.toISOString === 'function') return value.toISOString();
   if (typeof value.toDate === 'function') return value.toDate().toISOString();
-  if (typeof value.format === 'function') return new Date(value.format('YYYY-MM-DDTHH:mm:ss')).toISOString();
+  if (typeof value.format === 'function')
+    return new Date(value.format('YYYY-MM-DDTHH:mm:ss')).toISOString();
   return new Date().toISOString();
+}
+
+/** 审计详情展示：JSON 格式化；解析失败（脏数据）时按纯文本展示原始字符串 */
+function DetailContent({ raw }: { raw: string }): React.JSX.Element {
+  const parsed = safeParseJson(raw);
+  const text =
+    typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2);
+  return (
+    <pre
+      style={{
+        margin: 0,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+        background: 'rgba(0,0,0,0.03)',
+        padding: 8,
+        borderRadius: 4,
+        fontSize: 12,
+        maxHeight: 240,
+        overflow: 'auto',
+      }}
+    >
+      {text}
+    </pre>
+  );
 }

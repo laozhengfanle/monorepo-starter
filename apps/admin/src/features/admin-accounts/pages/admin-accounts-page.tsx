@@ -16,7 +16,6 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import type { MessageInstance } from 'antd/es/message/interface';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeliveredProcedureOutlined,
@@ -28,14 +27,20 @@ import {
   SafetyCertificateOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { ApolloError } from '@apollo/client';
-import { CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/api-client';
+import {
+  CreateAdminAccountSchema,
+  UpdateAdminAccountSchema,
+} from '@starter/api-client';
 
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { useSystemConfig } from '../../../app/providers/system-config-provider.js';
 import { AccountPermissionModal } from '../account-permission-modal.js';
 import { hardRemoveAccountApi, restoreAccountApi } from '../api.js';
 import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
+import {
+  applyZodErrors,
+  showMutationError,
+} from '../../../shared/utils/form-errors.js';
 import {
   useAdminAccountsQuery,
   useAdminRolesQuery,
@@ -50,28 +55,6 @@ import type {
 } from '../../../generated/graphql';
 
 const DEFAULT_PAGE_SIZE = 10;
-
-/** GraphQL 错误 → 用户提示（message 来自 App.useApp()，静态方法无法消费动态主题） */
-function showMutationError(message: MessageInstance, error: unknown): void {
-  if (error instanceof ApolloError) {
-    void message.error(error.graphQLErrors[0]?.message ?? '操作失败，请稍后重试');
-    return;
-  }
-  void message.error('操作失败，请稍后重试');
-}
-
-/** 把 zod 校验失败映射为 antd 表单字段错误 */
-function applyZodErrors(
-  form: ReturnType<typeof Form.useForm>[0],
-  result: { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } }
-): void {
-  form.setFields(
-    result.error.issues.map((issue) => ({
-      name: issue.path.map(String),
-      errors: [issue.message],
-    }))
-  );
-}
 
 /** 管理端账户管理页：列表 + 创建/编辑/删除（权限按钮控制） */
 export function AdminAccountsPage(): React.JSX.Element {
@@ -88,12 +71,23 @@ export function AdminAccountsPage(): React.JSX.Element {
     enabled?: boolean;
   }>({});
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
-    () => new Set(['username', 'nickname', 'email', 'roleCodes', 'status', 'actions']),
+    () =>
+      new Set([
+        'username',
+        'nickname',
+        'email',
+        'roleCodes',
+        'status',
+        'actions',
+      ]),
   );
   const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
   // 特例授权弹窗
-  const [permAccount, setPermAccount] = useState<{ id: string; name: string } | null>(null);
+  const [permAccount, setPermAccount] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   // 软删除视图（显示已删除记录）
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -121,11 +115,17 @@ export function AdminAccountsPage(): React.JSX.Element {
     },
   });
   const { data: rolesData } = useAdminRolesQuery();
-  const [createAccount, { loading: createLoading }] = useCreateAdminAccountMutation();
-  const [updateAccount, { loading: updateLoading }] = useUpdateAdminAccountMutation();
-  const [deleteAccount, { loading: deleteLoading }] = useDeleteAdminAccountMutation();
+  const [createAccount, { loading: createLoading }] =
+    useCreateAdminAccountMutation();
+  const [updateAccount, { loading: updateLoading }] =
+    useUpdateAdminAccountMutation();
+  const [deleteAccount, { loading: deleteLoading }] =
+    useDeleteAdminAccountMutation();
 
-  const accounts = useMemo(() => data?.adminAccounts.items ?? [], [data?.adminAccounts]);
+  const accounts = useMemo(
+    () => data?.adminAccounts.items ?? [],
+    [data?.adminAccounts],
+  );
   const total = data?.adminAccounts.total ?? 0;
   const roleOptions = (rolesData?.adminRoles ?? []).map((role) => ({
     value: role.code,
@@ -165,7 +165,8 @@ export function AdminAccountsPage(): React.JSX.Element {
 
   const handleSubmit = async (): Promise<void> => {
     const values = form.getFieldsValue();
-    const schema = editingId === null ? CreateAdminAccountSchema : UpdateAdminAccountSchema;
+    const schema =
+      editingId === null ? CreateAdminAccountSchema : UpdateAdminAccountSchema;
     const parsed = schema.safeParse(values);
     if (!parsed.success) {
       applyZodErrors(form, parsed);
@@ -174,7 +175,9 @@ export function AdminAccountsPage(): React.JSX.Element {
     try {
       if (editingId === null) {
         await createAccount({
-          variables: { input: parsed.data as unknown as CreateAdminAccountInput },
+          variables: {
+            input: parsed.data as unknown as CreateAdminAccountInput,
+          },
         });
         void message.success('创建成功');
       } else {
@@ -256,7 +259,11 @@ export function AdminAccountsPage(): React.JSX.Element {
             </Space>
           );
         }
-        return account.enabled ? <Tag color="green">正常</Tag> : <Tag>禁用</Tag>;
+        return account.enabled ? (
+          <Tag color="green">正常</Tag>
+        ) : (
+          <Tag>禁用</Tag>
+        );
       },
     },
     {
@@ -268,7 +275,11 @@ export function AdminAccountsPage(): React.JSX.Element {
         return (
           <Space>
             {!isDeleted && canUpdate && (
-              <Button type="link" size="small" onClick={() => openEdit(account)}>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => openEdit(account)}
+              >
                 编辑
               </Button>
             )}
@@ -277,14 +288,22 @@ export function AdminAccountsPage(): React.JSX.Element {
                 type="link"
                 size="small"
                 icon={<SafetyCertificateOutlined />}
-                onClick={() => setPermAccount({ id: account.accountId, name: account.username })}
+                onClick={() =>
+                  setPermAccount({
+                    id: account.accountId,
+                    name: account.username,
+                  })
+                }
               >
                 特例授权
               </Button>
             )}
             {!isDeleted && canDelete && (
-              <Popconfirm title="确认删除该账户？删除后其所有 token 失效" onConfirm={() => handleRemove(account.accountId)}>
-                <Button type="link" size="small" danger>
+              <Popconfirm
+                title="确认删除该账户？删除后其所有 token 失效"
+                onConfirm={() => handleRemove(account.accountId)}
+              >
+                <Button color="danger" variant="link" size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -304,12 +323,19 @@ export function AdminAccountsPage(): React.JSX.Element {
                 title="彻底删除？账户的所有关联数据将永久删除且不可恢复"
                 onConfirm={() => handleHardRemove(account.accountId)}
               >
-                <Button type="link" size="small" danger loading={actionLoading}>
+                <Button
+                  color="danger"
+                  variant="link"
+                  size="small"
+                  loading={actionLoading}
+                >
                   彻底删除
                 </Button>
               </Popconfirm>
             )}
-            {!canUpdate && !canDelete && <Typography.Text type="secondary">无权限</Typography.Text>}
+            {!canUpdate && !canDelete && (
+              <Typography.Text type="secondary">无权限</Typography.Text>
+            )}
           </Space>
         );
       },
@@ -353,15 +379,23 @@ export function AdminAccountsPage(): React.JSX.Element {
 
   // 导出 CSV：导出当前筛选条件下的账户（含可见列）
   const handleExport = (format: 'excel' | 'csv'): void => {
-    const exportCols = fullColumns.filter((c) => visibleKeys.has(c.key as string) && c.key !== 'actions');
+    const exportCols = fullColumns.filter(
+      (c) => visibleKeys.has(c.key as string) && c.key !== 'actions',
+    );
     const header = exportCols.map((c) => String(c.title));
     const rows: (string | number | boolean | null | undefined)[][] = [
       header,
       ...accounts.map((a) =>
         exportCols.map((c) => {
-          if (c.key === 'status') return a.deletedAt ? `已删除 ${a.deletedAt.slice(0, 10)}` : a.enabled ? '正常' : '禁用';
+          if (c.key === 'status')
+            return a.deletedAt
+              ? `已删除 ${a.deletedAt.slice(0, 10)}`
+              : a.enabled
+                ? '正常'
+                : '禁用';
           if (c.key === 'roleCodes') return a.roleCodes.join(' / ');
-          const dataIdx = (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
+          const dataIdx =
+            (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
           const v = (a as unknown as Record<string, unknown>)[dataIdx];
           return (v as string | number | boolean | null | undefined) ?? '';
         }),
@@ -369,16 +403,24 @@ export function AdminAccountsPage(): React.JSX.Element {
     ];
     const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
     if (format === 'excel') {
-      downloadBlob(toExcel(rows), `账户管理_${ts}.xls`, 'application/vnd.ms-excel;charset=utf-8;');
+      downloadBlob(
+        toExcel(rows),
+        `账户管理_${ts}.xls`,
+        'application/vnd.ms-excel;charset=utf-8;',
+      );
     } else {
-      downloadBlob(toCSV(rows), `账户管理_${ts}.csv`, 'text/csv;charset=utf-8;');
+      downloadBlob(
+        toCSV(rows),
+        `账户管理_${ts}.csv`,
+        'text/csv;charset=utf-8;',
+      );
     }
     void message.success(`已导出 ${accounts.length} 条`);
   };
 
   return (
     <div>
-            {/* 搜索卡：服务端筛选（点「查询」才请求，对标老项目 Vue） */}
+      {/* 搜索卡：服务端筛选（点「查询」才请求，对标老项目 Vue） */}
       <Card style={{ marginBottom: 16 }}>
         <Form
           form={searchForm}
@@ -396,37 +438,43 @@ export function AdminAccountsPage(): React.JSX.Element {
               email: values.email || undefined,
               roleCode: values.roleCode || undefined,
               enabled:
-                values.enabled === 'enabled' ? true : values.enabled === 'disabled' ? false : undefined,
+                values.enabled === 'enabled'
+                  ? true
+                  : values.enabled === 'disabled'
+                    ? false
+                    : undefined,
             });
           }}
         >
-          <Form.Item name="username" style={{ marginBottom: 0 }}>
+          <Form.Item name="username" label="用户名" style={{ marginBottom: 0 }}>
             <Input
               allowClear
               prefix={<SearchOutlined />}
-              placeholder="用户名"
+              placeholder="请输入用户名"
+              autoComplete="off"
               style={{ width: 160 }}
             />
           </Form.Item>
-          <Form.Item name="email" style={{ marginBottom: 0 }}>
+          <Form.Item name="email" label="邮箱" style={{ marginBottom: 0 }}>
             <Input
               allowClear
-              placeholder="邮箱"
+              placeholder="请输入邮箱"
+              autoComplete="off"
               style={{ width: 180 }}
             />
           </Form.Item>
-          <Form.Item name="roleCode" style={{ marginBottom: 0 }}>
+          <Form.Item name="roleCode" label="角色" style={{ marginBottom: 0 }}>
             <Select
               allowClear
-              placeholder="角色"
+              placeholder="全部"
               style={{ width: 160 }}
               options={roleOptions}
             />
           </Form.Item>
-          <Form.Item name="enabled" style={{ marginBottom: 0 }}>
+          <Form.Item name="enabled" label="状态" style={{ marginBottom: 0 }}>
             <Select
               allowClear
-              placeholder="状态"
+              placeholder="全部"
               style={{ width: 120 }}
               options={[
                 { value: 'enabled', label: '正常' },
@@ -435,7 +483,11 @@ export function AdminAccountsPage(): React.JSX.Element {
             />
           </Form.Item>
           {canViewTrash && (
-            <Form.Item name="includeDeleted" valuePropName="checked" style={{ marginBottom: 0 }}>
+            <Form.Item
+              name="includeDeleted"
+              valuePropName="checked"
+              style={{ marginBottom: 0 }}
+            >
               <Checkbox
                 checked={includeDeleted}
                 onChange={(e) => {
@@ -449,7 +501,11 @@ export function AdminAccountsPage(): React.JSX.Element {
           )}
           <Form.Item style={{ marginBottom: 0 }}>
             <Space>
-              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<SearchOutlined />}
+              >
                 查询
               </Button>
               <Button
@@ -473,14 +529,21 @@ export function AdminAccountsPage(): React.JSX.Element {
         extra={
           <Space size="small">
             {canCreate && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openCreate}
+              >
                 新建账户
               </Button>
             )}
             <Dropdown
               trigger={['click']}
               arrow
-              menu={{ items: columnMenuItems, onClick: (info) => info.domEvent.stopPropagation() }}
+              menu={{
+                items: columnMenuItems,
+                onClick: (info) => info.domEvent.stopPropagation(),
+              }}
             >
               <Button icon={<FilterOutlined />} aria-label="列控制" />
             </Dropdown>
@@ -489,7 +552,11 @@ export function AdminAccountsPage(): React.JSX.Element {
               arrow
               menu={{
                 items: [
-                  { key: 'excel', label: '导出 Excel', icon: <FileExcelOutlined /> },
+                  {
+                    key: 'excel',
+                    label: '导出 Excel',
+                    icon: <FileExcelOutlined />,
+                  },
                   { key: 'csv', label: '导出 CSV', icon: <FileTextOutlined /> },
                 ],
                 onClick: ({ key }) => handleExport(key as 'excel' | 'csv'),
@@ -497,28 +564,32 @@ export function AdminAccountsPage(): React.JSX.Element {
             >
               <Button icon={<DeliveredProcedureOutlined />} aria-label="导出" />
             </Dropdown>
-            <Button icon={<RedoOutlined />} onClick={() => void refreshList()} aria-label="刷新" />
+            <Button
+              icon={<RedoOutlined />}
+              onClick={() => void refreshList()}
+              aria-label="刷新"
+            />
           </Space>
         }
       >
-      <Table<AdminAccount>
-        rowKey="accountId"
-        columns={columns}
-        dataSource={accounts}
-        loading={loading}
-        locale={{ emptyText: '暂无数据' }}
-        pagination={{
-          current: page,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showTotal: (t) => `共 ${t} 条`,
-          onChange: (nextPage, nextPageSize) => {
-            setPage(nextPageSize === pageSize ? nextPage : 1);
-            setPageSize(nextPageSize);
-          },
-        }}
-      />
+        <Table<AdminAccount>
+          rowKey="accountId"
+          columns={columns}
+          dataSource={accounts}
+          loading={loading}
+          locale={{ emptyText: '暂无数据' }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (nextPage, nextPageSize) => {
+              setPage(nextPageSize === pageSize ? nextPage : 1);
+              setPageSize(nextPageSize);
+            },
+          }}
+        />
       </Card>
 
       <Modal
@@ -539,9 +610,18 @@ export function AdminAccountsPage(): React.JSX.Element {
               <Form.Item
                 label="密码"
                 name="password"
-                rules={[{ required: true, message: '请输入密码' }, { min: sysSettings.passwordMinLength, message: `密码至少 ${sysSettings.passwordMinLength} 位` }]}
+                rules={[
+                  { required: true, message: '请输入密码' },
+                  {
+                    min: sysSettings.passwordMinLength,
+                    message: `密码至少 ${sysSettings.passwordMinLength} 位`,
+                  },
+                ]}
               >
-                <Input.Password placeholder={`至少 ${sysSettings.passwordMinLength} 位`} autoComplete="new-password" />
+                <Input.Password
+                  placeholder={`至少 ${sysSettings.passwordMinLength} 位`}
+                  autoComplete="new-password"
+                />
               </Form.Item>
             </>
           )}
@@ -552,7 +632,11 @@ export function AdminAccountsPage(): React.JSX.Element {
             <Input placeholder="name@example.com" />
           </Form.Item>
           <Form.Item label="角色" name="roleCodes">
-            <Select mode="multiple" options={roleOptions} placeholder="至少选择一个角色" />
+            <Select
+              mode="multiple"
+              options={roleOptions}
+              placeholder="至少选择一个角色"
+            />
           </Form.Item>
           {editingId !== null && (
             <Form.Item label="启用" name="enabled" valuePropName="checked">

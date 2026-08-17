@@ -18,6 +18,12 @@ for (const envFile of ['.env', 'apps/server/.env']) {
 }
 
 async function main(): Promise<void> {
+  // 生产环境拒绝执行 seed：seed 内置硬编码口令/演示账户，误跑即可能接管生产系统
+  const isProduction = process.env['NODE_ENV'] === 'production';
+  if (isProduction) {
+    throw new Error('生产环境禁止执行 seed，请走正式部署/初始化流程');
+  }
+
   const databaseUrl = process.env['DATABASE_URL'];
   if (!databaseUrl) {
     throw new Error('DATABASE_URL 未配置');
@@ -27,22 +33,39 @@ async function main(): Promise<void> {
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
 
-  // ── 1. 演示用户（幂等补数据：只创建缺失的，重复执行安全） ──
+  // ── 1. 演示用户（幂等补数据：只创建缺失的，重复执行安全；仅非生产创建） ──
   const DEMO_USERS = [
-    { username: 'alice', email: 'alice@example.com', role: 'member' as const, status: 'active' as const },
-    { username: 'bob', email: 'bob@example.com', role: 'member' as const, status: 'active' as const },
-    { username: 'carol', email: 'carol@example.com', role: 'admin' as const, status: 'active' as const },
+    {
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'member' as const,
+      status: 'active' as const,
+    },
+    {
+      username: 'bob',
+      email: 'bob@example.com',
+      role: 'member' as const,
+      status: 'active' as const,
+    },
+    {
+      username: 'carol',
+      email: 'carol@example.com',
+      role: 'admin' as const,
+      status: 'active' as const,
+    },
   ];
-  for (const demo of DEMO_USERS) {
-    // rawClient 查含软删记录（username 唯一约束包括软删行），存在则跳过
-    const existing = await prisma.user.findFirst({
-      where: { username: demo.username },
-    });
-    if (!existing) {
-      await prisma.user.create({
-        data: { id: newId(), ...demo },
+  if (!isProduction) {
+    for (const demo of DEMO_USERS) {
+      // rawClient 查含软删记录（username 唯一约束包括软删行），存在则跳过
+      const existing = await prisma.user.findFirst({
+        where: { username: demo.username },
       });
-      console.log(`✅ 已创建演示用户 ${demo.username}`);
+      if (!existing) {
+        await prisma.user.create({
+          data: { id: newId(), ...demo },
+        });
+        console.log(`✅ 已创建演示用户 ${demo.username}`);
+      }
     }
   }
 
@@ -80,19 +103,29 @@ async function main(): Promise<void> {
       });
       // 档案（默认头像 /avatar.jpeg：admin public 静态资源，seed 内置保证可用）
       await tx.adminProfile.create({
-        data: { id: newId(), accountId, nickname: '超级管理员', avatar: '/avatar.jpeg' },
+        data: {
+          id: newId(),
+          accountId,
+          nickname: '超级管理员',
+          avatar: '/avatar.jpeg',
+        },
       });
       // 角色（super_admin）+ 绑定
       if (!superAdminRole) {
         await tx.adminRole.create({
-          data: { id: roleId, name: '超级管理员', code: 'super_admin', description: '内置超管角色' },
+          data: {
+            id: roleId,
+            name: '超级管理员',
+            code: 'super_admin',
+            description: '内置超管角色',
+          },
         });
       }
       await tx.adminAccountRole.create({
         data: { id: newId(), accountId, roleId },
       });
     });
-    console.log('✅ 已创建初始管理员 root / Root!123（角色 super_admin）');
+    console.log('✅ 已创建初始管理员（角色 super_admin），初始密码见部署文档');
   } else {
     // 同步更新超管档案头像（幂等：每次 seed 都覆盖，保证 /avatar.jpeg 不会丢）
     await prisma.adminProfile.updateMany({
@@ -133,9 +166,24 @@ async function main(): Promise<void> {
           icon: 'UserOutlined',
           sort: 1,
           children: [
-            { code: 'account:create', name: '新建账户', type: 'button', sort: 1 },
-            { code: 'account:update', name: '编辑账户', type: 'button', sort: 2 },
-            { code: 'account:delete', name: '删除账户', type: 'button', sort: 3 },
+            {
+              code: 'account:create',
+              name: '新建账户',
+              type: 'button',
+              sort: 1,
+            },
+            {
+              code: 'account:update',
+              name: '编辑账户',
+              type: 'button',
+              sort: 2,
+            },
+            {
+              code: 'account:delete',
+              name: '删除账户',
+              type: 'button',
+              sort: 3,
+            },
           ],
         },
         {
@@ -183,7 +231,12 @@ async function main(): Promise<void> {
           icon: 'SettingOutlined',
           sort: 1,
           children: [
-            { code: 'config:admin:update', name: '编辑配置', type: 'button', sort: 1 },
+            {
+              code: 'config:admin:update',
+              name: '编辑配置',
+              type: 'button',
+              sort: 1,
+            },
           ],
         },
         {
@@ -194,9 +247,24 @@ async function main(): Promise<void> {
           icon: 'FileTextOutlined',
           sort: 2,
           children: [
-            { code: 'config:audit:export', name: '导出日志', type: 'button', sort: 1 },
-            { code: 'config:audit:clear', name: '清空日志', type: 'button', sort: 2 },
-            { code: 'config:audit:delete', name: '删除日志', type: 'button', sort: 3 },
+            {
+              code: 'config:audit:export',
+              name: '导出日志',
+              type: 'button',
+              sort: 1,
+            },
+            {
+              code: 'config:audit:clear',
+              name: '清空日志',
+              type: 'button',
+              sort: 2,
+            },
+            {
+              code: 'config:audit:delete',
+              name: '删除日志',
+              type: 'button',
+              sort: 3,
+            },
           ],
         },
         {
@@ -207,7 +275,12 @@ async function main(): Promise<void> {
           icon: 'FolderOutlined',
           sort: 3,
           children: [
-            { code: 'config:file:delete', name: '删除文件', type: 'button', sort: 1 },
+            {
+              code: 'config:file:delete',
+              name: '删除文件',
+              type: 'button',
+              sort: 1,
+            },
           ],
         },
         {
@@ -218,7 +291,12 @@ async function main(): Promise<void> {
           icon: 'ThunderboltOutlined',
           sort: 4,
           children: [
-            { code: 'config:cache:delete', name: '清理缓存', type: 'button', sort: 1 },
+            {
+              code: 'config:cache:delete',
+              name: '清理缓存',
+              type: 'button',
+              sort: 1,
+            },
           ],
         },
         {
@@ -229,7 +307,12 @@ async function main(): Promise<void> {
           icon: 'SafetyCertificateOutlined',
           sort: 5,
           children: [
-            { code: 'config:turnstile:update', name: '编辑配置', type: 'button', sort: 1 },
+            {
+              code: 'config:turnstile:update',
+              name: '编辑配置',
+              type: 'button',
+              sort: 1,
+            },
           ],
         },
         {
@@ -240,7 +323,12 @@ async function main(): Promise<void> {
           icon: 'BookOutlined',
           sort: 6,
           children: [
-            { code: 'config:dict:update', name: '编辑字典', type: 'button', sort: 1 },
+            {
+              code: 'config:dict:update',
+              name: '编辑字典',
+              type: 'button',
+              sort: 1,
+            },
           ],
         },
       ],
@@ -257,9 +345,24 @@ async function main(): Promise<void> {
       sort: 30,
       visible: false,
       children: [
-        { code: 'global:trash:view', name: '查看软删除', type: 'button', sort: 10 },
-        { code: 'global:trash:restore', name: '恢复已删数据', type: 'button', sort: 11 },
-        { code: 'global:trash:hard_delete', name: '彻底删除数据', type: 'button', sort: 12 },
+        {
+          code: 'global:trash:view',
+          name: '查看软删除',
+          type: 'button',
+          sort: 10,
+        },
+        {
+          code: 'global:trash:restore',
+          name: '恢复已删数据',
+          type: 'button',
+          sort: 11,
+        },
+        {
+          code: 'global:trash:hard_delete',
+          name: '彻底删除数据',
+          type: 'button',
+          sort: 12,
+        },
       ],
     },
   ];
@@ -312,107 +415,136 @@ async function main(): Promise<void> {
     return count;
   }
 
-  const superAdminRole = await prisma.adminRole.findUnique({ where: { code: 'super_admin' } });
+  const superAdminRole = await prisma.adminRole.findUnique({
+    where: { code: 'super_admin' },
+  });
   if (superAdminRole) {
-    const boundCount = await upsertMenuTree(prisma, superAdminRole.id, MENU_TREE, null);
-    console.log(`✅ 已对齐菜单树并绑定 super_admin 的 ${boundCount} 个菜单/权限点`);
+    const boundCount = await upsertMenuTree(
+      prisma,
+      superAdminRole.id,
+      MENU_TREE,
+      null,
+    );
+    console.log(
+      `✅ 已对齐菜单树并绑定 super_admin 的 ${boundCount} 个菜单/权限点`,
+    );
   }
 
-  // ── 4. 演示角色 + 账号（特例授权演示）：部分权限 ──
+  // ── 4. 演示角色 + 账号（特例授权演示）：仅非生产创建 ──
   // 运营专员角色只拥有部分权限（account:list / account:update / role:list），
   // 配合账号 operator1 可在「特例授权」弹窗直观看到：基线权限只显示禁止、其余只显示允许
-  const OPERATOR_CODES = ['account:list', 'account:update', 'role:list'];
-  let operatorRole = await prisma.adminRole.findUnique({ where: { code: 'operator' } });
-  if (!operatorRole) {
-    operatorRole = await prisma.adminRole.create({
-      data: {
-        id: newId(),
-        name: '运营专员',
-        code: 'operator',
-        description: '演示角色：拥有部分权限（账户管理/角色权限），用于特例授权演示',
-      },
+  if (!isProduction) {
+    const OPERATOR_CODES = ['account:list', 'account:update', 'role:list'];
+    let operatorRole = await prisma.adminRole.findUnique({
+      where: { code: 'operator' },
     });
-    console.log('✅ 已创建演示角色 运营专员（operator）');
-  }
-  // 幂等绑定部分权限
-  const operatorMenus = await prisma.adminMenu.findMany({
-    where: { code: { in: OPERATOR_CODES } },
-    select: { id: true },
-  });
-  for (const menu of operatorMenus) {
-    const bound = await prisma.adminRoleMenu.findUnique({
-      where: { roleId_menuId: { roleId: operatorRole.id, menuId: menu.id } },
-    });
-    if (!bound) {
-      await prisma.adminRoleMenu.create({
-        data: { id: newId(), roleId: operatorRole.id, menuId: menu.id },
-      });
-    }
-  }
-  // 演示账号 operator1（绑定运营专员角色）
-  const operatorIdentity = await prisma.accountIdentity.findUnique({
-    where: {
-      identityType_identifier: { identityType: 'username', identifier: 'operator1' },
-    },
-  });
-  if (!operatorIdentity) {
-    const accountId = newId();
-    await prisma.$transaction(async (tx) => {
-      await tx.account.create({
-        data: { id: accountId, userType: 'admin', enabled: true },
-      });
-      await tx.accountIdentity.create({
+    if (!operatorRole) {
+      operatorRole = await prisma.adminRole.create({
         data: {
           id: newId(),
-          accountId,
+          name: '运营专员',
+          code: 'operator',
+          description:
+            '演示角色：拥有部分权限（账户管理/角色权限），用于特例授权演示',
+        },
+      });
+      console.log('✅ 已创建演示角色 运营专员（operator）');
+    }
+    // 幂等绑定部分权限
+    const operatorMenus = await prisma.adminMenu.findMany({
+      where: { code: { in: OPERATOR_CODES } },
+      select: { id: true },
+    });
+    for (const menu of operatorMenus) {
+      const bound = await prisma.adminRoleMenu.findUnique({
+        where: { roleId_menuId: { roleId: operatorRole.id, menuId: menu.id } },
+      });
+      if (!bound) {
+        await prisma.adminRoleMenu.create({
+          data: { id: newId(), roleId: operatorRole.id, menuId: menu.id },
+        });
+      }
+    }
+    // 演示账号 operator1（绑定运营专员角色）
+    const operatorIdentity = await prisma.accountIdentity.findUnique({
+      where: {
+        identityType_identifier: {
           identityType: 'username',
           identifier: 'operator1',
-          credential: await bcrypt.hash('Operator!123', 10),
-          verified: true,
         },
-      });
-      await tx.adminProfile.create({
-        data: { id: newId(), accountId, nickname: '运营专员' },
-      });
-      await tx.adminAccountRole.create({
-        data: { id: newId(), accountId, roleId: operatorRole.id },
-      });
+      },
     });
-    console.log('✅ 已创建演示账号 operator1 / Operator!123（角色 运营专员）');
-  }
-
-  // ── 4.5 演示软删除数据：deleted_demo（已删除演示账号，用于展示软删除视图） ──
-  const deletedDemoIdentity = await prisma.accountIdentity.findUnique({
-    where: {
-      identityType_identifier: { identityType: 'username', identifier: 'deleted_demo' },
-    },
-  });
-  if (!deletedDemoIdentity) {
-    const accountId = newId();
-    await prisma.$transaction(async (tx) => {
-      await tx.account.create({
-        data: { id: accountId, userType: 'admin', enabled: true, deletedAt: new Date() },
-      });
-      await tx.accountIdentity.create({
-        data: {
-          id: newId(),
-          accountId,
-          identityType: 'username',
-          identifier: 'deleted_demo',
-          credential: await bcrypt.hash('Deleted!123', 10),
-          verified: true,
-        },
-      });
-      await tx.adminProfile.create({
-        data: { id: newId(), accountId, nickname: '已删除演示账号' },
-      });
-      if (operatorRole) {
+    if (!operatorIdentity) {
+      const accountId = newId();
+      await prisma.$transaction(async (tx) => {
+        await tx.account.create({
+          data: { id: accountId, userType: 'admin', enabled: true },
+        });
+        await tx.accountIdentity.create({
+          data: {
+            id: newId(),
+            accountId,
+            identityType: 'username',
+            identifier: 'operator1',
+            credential: await bcrypt.hash('Operator!123', 10),
+            verified: true,
+          },
+        });
+        await tx.adminProfile.create({
+          data: { id: newId(), accountId, nickname: '运营专员' },
+        });
         await tx.adminAccountRole.create({
           data: { id: newId(), accountId, roleId: operatorRole.id },
         });
-      }
+      });
+      console.log(
+        '✅ 已创建演示账号 operator1（角色 运营专员），初始密码见部署文档',
+      );
+    }
+
+    // ── 4.5 演示软删除数据：deleted_demo（已删除演示账号，用于展示软删除视图） ──
+    const deletedDemoIdentity = await prisma.accountIdentity.findUnique({
+      where: {
+        identityType_identifier: {
+          identityType: 'username',
+          identifier: 'deleted_demo',
+        },
+      },
     });
-    console.log('✅ 已创建软删除演示账号 deleted_demo（在「显示已删除」视图可见）');
+    if (!deletedDemoIdentity) {
+      const accountId = newId();
+      await prisma.$transaction(async (tx) => {
+        await tx.account.create({
+          data: {
+            id: accountId,
+            userType: 'admin',
+            enabled: true,
+            deletedAt: new Date(),
+          },
+        });
+        await tx.accountIdentity.create({
+          data: {
+            id: newId(),
+            accountId,
+            identityType: 'username',
+            identifier: 'deleted_demo',
+            credential: await bcrypt.hash('Deleted!123', 10),
+            verified: true,
+          },
+        });
+        await tx.adminProfile.create({
+          data: { id: newId(), accountId, nickname: '已删除演示账号' },
+        });
+        if (operatorRole) {
+          await tx.adminAccountRole.create({
+            data: { id: newId(), accountId, roleId: operatorRole.id },
+          });
+        }
+      });
+      console.log(
+        '✅ 已创建软删除演示账号 deleted_demo（在「显示已删除」视图可见）',
+      );
+    }
   }
 
   // ── 4.6 系统配置默认值（system_config，key-value JSON） ──
@@ -451,8 +583,9 @@ async function main(): Promise<void> {
   for (const cfg of DEFAULT_CONFIGS) {
     // 先找未删行；不存在则找已软删行（key 唯一约束，软删后重建需复用并清除 deletedAt）
     const existing =
-      (await prisma.systemConfig.findFirst({ where: { key: cfg.key, deletedAt: null } })) ??
-      (await prisma.systemConfig.findFirst({ where: { key: cfg.key } }));
+      (await prisma.systemConfig.findFirst({
+        where: { key: cfg.key, deletedAt: null },
+      })) ?? (await prisma.systemConfig.findFirst({ where: { key: cfg.key } }));
     if (existing) {
       if (existing.deletedAt) {
         await prisma.systemConfig.update({
@@ -486,7 +619,8 @@ async function main(): Promise<void> {
     {
       code: 'audit_action',
       name: '审计操作类型',
-      remark: '审计日志 action 的可选项（audit_log.action）—— 由 audit.constants.ts 单一事实源生成',
+      remark:
+        '审计日志 action 的可选项（audit_log.action）—— 由 audit.constants.ts 单一事实源生成',
       // 与 AUDIT_ACTIONS 常量严格一致：新增动作只改 audit.constants.ts，勿在此手写
       items: (Object.entries(AUDIT_ACTION_LABELS) as [string, string][]).map(
         ([value, label], index) => ({ label, value, sort: index + 1 }),
@@ -495,7 +629,8 @@ async function main(): Promise<void> {
     {
       code: 'audit_resource',
       name: '审计资源类型',
-      remark: '审计日志 resourceType 的可选项 —— 由 audit.constants.ts 单一事实源生成',
+      remark:
+        '审计日志 resourceType 的可选项 —— 由 audit.constants.ts 单一事实源生成',
       items: (Object.entries(AUDIT_RESOURCE_LABELS) as [string, string][]).map(
         ([value, label], index) => ({ label, value, sort: index + 1 }),
       ),
@@ -556,10 +691,17 @@ async function main(): Promise<void> {
     },
   ];
   for (const dict of DICT_SEED) {
-    let type = await prisma.sysDictType.findUnique({ where: { code: dict.code } });
+    let type = await prisma.sysDictType.findUnique({
+      where: { code: dict.code },
+    });
     if (!type) {
       type = await prisma.sysDictType.create({
-        data: { id: newId(), code: dict.code, name: dict.name, remark: dict.remark ?? null },
+        data: {
+          id: newId(),
+          code: dict.code,
+          name: dict.name,
+          remark: dict.remark ?? null,
+        },
       });
       console.log(`✅ 已创建字典类型 ${dict.code}（${dict.name}）`);
     }
@@ -607,7 +749,11 @@ async function main(): Promise<void> {
   // 否则旧行会一直残留在侧栏（回收站曾因此反复出现）。
   const LEGACY_MENU_CODES = [
     // 用户中心 分支（user-center / user:*）
-    'user-center', 'user:list', 'user:create', 'user:update', 'user:delete',
+    'user-center',
+    'user:list',
+    'user:create',
+    'user:update',
+    'user:delete',
     // 独立回收站菜单（已废弃，软删除集成进账户列表）
     'recycle:list',
     // 旧后台设置权限码 config:admin → 已升级为 config:admin:view
@@ -621,10 +767,16 @@ async function main(): Promise<void> {
   });
   if (legacyMenus.length > 0) {
     const legacyIds = legacyMenus.map((m) => m.id);
-    await prisma.adminAccountMenu.deleteMany({ where: { menuId: { in: legacyIds } } });
-    await prisma.adminRoleMenu.deleteMany({ where: { menuId: { in: legacyIds } } });
+    await prisma.adminAccountMenu.deleteMany({
+      where: { menuId: { in: legacyIds } },
+    });
+    await prisma.adminRoleMenu.deleteMany({
+      where: { menuId: { in: legacyIds } },
+    });
     await prisma.adminMenu.deleteMany({ where: { id: { in: legacyIds } } });
-    console.log(`🗑️ 已清理旧菜单/权限点 ${legacyMenus.length} 个（${legacyMenus.map((m) => m.code).join(', ')}）`);
+    console.log(
+      `🗑️ 已清理旧菜单/权限点 ${legacyMenus.length} 个（${legacyMenus.map((m) => m.code).join(', ')}）`,
+    );
   }
 
   await pool.end();

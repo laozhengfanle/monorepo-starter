@@ -1,4 +1,4 @@
-import { Breadcrumb, FloatButton, Layout, theme } from 'antd';
+import { Breadcrumb, FloatButton, Layout, Watermark, theme } from 'antd';
 import type { ReactNode } from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -38,11 +38,21 @@ function findBreadcrumb(
  * 顶栏 Header → 左侧 Sider（响应式折叠）→ 标签栏 + 面包屑 + 内容 + 页脚。
  * 布局显隐（标签栏/面包屑/页脚）由偏好设置控制。
  */
-export function MainLayout({ children }: { children: ReactNode }): React.JSX.Element {
+export function MainLayout({
+  children,
+}: {
+  children: ReactNode;
+}): React.JSX.Element {
   const { token } = theme.useToken();
   const location = useLocation();
   const { user } = useAuth();
-  const { showTabBar, showBreadcrumb, showFooter } = useSettings();
+  const {
+    showTabBar,
+    showBreadcrumb,
+    showFooter,
+    isWatermarkVisible,
+    watermarkContent,
+  } = useSettings();
 
   // userCollapsed：用户手动收起；belowLg：视口 < lg 强制收起
   const [userCollapsed, setUserCollapsed] = useState(false);
@@ -58,59 +68,76 @@ export function MainLayout({ children }: { children: ReactNode }): React.JSX.Ele
     return findBreadcrumb(user?.menus ?? [], path);
   }, [location.pathname, user?.menus]);
 
-  return (
-    <TabBarProvider>
-      <Layout className="h-screen">
-        <LayoutHeader />
+  // 主布局（水印开关 + 内容非空时用 Watermark 包裹整页）
+  const layout = (
+    <Layout className="h-screen">
+      <LayoutHeader />
 
-        <Layout hasSider className="flex-1 overflow-hidden">
-          <LayoutSidebar
-            collapsed={collapsed}
-            onToggle={() => setUserCollapsed((prev) => !prev)}
-            onBreakpoint={setBelowLg}
-          />
+      <Layout hasSider className="flex-1 overflow-hidden">
+        <LayoutSidebar
+          collapsed={collapsed}
+          onToggle={() => setUserCollapsed((prev) => !prev)}
+          onBreakpoint={setBelowLg}
+        />
 
-          <Layout className="overflow-hidden">
-            {showTabBar ? <TabBar /> : null}
+        <Layout className="overflow-hidden">
+          {showTabBar ? <TabBar /> : null}
 
-            {showBreadcrumb && breadcrumbItems.length > 0 ? (
-              <div
-                className="shrink-0"
-                style={{
-                  padding: `${token.paddingSM}px ${token.paddingLG}px`,
-                  background: token.colorBgContainer,
-                }}
-              >
-                <Breadcrumb items={breadcrumbItems.map((item) => ({ title: item.title }))} />
-              </div>
-            ) : null}
-
-            {/* 滚动容器：minHeight:0 是 flex 子项可滚动的关键，
-               否则内容超出会被 overflow-hidden 父级裁掉（footer 不可见） */}
-            <Layout
-              ref={scrollRef}
-              className="flex-1 overflow-auto"
-              style={{ minHeight: 0 }}
+          {showBreadcrumb && breadcrumbItems.length > 0 ? (
+            <div
+              className="shrink-0"
+              style={{
+                padding: `${token.paddingSM}px ${token.paddingLG}px`,
+                background: token.colorBgContainer,
+              }}
             >
-              {/* 内层包裹：min-height 100% + flex column 实现 sticky footer ——
-                  内容不足时 Content 撑满、footer 贴底；
-                  内容多时包裹层随内容变高、footer 被顶到下方滚动可见 */}
-              <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
-                {/* flex: 1 0 auto —— grow 填充不足空间，shrink 0 防止内容被压缩溢出 */}
-                <Content style={{ flex: '1 0 auto', padding: token.paddingLG }}>
-                  {children}
-                </Content>
-                {showFooter ? <LayoutFooter /> : null}
-              </div>
-            </Layout>
+              <Breadcrumb
+                items={breadcrumbItems.map((item) => ({ title: item.title }))}
+              />
+            </div>
+          ) : null}
+
+          {/* 滚动容器：minHeight:0 是 flex 子项可滚动的关键，
+              否则内容超出会被 overflow-hidden 父级裁掉（footer 不可见） */}
+          <Layout
+            ref={scrollRef}
+            className="flex-1 overflow-auto"
+            style={{ minHeight: 0 }}
+          >
+            {/* 内层包裹：min-height 100% + flex column 实现 sticky footer ——
+                内容不足时 Content 撑满、footer 贴底；
+                内容多时包裹层随内容变高、footer 被顶到下方滚动可见 */}
+            <div
+              style={{
+                minHeight: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {/* flex: 1 0 auto —— grow 填充不足空间，shrink 0 防止内容被压缩溢出 */}
+              <Content style={{ flex: '1 0 auto', padding: token.paddingLG }}>
+                {children}
+              </Content>
+              {showFooter ? <LayoutFooter /> : null}
+            </div>
           </Layout>
         </Layout>
-
-        <FloatButton.BackTop
-          target={() => scrollRef.current as HTMLElement}
-          style={{ insetInlineEnd: token.paddingLG }}
-        />
       </Layout>
+
+      <FloatButton.BackTop
+        target={() => scrollRef.current as HTMLElement}
+        style={{ insetInlineEnd: token.paddingLG }}
+      />
+    </Layout>
+  );
+
+  return (
+    <TabBarProvider>
+      {isWatermarkVisible && watermarkContent ? (
+        <Watermark content={watermarkContent}>{layout}</Watermark>
+      ) : (
+        layout
+      )}
     </TabBarProvider>
   );
 }

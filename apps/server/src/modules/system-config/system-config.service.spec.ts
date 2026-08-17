@@ -136,6 +136,69 @@ describe('SystemConfigService', () => {
     expect(turnstile?.value.siteKey).toBe('k'); // 非敏感字段保留
   });
 
+  it('getByKey：turnstile.config 敏感字段 secretKey 脱敏为占位符', async () => {
+    prisma.client.systemConfig.findFirst.mockResolvedValue(
+      makeConfigRow('turnstile.config', {
+        enabled: true,
+        siteKey: 'k',
+        secretKey: 'SECRET',
+      }),
+    );
+
+    const result = await service.getByKey('turnstile.config');
+
+    expect(result?.value.secretKey).toBe(MASK_PLACEHOLDER);
+    expect(result?.value.siteKey).toBe('k');
+  });
+
+  it('getByKey：storage.driver 云存储凭证 accessKey/secretKey 脱敏', async () => {
+    prisma.client.systemConfig.findFirst.mockResolvedValue(
+      makeConfigRow('storage.driver', {
+        driver: 'oss',
+        accessKey: 'AK',
+        secretKey: 'SK',
+      }),
+    );
+
+    const result = await service.getByKey('storage.driver');
+
+    expect(result?.value.accessKey).toBe(MASK_PLACEHOLDER);
+    expect(result?.value.secretKey).toBe(MASK_PLACEHOLDER);
+    expect(result?.value.driver).toBe('oss'); // 非敏感字段保留
+  });
+
+  it('update：敏感字段回传 ****** 时保留数据库旧值，不覆盖真值', async () => {
+    prisma.client.systemConfig.findFirst.mockResolvedValue(
+      makeConfigRow('turnstile.config', {
+        enabled: true,
+        siteKey: 'k',
+        secretKey: 'OLD_SECRET',
+      }),
+    );
+    prisma.client.systemConfig.update.mockResolvedValue(
+      makeConfigRow('turnstile.config', {
+        enabled: true,
+        siteKey: 'k',
+        secretKey: 'OLD_SECRET',
+      }),
+    );
+
+    const result = await service.update(
+      'turnstile.config',
+      { value: { enabled: true, siteKey: 'k2', secretKey: MASK_PLACEHOLDER } },
+      'op-1',
+    );
+
+    // 写入 DB 的值：secretKey 保留旧值，其余字段正常更新
+    const updateCall = prisma.client.systemConfig.update.mock.calls[0][0] as {
+      data: { value: Record<string, unknown> };
+    };
+    expect(updateCall.data.value.secretKey).toBe('OLD_SECRET');
+    expect(updateCall.data.value.siteKey).toBe('k2');
+    // 返回给前端的值仍脱敏，避免回显真密钥
+    expect(result.value.secretKey).toBe(MASK_PLACEHOLDER);
+  });
+
   it('remove：配置不存在抛 CONFIG_NOT_FOUND', async () => {
     await expect(service.remove('nope', 'op-1')).rejects.toMatchObject({
       code: 'CONFIG_NOT_FOUND',

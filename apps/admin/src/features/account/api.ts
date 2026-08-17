@@ -1,13 +1,12 @@
 import axios from 'axios';
-import type { AdminMe, ChangePasswordInput, UpdateSelfInput } from '@starter/api-client';
-import { authStorage } from '../../app/auth/auth-storage.js';
+import type {
+  AdminMe,
+  ChangePasswordInput,
+  UpdateSelfInput,
+} from '@starter/api-client';
+import { authHeaders } from '../../shared/utils/http.js';
 
 /** 个人中心 API（走 /api 前缀，开发环境由 Vite 代理转发） */
-
-function authHeaders(): Record<string, string> {
-  const token = authStorage.getAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 /** 更新自己的资料（nickname/email/phone/avatar） */
 export async function updateSelfApi(input: UpdateSelfInput): Promise<AdminMe> {
@@ -18,7 +17,9 @@ export async function updateSelfApi(input: UpdateSelfInput): Promise<AdminMe> {
 }
 
 /** 修改密码（成功后账号所有 token 被撤销） */
-export async function changePasswordApi(input: ChangePasswordInput): Promise<void> {
+export async function changePasswordApi(
+  input: ChangePasswordInput,
+): Promise<void> {
   await axios.post('/api/auth/me/password', input, { headers: authHeaders() });
 }
 

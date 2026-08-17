@@ -12,7 +12,6 @@ import {
   Tag,
   Typography,
   theme,
-  type FormInstance,
 } from 'antd';
 import {
   CameraOutlined,
@@ -24,7 +23,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/auth/auth-context.js';
 import { changePasswordApi, updateSelfApi, uploadAvatarApi } from './api.js';
 import { ChangePasswordSchema, UpdateSelfSchema } from '@starter/api-client';
-import { formatDateTime, ROLE_LABEL_MAP, ROLE_TAG_COLOR_MAP } from './shared.js';
+import {
+  formatDateTime,
+  ROLE_LABEL_MAP,
+  ROLE_TAG_COLOR_MAP,
+} from './shared.js';
+import { applyZodErrors } from '../../shared/utils/form-errors.js';
 
 const { Text, Title } = Typography;
 
@@ -63,19 +67,6 @@ function CardHeader({
   );
 }
 
-/** 把 zod 校验失败映射为 antd 表单字段错误（与 admin-accounts-page 的 applyZodErrors 同模式） */
-function applyZodErrors(
-  form: FormInstance,
-  result: { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } }
-): void {
-  form.setFields(
-    result.error.issues.map((issue) => ({
-      name: issue.path.map(String),
-      errors: [issue.message],
-    }))
-  );
-}
-
 /** 账号设置（对标老项目 AccountSettingsPage）：头像/基本信息/账号状态/修改密码，全部接真实后端 */
 export function AccountSettingsPage(): React.JSX.Element {
   const { token } = theme.useToken();
@@ -83,10 +74,13 @@ export function AccountSettingsPage(): React.JSX.Element {
   const navigate = useNavigate();
   const { user, refreshMe } = useAuth();
 
-  const displayRole = (user?.roleCodes ?? []).map((c) => ROLE_LABEL_MAP[c] ?? c).join(' / ') || '-';
-  const roleTagColor = (user?.roleCodes ?? []).length > 0
-    ? ROLE_TAG_COLOR_MAP[user!.roleCodes[0]] || 'blue'
-    : 'default';
+  const displayRole =
+    (user?.roleCodes ?? []).map((c) => ROLE_LABEL_MAP[c] ?? c).join(' / ') ||
+    '-';
+  const roleTagColor =
+    (user?.roleCodes ?? []).length > 0
+      ? ROLE_TAG_COLOR_MAP[user!.roleCodes[0]] || 'blue'
+      : 'default';
 
   // ===== 头像 =====
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -94,11 +88,19 @@ export function AccountSettingsPage(): React.JSX.Element {
   const [avatarPreview, setAvatarPreview] = useState('');
 
   // ===== 基本信息 =====
-  const [profileForm] = Form.useForm<{ nickname: string; email: string; phone: string }>();
+  const [profileForm] = Form.useForm<{
+    nickname: string;
+    email: string;
+    phone: string;
+  }>();
   const [profileSaving, setProfileSaving] = useState(false);
 
   // ===== 修改密码 =====
-  const [passwordForm] = Form.useForm<{ currentPassword: string; newPassword: string; confirm: string }>();
+  const [passwordForm] = Form.useForm<{
+    currentPassword: string;
+    newPassword: string;
+    confirm: string;
+  }>();
   const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
@@ -114,7 +116,9 @@ export function AccountSettingsPage(): React.JSX.Element {
 
   /** 更换头像：上传 → 更新 profile → 刷新 me */
   const onAvatarClick = (): void => avatarInputRef.current?.click();
-  const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+  const onAvatarChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
     const input = e.target;
     const file = input.files?.[0];
     input.value = '';
@@ -165,7 +169,11 @@ export function AccountSettingsPage(): React.JSX.Element {
     } catch (error) {
       const msg =
         typeof error === 'object' && error !== null && 'response' in error
-          ? ((error as { response?: { data?: { error?: { message?: string } } } }).response?.data?.error?.message)
+          ? (
+              error as {
+                response?: { data?: { error?: { message?: string } } };
+              }
+            ).response?.data?.error?.message
           : undefined;
       void message.error(msg ?? '保存失败，请重试');
     } finally {
@@ -197,7 +205,11 @@ export function AccountSettingsPage(): React.JSX.Element {
     } catch (error) {
       const msg =
         typeof error === 'object' && error !== null && 'response' in error
-          ? ((error as { response?: { data?: { error?: { message?: string } } } }).response?.data?.error?.message)
+          ? (
+              error as {
+                response?: { data?: { error?: { message?: string } } };
+              }
+            ).response?.data?.error?.message
           : undefined;
       void message.error(msg ?? '修改失败，请重试');
     } finally {
@@ -206,7 +218,11 @@ export function AccountSettingsPage(): React.JSX.Element {
   };
 
   return (
-    <Space orientation="vertical" size={token.marginMD} style={{ width: '100%' }}>
+    <Space
+      orientation="vertical"
+      size={token.marginMD}
+      style={{ width: '100%' }}
+    >
       <div>
         <Title level={5} style={{ margin: 0 }}>
           账号设置
@@ -225,9 +241,21 @@ export function AccountSettingsPage(): React.JSX.Element {
         }}
       >
         <Card
-          title={<CardHeader color="#18A058" icon={<CameraOutlined />} title="头像" />}
+          title={
+            <CardHeader
+              color="#18A058"
+              icon={<CameraOutlined />}
+              title="头像"
+            />
+          }
           extra={
-            <Button size="small" type="primary" variant="outlined" loading={avatarLoading} onClick={onAvatarClick}>
+            <Button
+              size="small"
+              color="primary"
+              variant="outlined"
+              loading={avatarLoading}
+              onClick={onAvatarClick}
+            >
               更换头像
             </Button>
           }
@@ -261,7 +289,15 @@ export function AccountSettingsPage(): React.JSX.Element {
           </div>
         </Card>
 
-        <Card title={<CardHeader color="#1677FF" icon={<EditOutlined />} title="基本信息" />}>
+        <Card
+          title={
+            <CardHeader
+              color="#1677FF"
+              icon={<EditOutlined />}
+              title="基本信息"
+            />
+          }
+        >
           <Form form={profileForm} layout="vertical" onFinish={onSaveProfile}>
             <Form.Item label="账号 ID">
               <Input value={user?.accountId ?? '-'} disabled />
@@ -326,19 +362,53 @@ export function AccountSettingsPage(): React.JSX.Element {
         }}
       >
         <Card
-          title={<CardHeader color="#FA8C16" icon={<SafetyCertificateOutlined />} title="账号状态" />}
+          title={
+            <CardHeader
+              color="#FA8C16"
+              icon={<SafetyCertificateOutlined />}
+              title="账号状态"
+            />
+          }
         >
-          <Descriptions bordered column={1} size="small" styles={{ label: { width: 120 } }}>
-            <Descriptions.Item label="账号 ID">{user?.accountId ?? '-'}</Descriptions.Item>
-            <Descriptions.Item label="用户名">{user?.username ?? '-'}</Descriptions.Item>
-            <Descriptions.Item label="角色">
-              <Tag color={roleTagColor}>{displayRole}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="创建时间">{formatDateTime(user?.createdAt)}</Descriptions.Item>
-          </Descriptions>
+          <Descriptions
+            bordered
+            column={1}
+            size="small"
+            styles={{ label: { width: 120 } }}
+            items={[
+              {
+                key: 'accountId',
+                label: '账号 ID',
+                children: user?.accountId ?? '-',
+              },
+              {
+                key: 'username',
+                label: '用户名',
+                children: user?.username ?? '-',
+              },
+              {
+                key: 'role',
+                label: '角色',
+                children: <Tag color={roleTagColor}>{displayRole}</Tag>,
+              },
+              {
+                key: 'createdAt',
+                label: '创建时间',
+                children: formatDateTime(user?.createdAt),
+              },
+            ]}
+          />
         </Card>
 
-        <Card title={<CardHeader color="#F5222D" icon={<LockOutlined />} title="修改密码" />}>
+        <Card
+          title={
+            <CardHeader
+              color="#F5222D"
+              icon={<LockOutlined />}
+              title="修改密码"
+            />
+          }
+        >
           <Form
             form={passwordForm}
             layout="vertical"
@@ -350,7 +420,10 @@ export function AccountSettingsPage(): React.JSX.Element {
               label="当前密码"
               rules={[{ required: true, message: '请输入当前密码' }]}
             >
-              <Input.Password placeholder="请输入当前密码" autoComplete="current-password" />
+              <Input.Password
+                placeholder="请输入当前密码"
+                autoComplete="current-password"
+              />
             </Form.Item>
             <Form.Item
               name="newPassword"
@@ -360,7 +433,10 @@ export function AccountSettingsPage(): React.JSX.Element {
                 { min: 8, max: 100, message: '新密码至少 8 位' },
               ]}
             >
-              <Input.Password placeholder="至少 8 位" autoComplete="new-password" />
+              <Input.Password
+                placeholder="至少 8 位"
+                autoComplete="new-password"
+              />
             </Form.Item>
             <Form.Item
               name="confirm"
@@ -376,10 +452,18 @@ export function AccountSettingsPage(): React.JSX.Element {
                 }),
               ]}
             >
-              <Input.Password placeholder="再次输入新密码" autoComplete="new-password" />
+              <Input.Password
+                placeholder="再次输入新密码"
+                autoComplete="new-password"
+              />
             </Form.Item>
             <Form.Item style={{ marginBottom: 0 }}>
-              <Button type="primary" danger htmlType="submit" loading={passwordSaving}>
+              <Button
+                color="danger"
+                variant="solid"
+                htmlType="submit"
+                loading={passwordSaving}
+              >
                 确认修改
               </Button>
             </Form.Item>

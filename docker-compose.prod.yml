@@ -26,6 +26,10 @@ services:
     security_opt:
       - no-new-privileges:true
     read_only: true
+    # 上传文件持久化：挂载命名卷到 /app/uploads。
+    # read_only: true 只禁止根文件系统写入，命名卷挂载点本身可写（Dockerfile 已 mkdir 并 chown 给 nestjs:1001）
+    volumes:
+      - uploads-data:/app/uploads
     tmpfs:
       - /tmp:size=100m,mode=1777
     cap_drop:
@@ -160,3 +164,5 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  # 上传文件持久卷（server 服务挂载到 /app/uploads；read_only 根文件系统下卷挂载点仍可写）
+  uploads-data:

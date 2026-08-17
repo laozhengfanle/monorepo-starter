@@ -2,8 +2,9 @@
 # Deploy 工作流
 # ============================================
 # 触发：
-#   1. 推送 tag 形如 v*.*.*（如 v0.2.0）
-#   2. 手动 dispatch（可指定环境：staging / production；可指定 image_tag）
+#   1. 仅手动 dispatch（可指定环境：staging / production；可指定 image_tag）
+#      —— 镜像构建/发布由 release.yml（tag 触发）负责，避免同一 tag 重复 build+push；
+#         deploy 只在人工确认后执行，杜绝发版直连生产无门禁。
 #
 # 流程：
 #   Job 1 (build-and-push)：登录 GHCR → build 2 个镜像（server/admin）→ push
@@ -19,9 +20,6 @@
 name: Deploy
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       environment:

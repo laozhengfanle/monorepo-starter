@@ -15,8 +15,12 @@ import {
   Typography,
   Upload,
 } from 'antd';
-import { useAdminConfigsQuery, useBatchUpdateConfigsMutation } from '../../../generated/graphql';
+import {
+  useAdminConfigsQuery,
+  useBatchUpdateConfigsMutation,
+} from '../../../generated/graphql';
 import { uploadFileApi } from '../../../shared/utils/upload.js';
+import heroPng from '../../../assets/hero.png';
 
 const { Text } = Typography;
 
@@ -91,8 +95,10 @@ export function SystemSettingsPage(): React.JSX.Element {
         passwordMinLength: (v.passwordMinLength as number) ?? 8,
         loginFailThreshold: (v.loginFailThreshold as number) ?? 5,
         lockDuration: (v.lockDuration as number) ?? 30,
-        passwordComplexity: (v.passwordComplexity as 'low' | 'medium' | 'high') ?? 'medium',
-        watermarkContent: (v.watermarkContent as string) ?? '{{username}} {{date}}',
+        passwordComplexity:
+          (v.passwordComplexity as 'low' | 'medium' | 'high') ?? 'medium',
+        watermarkContent:
+          (v.watermarkContent as string) ?? '{{username}} {{date}}',
         keepAliveMax: (v.keepAliveMax as number) ?? 10,
         requestTimeout: (v.requestTimeout as number) ?? 10000,
       });
@@ -119,7 +125,9 @@ export function SystemSettingsPage(): React.JSX.Element {
         form.setFieldValue('logo', result.url);
         void message.success('Logo 已上传，保存后生效');
       } catch (error) {
-        void message.error(error instanceof Error ? error.message : 'Logo 上传失败，请重试');
+        void message.error(
+          error instanceof Error ? error.message : 'Logo 上传失败，请重试',
+        );
       }
     })();
     return false; // 阻止 antd 自动上传（走上面的 uploadFileApi）
@@ -165,8 +173,7 @@ export function SystemSettingsPage(): React.JSX.Element {
       document.title = values.systemName;
       void message.success('设置已保存');
     } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : '保存失败，请重试';
+      const msg = error instanceof Error ? error.message : '保存失败，请重试';
       void message.error(msg);
     }
   };
@@ -174,192 +181,237 @@ export function SystemSettingsPage(): React.JSX.Element {
   return (
     <Card title="后台设置">
       <Spin spinning={isLoading}>
-      <Form<SettingsFormValues>
-        form={form}
-        layout="horizontal"
-        labelCol={{ flex: '120px' }}
-        labelWrap
-      >
-        {/* 系统基本信息 */}
-        <Divider titlePlacement="left" plain>
-          系统基本信息
-        </Divider>
-        <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="系统名称"
-              name="systemName"
-              rules={[{ required: true, message: '请输入系统名称' }]}
-              extra="后台显示的系统名称"
-            >
-              <Input placeholder="请输入系统名称" maxLength={50} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item label="页脚文本" name="footerText" extra="显示在页面底部的版权信息">
-              <Input placeholder="© 2026 zhengbo" maxLength={100} />
-            </Form.Item>
-          </Col>
-          <Col span={24}>
-            <Form.Item
-              label="系统 Logo"
-              name="logo"
-              extra="支持 PNG、JPG、WebP 格式，建议尺寸 48x48"
-            >
-              <Upload
-                accept="image/png,image/jpeg,image/webp"
-                showUploadList={false}
-                beforeUpload={handleLogoSelect}
-                fileList={[]}
+        <Form<SettingsFormValues>
+          form={form}
+          layout="horizontal"
+          labelCol={{ flex: '120px' }}
+          labelWrap
+        >
+          {/* 系统基本信息 */}
+          <Divider titlePlacement="left" plain>
+            系统基本信息
+          </Divider>
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="系统名称"
+                name="systemName"
+                rules={[{ required: true, message: '请输入系统名称' }]}
+                extra="后台显示的系统名称"
               >
-                {logoPreview ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <img
-                      src={logoPreview}
-                      alt="logo"
-                      style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'contain', border: '1px solid rgba(0,0,0,0.1)' }}
-                    />
-                    <Button size="small">更换 Logo</Button>
-                    <Button size="small" danger onClick={(e) => { e.stopPropagation(); handleLogoRemove(); }}>
-                      移除
-                    </Button>
-                  </div>
-                ) : (
-                  <Button icon={<UploadOutlined />}>上传 Logo</Button>
-                )}
-              </Upload>
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {/* 安全策略 */}
-        <Divider titlePlacement="left" plain>
-          安全策略
-        </Divider>
-        <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="密码最小长度"
-              name="passwordMinLength"
-              extra="6-32 位"
-            >
-              <InputNumber min={6} max={32} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="登录失败阈值"
-              name="loginFailThreshold"
-              extra="超过后锁定账号（次）"
-            >
-              <InputNumber min={3} max={20} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item label="锁定时长" name="lockDuration" extra="分钟">
-              <InputNumber min={5} max={120} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="密码复杂度"
-              name="passwordComplexity"
-              rules={[{ required: true, message: '请选择密码复杂度' }]}
-              extra={complexityDescMap[passwordComplexity ?? 'medium']}
-            >
-              <Select options={complexityOptions} placeholder="请选择" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {/* 界面配置 */}
-        <Divider titlePlacement="left" plain>
-          界面配置
-        </Divider>
-        <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <Form.Item label="Keep-alive 上限" name="keepAliveMax" extra="0 表示不缓存（个页面）">
-              <InputNumber min={0} max={50} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item label="请求超时" name="requestTimeout" extra="毫秒">
-              <InputNumber min={100} max={60000} step={1000} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {/* 水印设置 */}
-        <Divider titlePlacement="left" plain>
-          水印设置
-        </Divider>
-        <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="水印内容"
-              name="watermarkContent"
-              extra="支持变量：{{username}}（当前用户名）、{{date}}（当前日期）；留空则不显示"
-            >
-              <Input placeholder="请输入水印文本" maxLength={100} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item label="预览">
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  height: 96,
-                  borderRadius: 6,
-                  overflow: 'hidden',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  background: 'rgba(0,0,0,0.02)',
-                }}
+                <Input placeholder="请输入系统名称" maxLength={50} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="页脚文本"
+                name="footerText"
+                extra="显示在页面底部的版权信息"
               >
-                {watermarkPreview ? (
+                <Input placeholder="© 2026 zhengbo" maxLength={100} />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item
+                label="系统 Logo"
+                name="logo"
+                extra="支持 PNG、JPG、WebP 格式，建议尺寸 48x48"
+              >
+                <Upload
+                  accept="image/png,image/jpeg,image/webp"
+                  showUploadList={false}
+                  beforeUpload={handleLogoSelect}
+                  fileList={[]}
+                >
                   <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transform: 'rotate(-20deg)',
-                      color: 'rgba(0,0,0,0.08)',
-                      fontSize: 14,
-                      whiteSpace: 'nowrap',
-                      pointerEvents: 'none',
-                      userSelect: 'none',
-                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12 }}
                   >
-                    {watermarkPreview}
+                    <img
+                      src={logoPreview || heroPng}
+                      alt="logo"
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 8,
+                        objectFit: 'contain',
+                        border: '1px solid rgba(0,0,0,0.1)',
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                      }}
+                    >
+                      <Button size="small" icon={<UploadOutlined />}>
+                        {logoPreview ? '更换 Logo' : '上传 Logo'}
+                      </Button>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {logoPreview
+                          ? '当前为自定义 Logo'
+                          : '未设置 Logo，当前显示默认'}
+                      </Text>
+                    </div>
+                    {logoPreview && (
+                      <Button
+                        size="small"
+                        danger
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLogoRemove();
+                        }}
+                      >
+                        移除
+                      </Button>
+                    )}
                   </div>
-                ) : (
-                  <Text
-                    type="secondary"
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 12,
-                    }}
-                  >
-                    无水印
-                  </Text>
-                )}
-              </div>
-            </Form.Item>
-          </Col>
-        </Row>
+                </Upload>
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Form.Item label=" " colon={false} style={{ marginBottom: 0 }}>
-          <Button type="primary" loading={saving} onClick={() => void handleSubmit()}>
-            保存设置
-          </Button>
-        </Form.Item>
-      </Form>
+          {/* 安全策略 */}
+          <Divider titlePlacement="left" plain>
+            安全策略
+          </Divider>
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="密码最小长度"
+                name="passwordMinLength"
+                extra="6-32 位"
+              >
+                <InputNumber min={6} max={32} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="登录失败阈值"
+                name="loginFailThreshold"
+                extra="超过后锁定账号（次）"
+              >
+                <InputNumber min={3} max={20} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item label="锁定时长" name="lockDuration" extra="分钟">
+                <InputNumber min={5} max={120} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="密码复杂度"
+                name="passwordComplexity"
+                rules={[{ required: true, message: '请选择密码复杂度' }]}
+                extra={complexityDescMap[passwordComplexity ?? 'medium']}
+              >
+                <Select options={complexityOptions} placeholder="请选择" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 界面配置 */}
+          <Divider titlePlacement="left" plain>
+            界面配置
+          </Divider>
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Keep-alive 上限"
+                name="keepAliveMax"
+                extra="0 表示不缓存（个页面）"
+              >
+                <InputNumber min={0} max={50} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item label="请求超时" name="requestTimeout" extra="毫秒">
+                <InputNumber
+                  min={100}
+                  max={60000}
+                  step={1000}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 水印设置 */}
+          <Divider titlePlacement="left" plain>
+            水印设置
+          </Divider>
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="水印内容"
+                name="watermarkContent"
+                extra="支持变量：{{username}}（当前用户名）、{{date}}（当前日期）；留空则不显示"
+              >
+                <Input placeholder="请输入水印文本" maxLength={100} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item label="预览">
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: 96,
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    background: 'rgba(0,0,0,0.02)',
+                  }}
+                >
+                  {watermarkPreview ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transform: 'rotate(-20deg)',
+                        color: 'rgba(0,0,0,0.08)',
+                        fontSize: 14,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {watermarkPreview}
+                    </div>
+                  ) : (
+                    <Text
+                      type="secondary"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 12,
+                      }}
+                    >
+                      无水印
+                    </Text>
+                  )}
+                </div>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label=" " colon={false} style={{ marginBottom: 0 }}>
+            <Button
+              type="primary"
+              loading={saving}
+              onClick={() => void handleSubmit()}
+            >
+              保存设置
+            </Button>
+          </Form.Item>
+        </Form>
       </Spin>
     </Card>
   );

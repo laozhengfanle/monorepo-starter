@@ -39,6 +39,38 @@ jobs:
         node-version: ['24.x']
         # node-version: ['22.x', '24.x']
 
+    # 测试所需基础设施：server 的 e2e 测试（api.e2e.spec.ts）会真连 PostgreSQL + Redis，
+    # 没有 services 时 createApp() 直连失败 → CI 必红。此处按 GitHub Actions 标准配置。
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: monorepo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d monorepo_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # 指向本 job 的 postgres service（GitHub Actions 将服务端口映射到 localhost）
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/monorepo_test?schema=public
+      # e2e 登录/签发 JWT 需要（env schema 要求 ≥16 字符）
+      JWT_SECRET: ci-test-jwt-secret-0123456789
+
     steps:
       - uses: actions/checkout@v5
         with:
@@ -76,10 +108,26 @@ jobs:
       - name: Security audit
         run: pnpm audit --audit-level=high
 
+      # 准备测试数据库（server 的 e2e 会真连库，需要 schema + 种子数据）：
+      #   1. 生成 Prisma client（gitignored，CI 需现场生成，测试代码 import 它）
+      #   2. 应用全部迁移
+      #   3. 灌入种子数据（e2e 登录依赖 root/Root!123）
+      # 注意：e2e spec 已加 describe.skipIf(!DATABASE_URL) 保护，无 DATABASE_URL 时自动跳过
+      - name: Prepare test database (prisma generate + migrate + seed)
+        run: |
+          pnpm exec nx run server:prisma-generate
+          cd apps/server
+          pnpm exec prisma migrate deploy
+          pnpm exec prisma db seed
+
       # 先显式生成 API client（缓存命中时秒回），保证后续 typecheck/build 使用确定的产物
       - run: pnpm exec nx run @starter/api-client:generate-api
 
-      - run: pnpm exec nx affected -t test build typecheck --base=origin/main --head=HEAD
+      # test 单独跑并携带 --coverage（触发 vitest coverage thresholds 校验）；
+      # build/typecheck 与 test 分开，避免 --coverage 被透传给非 vitest 目标
+      - run: pnpm exec nx affected -t test --coverage --base=origin/main --head=HEAD
+
+      - run: pnpm exec nx affected -t build typecheck --base=origin/main --head=HEAD
 
       - run: pnpm exec playwright install --with-deps chromium
 

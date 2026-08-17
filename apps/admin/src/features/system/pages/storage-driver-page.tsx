@@ -30,6 +30,14 @@ const { Text } = Typography;
 /** 配置 key：storage.driver（文件存储驱动） */
 const STORAGE_KEY = 'storage.driver';
 
+/** 后端脱敏占位符：密钥已保存时回传该值，前端不再回传以免覆盖 */
+const REDACTED_PLACEHOLDER = '******';
+
+/** 是否为脱敏占位符或空值（提交时跳过，保持后端原值） */
+function isRedacted(value: string | undefined): boolean {
+  return !value || value === REDACTED_PLACEHOLDER;
+}
+
 /** 存储驱动选项 */
 const driverOptions = [
   { label: '本地存储', value: 'local' },
@@ -77,7 +85,11 @@ export function StorageDriverPage(): React.JSX.Element {
   // 文件列表（服务端分页）
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const { data: filesData, loading: filesLoading, refetch } = useUploadFilesQuery({
+  const {
+    data: filesData,
+    loading: filesLoading,
+    refetch,
+  } = useUploadFilesQuery({
     variables: { page, pageSize },
     fetchPolicy: 'network-only',
   });
@@ -117,14 +129,19 @@ export function StorageDriverPage(): React.JSX.Element {
       return;
     }
     const values = form.getFieldsValue();
-    // 只提交当前驱动相关字段（避免把无关空值写进 JSON）
+    // 只提交当前驱动相关字段（避免把无关空值写进 JSON）；
+    // 密钥为占位符/留空时不提交该字段（undefined），避免覆盖已保存的密钥
     const value = isCloud
       ? {
           driver: values.driver,
           bucket: values.bucket,
           region: values.region,
-          accessKey: values.accessKey,
-          secretKey: values.secretKey,
+          ...(isRedacted(values.accessKey)
+            ? {}
+            : { accessKey: values.accessKey }),
+          ...(isRedacted(values.secretKey)
+            ? {}
+            : { secretKey: values.secretKey }),
         }
       : { driver: values.driver, localPath: values.localPath };
     try {
@@ -133,7 +150,9 @@ export function StorageDriverPage(): React.JSX.Element {
       });
       void message.success('存储驱动配置已保存');
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '保存失败，请重试');
+      void message.error(
+        error instanceof Error ? error.message : '保存失败，请重试',
+      );
     }
   };
 
@@ -143,7 +162,9 @@ export function StorageDriverPage(): React.JSX.Element {
       void message.success('文件已删除');
       await loadFiles();
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '删除失败，请重试');
+      void message.error(
+        error instanceof Error ? error.message : '删除失败，请重试',
+      );
     }
   };
 
@@ -157,7 +178,11 @@ export function StorageDriverPage(): React.JSX.Element {
       f.createdAt,
       f.url,
     ]);
-    downloadBlob(toCSV([header, ...rows]), `文件列表_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
+    downloadBlob(
+      toCSV([header, ...rows]),
+      `文件列表_${new Date().toISOString().slice(0, 10)}.csv`,
+      'text/csv;charset=utf-8;',
+    );
   };
 
   const columns: ColumnsType<UploadFile> = [
@@ -172,7 +197,12 @@ export function StorageDriverPage(): React.JSX.Element {
             <img
               src={record.url}
               alt={v}
-              style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4 }}
+              style={{
+                width: 32,
+                height: 32,
+                objectFit: 'cover',
+                borderRadius: 4,
+              }}
             />
             <span>{v}</span>
           </Space>
@@ -180,8 +210,20 @@ export function StorageDriverPage(): React.JSX.Element {
           <span>{v}</span>
         ),
     },
-    { title: '类型', dataIndex: 'mimeType', key: 'mimeType', width: 140, render: (v: string) => <Tag>{v}</Tag> },
-    { title: '大小', dataIndex: 'size', key: 'size', width: 90, render: (v: number) => formatSize(v) },
+    {
+      title: '类型',
+      dataIndex: 'mimeType',
+      key: 'mimeType',
+      width: 140,
+      render: (v: string) => <Tag>{v}</Tag>,
+    },
+    {
+      title: '大小',
+      dataIndex: 'size',
+      key: 'size',
+      width: 90,
+      render: (v: number) => formatSize(v),
+    },
     {
       title: '上传时间',
       dataIndex: 'createdAt',
@@ -204,7 +246,7 @@ export function StorageDriverPage(): React.JSX.Element {
               description="将同时删除存储中的物理文件，不可恢复"
               onConfirm={() => void handleDeleteFile(record.id)}
             >
-              <Button type="link" size="small" danger>
+              <Button color="danger" variant="link" size="small">
                 删除
               </Button>
             </Popconfirm>
@@ -231,7 +273,11 @@ export function StorageDriverPage(): React.JSX.Element {
             labelWrap
             initialValues={{ driver: 'local', localPath: './uploads' }}
           >
-            <Form.Item label="驱动" name="driver" rules={[{ required: true, message: '请选择存储驱动' }]}>
+            <Form.Item
+              label="驱动"
+              name="driver"
+              rules={[{ required: true, message: '请选择存储驱动' }]}
+            >
               <Select options={driverOptions} placeholder="请选择存储驱动" />
             </Form.Item>
 
@@ -248,32 +294,51 @@ export function StorageDriverPage(): React.JSX.Element {
 
             {isCloud && (
               <>
-                <Form.Item label="Bucket" name="bucket" rules={[{ required: true, message: '请输入 Bucket 名称' }]}>
+                <Form.Item
+                  label="Bucket"
+                  name="bucket"
+                  rules={[{ required: true, message: '请输入 Bucket 名称' }]}
+                >
                   <Input placeholder="存储桶名称" />
                 </Form.Item>
-                <Form.Item label="Region" name="region" rules={[{ required: true, message: '请输入 Region 地域' }]}>
+                <Form.Item
+                  label="Region"
+                  name="region"
+                  rules={[{ required: true, message: '请输入 Region 地域' }]}
+                >
                   <Input placeholder="如 oss-cn-hangzhou、ap-singapore" />
                 </Form.Item>
                 <Form.Item
                   label="AccessKey"
                   name="accessKey"
-                  rules={[{ required: true, message: '请输入 AccessKey' }]}
+                  extra="密钥留空或保持 ****** 表示保持原值，不覆盖已保存的密钥"
                 >
                   <Input placeholder="AccessKey ID" />
                 </Form.Item>
-                <Form.Item label="SecretKey" name="secretKey" rules={[{ required: true, message: '请输入 SecretKey' }]}>
+                <Form.Item
+                  label="SecretKey"
+                  name="secretKey"
+                  extra="密钥留空或保持 ****** 表示保持原值，不覆盖已保存的密钥"
+                >
                   <Input.Password placeholder="SecretKey" />
                 </Form.Item>
               </>
             )}
 
             <Form.Item label=" " colon={false}>
-              <Button type="primary" loading={saving} disabled={!canUpdate} onClick={() => void handleSubmit()}>
+              <Button
+                type="primary"
+                loading={saving}
+                disabled={!canUpdate}
+                onClick={() => void handleSubmit()}
+              >
                 保存设置
               </Button>
             </Form.Item>
             {!canUpdate && (
-              <Text type="secondary">当前角色无编辑配置权限（config:admin:update）</Text>
+              <Text type="secondary">
+                当前角色无编辑配置权限（config:admin:update）
+              </Text>
             )}
           </Form>
         </Spin>

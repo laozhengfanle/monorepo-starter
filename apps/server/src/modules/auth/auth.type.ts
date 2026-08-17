@@ -1,31 +1,11 @@
-import { Field, ID, InputType, Int, ObjectType } from '@nestjs/graphql';
-import type { AdminMe, AuthResult, LoginInput } from '@starter/contracts';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
+import type { AdminMe } from '@starter/contracts';
 import { AdminMenuNodeType } from '../admin-menu/admin-menu.type.js';
 
-/** 登录入参（GraphQL 薄壳，implements 对齐 zod） */
-@InputType('LoginInput')
-export class LoginInputType implements LoginInput {
-  @Field(() => String)
-  username!: string;
-
-  @Field(() => String)
-  password!: string;
-}
-
-/** 登录结果（GraphQL 薄壳） */
-@ObjectType('AuthResult')
-export class AuthResultType implements AuthResult {
-  @Field(() => String)
-  accessToken!: string;
-
-  @Field(() => String)
-  refreshToken!: string;
-
-  @Field(() => Int)
-  expiresIn!: number;
-}
-
-/** 当前管理端用户信息（GraphQL 薄壳） */
+/**
+ * 当前管理端用户信息（GraphQL 薄壳）。
+ * 注：登录入参/结果类型已随 login mutation 一并移除（认证仅走 REST AuthController）。
+ */
 @ObjectType('AdminMe')
 export class AdminMeType implements AdminMe {
   @Field(() => ID)

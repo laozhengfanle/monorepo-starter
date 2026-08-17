@@ -27,7 +27,11 @@ function lastEnvelope(mocked: MockedHost) {
   return mocked.json.mock.calls.at(-1)?.[0] as {
     success: boolean;
     data: null;
-    error: { code: string; message: string; details?: Record<string, string[]> };
+    error: {
+      code: string;
+      message: string;
+      details?: Record<string, string[]>;
+    };
   };
 }
 
@@ -39,11 +43,13 @@ describe('AllExceptionsFilter', () => {
 
     filter.catch(new Error('secret internal detail'), mocked.host);
 
-    expect(mocked.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(mocked.status).toHaveBeenCalledWith(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
     const envelope = lastEnvelope(mocked);
     expect(envelope.success).toBe(false);
     expect(envelope.data).toBeNull();
-    expect(envelope.error.code).toBe('INTERNAL_ERROR');
+    expect(envelope.error.code).toBe('INTERNAL_SERVER_ERROR');
     expect(JSON.stringify(envelope)).not.toContain('secret internal detail');
   });
 
@@ -58,7 +64,10 @@ describe('AllExceptionsFilter', () => {
     expect(mocked.status).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY);
     const envelope = lastEnvelope(mocked);
     expect(envelope.error.code).toBe('VALIDATION_FAILED');
-    expect(Object.keys(envelope.error.details ?? {})).toEqual(['username', 'email']);
+    expect(Object.keys(envelope.error.details ?? {})).toEqual([
+      'username',
+      'email',
+    ]);
     expect(envelope.error.details?.username).toBeDefined();
   });
 
@@ -96,7 +105,10 @@ describe('AllExceptionsFilter', () => {
   it('HttpException → 保持原状态码并携带消息', () => {
     const mocked = createMockHost();
 
-    filter.catch(new HttpException('权限不足', HttpStatus.FORBIDDEN), mocked.host);
+    filter.catch(
+      new HttpException('权限不足', HttpStatus.FORBIDDEN),
+      mocked.host,
+    );
 
     expect(mocked.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
     const envelope = lastEnvelope(mocked);
@@ -107,7 +119,13 @@ describe('AllExceptionsFilter', () => {
   it('HttpException（对象响应）→ 提取 message 字段', () => {
     const mocked = createMockHost();
 
-    filter.catch(new HttpException({ message: ['字段 A 非法', '字段 B 非法'] }, HttpStatus.BAD_REQUEST), mocked.host);
+    filter.catch(
+      new HttpException(
+        { message: ['字段 A 非法', '字段 B 非法'] },
+        HttpStatus.BAD_REQUEST,
+      ),
+      mocked.host,
+    );
 
     expect(mocked.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(lastEnvelope(mocked).error.message).toBe('字段 A 非法; 字段 B 非法');

@@ -23,7 +23,7 @@ interface AuditLogRow {
 /**
  * 审计日志管理服务（audit_log 表）
  * - 分页 + 多维筛选（action / resourceType / 时间区间），批量 join account_identity 拼 username
- * - 清空：rawClient 先写 audit_cleared 再 deleteMany（否则清空操作本身无记录）
+ * - 清空：rawClient 先 deleteMany 清空，再写 audit_cleared（否则清空动作本身无记录）
  * - 导出：不分页，上限 10000 条
  */
 @Injectable()
@@ -33,7 +33,14 @@ export class AuditLogService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** 分页查询审计日志（倒序） */
-  async findAll(query: AuditLogQuery): Promise<{ items: AuditLogItem[]; total: number; page: number; pageSize: number }> {
+  async findAll(
+    query: AuditLogQuery,
+  ): Promise<{
+    items: AuditLogItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
     const { page, pageSize, action, resourceType, startDate, endDate } = query;
     const where = this.buildWhere({ action, resourceType, startDate, endDate });
 
@@ -52,7 +59,12 @@ export class AuditLogService {
   }
 
   /** 导出（不分页，全量匹配，上限 10000 条） */
-  async exportLogs(query: Pick<AuditLogQuery, 'action' | 'resourceType' | 'startDate' | 'endDate'>): Promise<AuditLogItem[]> {
+  async exportLogs(
+    query: Pick<
+      AuditLogQuery,
+      'action' | 'resourceType' | 'startDate' | 'endDate'
+    >,
+  ): Promise<AuditLogItem[]> {
     const where = this.buildWhere(query);
     const rows = await this.prisma.client.auditLog.findMany({
       where,
@@ -62,36 +74,49 @@ export class AuditLogService {
     return this.attachUsernames(rows);
   }
 
-  /** 清空所有审计日志（硬删除）——先 rawClient 写 audit_cleared，再 deleteMany */
+  /** 清空所有审计日志（硬删除）——先 deleteMany 清空，再写 audit_cleared（rawClient），保证清空动作本身留痕 */
   async clear(operatorId: string): Promise<{ deletedCount: number }> {
     const total = await this.prisma.client.auditLog.count();
-    // 直写 rawClient：否则会被自己的 deleteMany 一并清掉
+    // 先删除全部日志（rawClient 无软删过滤，全量清空）
+    const { count } = await this.prisma.rawClient.auditLog.deleteMany();
+    const deletedCount = count ?? total;
+    // 清空动作留痕：必须在 deleteMany 之后再写（否则 audit_cleared 记录也会被一并删除）
     try {
       await this.prisma.rawClient.auditLog.create({
         data: {
           id: newId(),
           accountId: operatorId,
           action: AUDIT_ACTIONS.AUDIT_CLEARED,
-          detail: { clearedCount: total, clearedAt: new Date().toISOString() } as never,
+          detail: {
+            clearedCount: deletedCount,
+            clearedAt: new Date().toISOString(),
+          } as never,
         },
       });
     } catch (err) {
       this.logger.error(`写 audit_cleared 失败: ${(err as Error).message}`);
     }
-    await this.prisma.rawClient.auditLog.deleteMany();
-    return { deletedCount: total };
+    return { deletedCount };
   }
 
   /** 删除单条审计日志（硬删除） */
   async deleteOne(id: string): Promise<void> {
     const log = await this.prisma.client.auditLog.findUnique({ where: { id } });
     if (!log) {
-      throw new BizException({ code: 'AUDIT_LOG_NOT_FOUND', message: '审计日志不存在' });
+      throw new BizException({
+        code: 'AUDIT_LOG_NOT_FOUND',
+        message: '审计日志不存在',
+      });
     }
     await this.prisma.rawClient.auditLog.delete({ where: { id } });
   }
 
-  private buildWhere(filter: Pick<AuditLogQuery, 'action' | 'resourceType' | 'startDate' | 'endDate'>): Record<string, unknown> {
+  private buildWhere(
+    filter: Pick<
+      AuditLogQuery,
+      'action' | 'resourceType' | 'startDate' | 'endDate'
+    >,
+  ): Record<string, unknown> {
     const { action, resourceType, startDate, endDate } = filter;
     const where: Record<string, unknown> = {};
     if (action) where.action = action;
@@ -102,14 +127,20 @@ export class AuditLogService {
       if (startDate) {
         const start = new Date(startDate);
         if (Number.isNaN(start.getTime())) {
-          throw new BizException({ code: 'INVALID_DATE', message: 'startDate 不是合法的 ISO 日期' });
+          throw new BizException({
+            code: 'INVALID_DATE',
+            message: 'startDate 不是合法的 ISO 日期',
+          });
         }
         (where.createdAt as Record<string, unknown>).gte = start;
       }
       if (endDate) {
         const end = new Date(endDate);
         if (Number.isNaN(end.getTime())) {
-          throw new BizException({ code: 'INVALID_DATE', message: 'endDate 不是合法的 ISO 日期' });
+          throw new BizException({
+            code: 'INVALID_DATE',
+            message: 'endDate 不是合法的 ISO 日期',
+          });
         }
         (where.createdAt as Record<string, unknown>).lte = end;
       }
@@ -119,7 +150,9 @@ export class AuditLogService {
 
   /** 批量 join account_identity 拼 username */
   private async attachUsernames(rows: AuditLogRow[]): Promise<AuditLogItem[]> {
-    const accountIds = [...new Set(rows.map((r) => r.accountId).filter(Boolean))] as string[];
+    const accountIds = [
+      ...new Set(rows.map((r) => r.accountId).filter(Boolean)),
+    ] as string[];
     let accountMap = new Map<string, string>();
     if (accountIds.length > 0) {
       const identities = await this.prisma.client.accountIdentity.findMany({
@@ -131,7 +164,9 @@ export class AuditLogService {
     return rows.map((r) => ({
       id: r.id,
       accountId: r.accountId,
-      accountUsername: r.accountId ? (accountMap.get(r.accountId) ?? null) : null,
+      accountUsername: r.accountId
+        ? (accountMap.get(r.accountId) ?? null)
+        : null,
       action: r.action,
       resourceType: r.resourceType,
       resourceId: r.resourceId,

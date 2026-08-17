@@ -53,6 +53,9 @@ export const AUDIT_ACTIONS = {
   // ── 系统 ──
   CONFIG_UPDATED: 'config_updated',
   AUDIT_CLEARED: 'audit_cleared',
+  // ── 缓存管理（运维写操作） ──
+  CACHE_KEY_DELETED: 'cache_key_deleted',
+  CACHE_PATTERN_CLEARED: 'cache_pattern_cleared',
   // ── 数据字典 ──
   DICT_CREATED: 'dict_created',
   DICT_UPDATED: 'dict_updated',
@@ -72,9 +75,11 @@ export const AUDIT_RESOURCES = {
   AUDIT_LOG: 'audit_log',
   SYS_DICT_TYPE: 'sys_dict_type',
   SYS_DICT_ITEM: 'sys_dict_item',
+  CACHE: 'cache',
 } as const;
 
-export type AuditResource = (typeof AUDIT_RESOURCES)[keyof typeof AUDIT_RESOURCES];
+export type AuditResource =
+  (typeof AUDIT_RESOURCES)[keyof typeof AUDIT_RESOURCES];
 
 /** 审计动作中文标签（字典 audit_action 生成源） */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
@@ -106,6 +111,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   [AUDIT_ACTIONS.FILE_DELETED]: '删除文件',
   [AUDIT_ACTIONS.CONFIG_UPDATED]: '配置更新',
   [AUDIT_ACTIONS.AUDIT_CLEARED]: '清空审计',
+  [AUDIT_ACTIONS.CACHE_KEY_DELETED]: '删除缓存键',
+  [AUDIT_ACTIONS.CACHE_PATTERN_CLEARED]: '按模式清空缓存',
   [AUDIT_ACTIONS.DICT_CREATED]: '创建字典',
   [AUDIT_ACTIONS.DICT_UPDATED]: '更新字典',
   [AUDIT_ACTIONS.DICT_DELETED]: '删除字典',
@@ -123,6 +130,7 @@ export const AUDIT_RESOURCE_LABELS: Record<AuditResource, string> = {
   [AUDIT_RESOURCES.AUDIT_LOG]: '审计日志',
   [AUDIT_RESOURCES.SYS_DICT_TYPE]: '字典类型',
   [AUDIT_RESOURCES.SYS_DICT_ITEM]: '字典项',
+  [AUDIT_RESOURCES.CACHE]: '缓存',
 };
 
 /** action → 默认 resourceType（write 未显式传 resourceType 时自动补全，杜绝漏填/不对称） */
@@ -161,6 +169,9 @@ export const AUDIT_ACTION_RESOURCE_MAP: Record<AuditAction, AuditResource> = {
   // 系统
   [AUDIT_ACTIONS.CONFIG_UPDATED]: AUDIT_RESOURCES.SYSTEM_CONFIG,
   [AUDIT_ACTIONS.AUDIT_CLEARED]: AUDIT_RESOURCES.AUDIT_LOG,
+  // 缓存管理（运维写操作）
+  [AUDIT_ACTIONS.CACHE_KEY_DELETED]: AUDIT_RESOURCES.CACHE,
+  [AUDIT_ACTIONS.CACHE_PATTERN_CLEARED]: AUDIT_RESOURCES.CACHE,
   // 字典（sys_dict_item 场景由调用方显式覆盖）
   [AUDIT_ACTIONS.DICT_CREATED]: AUDIT_RESOURCES.SYS_DICT_TYPE,
   [AUDIT_ACTIONS.DICT_UPDATED]: AUDIT_RESOURCES.SYS_DICT_TYPE,

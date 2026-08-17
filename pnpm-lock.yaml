@@ -207,6 +207,9 @@ catalogs:
     '@types/express':
       specifier: ^5.0.6
       version: 5.0.6
+    '@types/graphql-depth-limit':
+      specifier: 1.1.6
+      version: 1.1.6
     '@types/ioredis':
       specifier: ^5.0.0
       version: 5.0.0
@@ -282,6 +285,9 @@ catalogs:
     graphql:
       specifier: ^16.14.0
       version: 16.14.2
+    graphql-depth-limit:
+      specifier: 1.1.0
+      version: 1.1.0
     helmet:
       specifier: ^8.2.0
       version: 8.3.0
@@ -878,6 +884,9 @@ importers:
       graphql:
         specifier: 'catalog:'
         version: 16.14.2
+      graphql-depth-limit:
+        specifier: 'catalog:'
+        version: 1.1.0(graphql@16.14.2)
       helmet:
         specifier: 'catalog:'
         version: 8.3.0
@@ -933,6 +942,9 @@ importers:
       '@types/express':
         specifier: 'catalog:'
         version: 5.0.6
+      '@types/graphql-depth-limit':
+        specifier: 'catalog:'
+        version: 1.1.6
       '@types/ioredis':
         specifier: 'catalog:'
         version: 5.0.0(supports-color@8.1.1)
@@ -8722,6 +8734,12 @@ packages:
         integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==,
       }
 
+  '@types/graphql-depth-limit@1.1.6':
+    resolution:
+      {
+        integrity: sha512-WU4bjoKOzJ8CQE32Pbyq+YshTMcLJf2aJuvVtSLv1BQPwDUGa38m2Vr8GGxf0GZ0luCQcfxlhZeHKu6nmTBvrw==,
+      }
+
   '@types/hast@3.0.5':
     resolution:
       {
@@ -10073,6 +10091,13 @@ packages:
         integrity: sha512-HGyxoOTYUyCM6stUe6EJgnd4EoewAI7zMdfqO+kGjnlZmBDz/cR5pf8r/cR4Wq60sL/p0IkcjUEEPwS3GFrIyw==,
       }
     engines: { node: '>=8' }
+
+  arrify@1.0.1:
+    resolution:
+      {
+        integrity: sha512-3CYzex9M9FGQjCGMGyi6/31c8GJbgb0qGyrx5HWxPd0aCwh4cB2YjMb2Xf9UuoogrMrlO9cTqnB5rI5GHZTcUA==,
+      }
+    engines: { node: '>=0.10.0' }
 
   asap@2.0.6:
     resolution:
@@ -13435,6 +13460,15 @@ packages:
       cosmiconfig-toml-loader:
         optional: true
 
+  graphql-depth-limit@1.1.0:
+    resolution:
+      {
+        integrity: sha512-+3B2BaG8qQ8E18kzk9yiSdAa75i/hnnOwgSeAxVJctGQPvmeiLtqKOYF6HETCyRjiF7Xfsyal0HbLlxCQkgkrw==,
+      }
+    engines: { node: '>=6.0.0' }
+    peerDependencies:
+      graphql: '*'
+
   graphql-request@6.0.0:
     resolution:
       {
@@ -13497,6 +13531,14 @@ packages:
         optional: true
       ws:
         optional: true
+
+  graphql@14.5.3:
+    resolution:
+      {
+        integrity: sha512-W8A8nt9BsMg0ZK2qA3DJIVU6muWhxZRYLTmc+5XGwzWzVdUdPVlAAg5hTBjiTISEnzsKL/onasu6vl3kgGTbYg==,
+      }
+    engines: { node: '>= 6.x' }
+    deprecated: 'No longer supported; please update to a newer version. Details: https://github.com/graphql/graphql-js#version-support'
 
   graphql@16.14.2:
     resolution:
@@ -26656,6 +26698,10 @@ snapshots:
 
   '@types/geojson@7946.0.16': {}
 
+  '@types/graphql-depth-limit@1.1.6':
+    dependencies:
+      graphql: 14.5.3
+
   '@types/hast@3.0.5':
     dependencies:
       '@types/unist': 3.0.3
@@ -27632,6 +27678,8 @@ snapshots:
   array-timsort@1.0.3: {}
 
   array-union@2.1.0: {}
+
+  arrify@1.0.1: {}
 
   asap@2.0.6: {}
 
@@ -29945,6 +29993,11 @@ snapshots:
       - crossws
       - utf-8-validate
 
+  graphql-depth-limit@1.1.0(graphql@16.14.2):
+    dependencies:
+      arrify: 1.0.1
+      graphql: 16.14.2
+
   graphql-request@6.0.0(graphql@16.14.2):
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.14.2)
@@ -29976,6 +30029,10 @@ snapshots:
       graphql: 16.14.2
     optionalDependencies:
       ws: 8.21.3
+
+  graphql@14.5.3:
+    dependencies:
+      iterall: 1.3.0
 
   graphql@16.14.2: {}
 

@@ -1,4 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+} from 'react';
 import type { ReactNode } from 'react';
 import { usePersistedState } from './use-persisted-state.js';
 
@@ -7,7 +13,8 @@ export const DEFAULT_PRIMARY_COLOR = '#1677ff';
 
 /** 合法 hex 颜色校验（#RGB / #RRGGBB / #RRGGBBAA） */
 const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
-export const isValidHexColor = (value: string): boolean => HEX_COLOR_RE.test(value);
+export const isValidHexColor = (value: string): boolean =>
+  HEX_COLOR_RE.test(value);
 
 interface SettingsContextValue {
   /** 当前主色（hex 字符串） */
@@ -22,6 +29,9 @@ interface SettingsContextValue {
   isWatermarkVisible: boolean;
   setWatermarkVisible: (v: boolean) => void;
   toggleWatermark: () => void;
+  /** 界面水印文字内容（空字符串则不渲染水印） */
+  watermarkContent: string;
+  setWatermarkContent: (v: string) => void;
 
   /** 色弱模式（html.color-blind） */
   isColorBlindMode: boolean;
@@ -53,7 +63,11 @@ export const useSettings = (): SettingsContextValue => {
  * 偏好设置 Provider（对标旧版 SettingsProvider）：
  * 主色 / 水印 / 色弱 / 布局开关，全部持久化到 localStorage。
  */
-export function SettingsProvider({ children }: { children: ReactNode }): React.JSX.Element {
+export function SettingsProvider({
+  children,
+}: {
+  children: ReactNode;
+}): React.JSX.Element {
   const [primaryColor, setPrimaryColorRaw] = usePersistedState<string>(
     'settings-primary-color',
     DEFAULT_PRIMARY_COLOR,
@@ -66,7 +80,8 @@ export function SettingsProvider({ children }: { children: ReactNode }): React.J
     },
     [setPrimaryColorRaw],
   );
-  const isCustomColor = primaryColor.toLowerCase() !== DEFAULT_PRIMARY_COLOR.toLowerCase();
+  const isCustomColor =
+    primaryColor.toLowerCase() !== DEFAULT_PRIMARY_COLOR.toLowerCase();
   const resetPrimaryColor = useCallback(
     () => setPrimaryColorRaw(DEFAULT_PRIMARY_COLOR),
     [setPrimaryColorRaw],
@@ -79,6 +94,10 @@ export function SettingsProvider({ children }: { children: ReactNode }): React.J
   const toggleWatermark = useCallback(
     () => setWatermarkVisible((prev) => !prev),
     [setWatermarkVisible],
+  );
+  const [watermarkContent, setWatermarkContent] = usePersistedState<string>(
+    'settings-watermark-content',
+    '',
   );
 
   const [isColorBlindMode, setColorBlindMode] = usePersistedState<boolean>(
@@ -94,12 +113,18 @@ export function SettingsProvider({ children }: { children: ReactNode }): React.J
     document.documentElement.classList.toggle('color-blind', isColorBlindMode);
   }, [isColorBlindMode]);
 
-  const [showTabBar, setShowTabBar] = usePersistedState<boolean>('settings-show-tabbar', true);
+  const [showTabBar, setShowTabBar] = usePersistedState<boolean>(
+    'settings-show-tabbar',
+    true,
+  );
   const [showBreadcrumb, setShowBreadcrumb] = usePersistedState<boolean>(
     'settings-show-breadcrumb',
     true,
   );
-  const [showFooter, setShowFooter] = usePersistedState<boolean>('settings-show-footer', true);
+  const [showFooter, setShowFooter] = usePersistedState<boolean>(
+    'settings-show-footer',
+    true,
+  );
 
   const value = useMemo<SettingsContextValue>(
     () => ({
@@ -110,6 +135,8 @@ export function SettingsProvider({ children }: { children: ReactNode }): React.J
       isWatermarkVisible,
       setWatermarkVisible,
       toggleWatermark,
+      watermarkContent,
+      setWatermarkContent,
       isColorBlindMode,
       setColorBlindMode,
       toggleColorBlindMode,
@@ -128,6 +155,8 @@ export function SettingsProvider({ children }: { children: ReactNode }): React.J
       isWatermarkVisible,
       setWatermarkVisible,
       toggleWatermark,
+      watermarkContent,
+      setWatermarkContent,
       isColorBlindMode,
       setColorBlindMode,
       toggleColorBlindMode,
@@ -140,5 +169,9 @@ export function SettingsProvider({ children }: { children: ReactNode }): React.J
     ],
   );
 
-  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
+  return (
+    <SettingsContext.Provider value={value}>
+      {children}
+    </SettingsContext.Provider>
+  );
 }

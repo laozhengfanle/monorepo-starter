@@ -1,30 +1,39 @@
 import axios from 'axios';
-import type { AccountMenusResult, SaveAccountMenusInput } from '@starter/api-client';
-import { authStorage } from '../../app/auth/auth-storage.js';
+import type {
+  AccountMenusResult,
+  SaveAccountMenusInput,
+} from '@starter/api-client';
+import { authHeaders } from '../../shared/utils/http.js';
 
 /** 账户特例授权 API（走 /api 前缀，Vite 代理转发） */
 
-function authHeaders(): Record<string, string> {
-  const token = authStorage.getAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 /** 读取账户特例授权（覆盖 + 角色基线菜单 id） */
-export async function getAccountMenusApi(accountId: string): Promise<AccountMenusResult> {
-  const { data } = await axios.get<AccountMenusResult>(`/api/admin/accounts/${accountId}/menus`, {
-    headers: authHeaders(),
-  });
+export async function getAccountMenusApi(
+  accountId: string,
+): Promise<AccountMenusResult> {
+  const { data } = await axios.get<AccountMenusResult>(
+    `/api/admin/accounts/${accountId}/menus`,
+    {
+      headers: authHeaders(),
+    },
+  );
   return data;
 }
 
 /** 恢复已软删账户 */
 export async function restoreAccountApi(accountId: string): Promise<void> {
-  await axios.post(`/api/admin/accounts/${accountId}/restore`, {}, { headers: authHeaders() });
+  await axios.post(
+    `/api/admin/accounts/${accountId}/restore`,
+    {},
+    { headers: authHeaders() },
+  );
 }
 
 /** 彻底删除账户（清级联表后硬删） */
 export async function hardRemoveAccountApi(accountId: string): Promise<void> {
-  await axios.delete(`/api/admin/accounts/${accountId}/hard`, { headers: authHeaders() });
+  await axios.delete(`/api/admin/accounts/${accountId}/hard`, {
+    headers: authHeaders(),
+  });
 }
 
 /** 保存账户特例授权（全量覆盖） */

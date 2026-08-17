@@ -60,7 +60,14 @@ function toHexString(color: unknown): string {
 function SectionTitle({ title }: { title: string }): React.JSX.Element {
   const { token } = theme.useToken();
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 12,
+      }}
+    >
       <span
         style={{
           display: 'inline-block',
@@ -127,7 +134,10 @@ function OptionRow({
  * - 界面显示：主题模式（Segmented）、主题色（预设色块 + 取色器 + HEX 输入 + 当前色 + 恢复默认）、水印、色弱
  * - 布局选项：标签栏 / 页脚 / 面包屑显隐
  */
-export function SettingsDrawer({ open, onClose }: SettingsDrawerProps): React.JSX.Element {
+export function SettingsDrawer({
+  open,
+  onClose,
+}: SettingsDrawerProps): React.JSX.Element {
   const { token } = theme.useToken();
   const { mode, setMode } = useTheme();
   const {
@@ -137,6 +147,8 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps): React.JS
     resetPrimaryColor,
     isWatermarkVisible,
     setWatermarkVisible,
+    watermarkContent,
+    setWatermarkContent,
     isColorBlindMode,
     setColorBlindMode,
     showTabBar,
@@ -178,17 +190,30 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps): React.JS
             block
             value={mode}
             onChange={(v) => setMode(v as 'system' | 'light' | 'dark')}
-            options={themeModes.map((m) => ({ value: m.value, label: m.label }))}
+            options={themeModes.map((m) => ({
+              value: m.value,
+              label: m.label,
+            }))}
             style={{ marginBottom: 16 }}
           />
 
           <Divider style={{ margin: '12px 0' }} />
 
           <SubsectionLabel text="主题色" />
-          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+          <Text
+            type="secondary"
+            style={{ fontSize: 12, display: 'block', marginBottom: 8 }}
+          >
             自定义应用的主色调，将应用于按钮、链接等所有强调元素
           </Text>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
             {presetColors.map((c) => {
               const active = primaryColor.toLowerCase() === c.toLowerCase();
               return (
@@ -202,7 +227,9 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps): React.JS
                     width: 28,
                     height: 28,
                     borderRadius: '50%',
-                    border: active ? `2px solid ${token.colorPrimary}` : '2px solid transparent',
+                    border: active
+                      ? `2px solid ${token.colorPrimary}`
+                      : '2px solid transparent',
                     backgroundColor: c,
                     cursor: 'pointer',
                     display: 'flex',
@@ -214,14 +241,17 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps): React.JS
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'scale(1.15)';
-                    e.currentTarget.style.boxShadow = '0 1px 6px rgba(0,0,0,0.18)';
+                    e.currentTarget.style.boxShadow =
+                      '0 1px 6px rgba(0,0,0,0.18)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = '';
                     e.currentTarget.style.boxShadow = '';
                   }}
                 >
-                  {active ? <CheckOutlined style={{ color: '#fff', fontSize: 14 }} /> : null}
+                  {active ? (
+                    <CheckOutlined style={{ color: '#fff', fontSize: 14 }} />
+                  ) : null}
                 </button>
               );
             })}
@@ -279,10 +309,19 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps): React.JS
           <OptionRow
             id="settings-watermark"
             label="界面水印"
-            desc="页面背景显示水印文字，防止截图泄露（待水印组件实现后生效）"
+            desc="页面背景显示水印文字，防止截图泄露"
             checked={isWatermarkVisible}
             onChange={setWatermarkVisible}
           />
+          {isWatermarkVisible && (
+            <Input
+              value={watermarkContent}
+              onChange={(e) => setWatermarkContent(e.target.value)}
+              placeholder="输入水印文字，留空则不显示"
+              allowClear
+              style={{ marginTop: 4 }}
+            />
+          )}
           <OptionRow
             id="settings-colorblind"
             label="色弱模式"

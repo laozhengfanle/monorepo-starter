@@ -4,6 +4,8 @@
 # - 优雅关闭：preStop sleep 5（让 Service 端点摘除完成）
 # - 环境变量通过 envFrom 引用 ConfigMap + Secret
 # - 镜像 tag 占位：<registry>/monorepo-starter-server:<tag>
+# - 上传持久化：PVC server-uploads 挂载到 /app/uploads（readOnlyRootFilesystem 下挂载点仍可写；
+#   生产大流量建议替换为云盘/对象存储，上传走 S3 等）
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,7 +32,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 1001 # nestjs 用户（与 Dockerfile 一致）
         runAsGroup: 1001
-        fsGroup: 1001
+        fsGroup: 1001 # 让 PVC 卷组可写（nestjs uid 1001 属于该组）
         readOnlyRootFilesystem: true
       containers:
         - name: server
@@ -44,6 +46,10 @@ spec:
                 name: server-config
             - secretRef:
                 name: server-secrets
+          volumeMounts:
+            # 上传文件目录（Dockerfile 已 mkdir /app/uploads 并 chown nestjs:nodejs）
+            - name: uploads
+              mountPath: /app/uploads
           resources:
             requests:
               memory: 256Mi

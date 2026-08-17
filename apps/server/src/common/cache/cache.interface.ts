@@ -17,6 +17,12 @@ export interface ICacheService {
   set(key: string, value: unknown, ttl?: number): Promise<void>;
   /** 写入并设置 TTL（秒） */
   setex(key: string, ttl: number, value: unknown): Promise<void>;
+  /**
+   * 仅当 key 不存在时写入（SET NX，原子认领语义），返回是否为新设置。
+   * 用于需要「一次性认领/互斥」的场景（如 refresh token 重用检测），
+   * 避免 get→set 两步的非原子竞态（并发可双双通过）。
+   */
+  setnx(key: string, value: unknown, ttl?: number): Promise<boolean>;
   del(key: string): Promise<void>;
   /** 按通配符模式批量删除（如 delByPattern('auth:*')） */
   delByPattern(pattern: string): Promise<void>;

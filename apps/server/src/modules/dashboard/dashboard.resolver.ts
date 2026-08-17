@@ -32,9 +32,11 @@ export class DashboardResolver {
   @Query(() => [DashboardTrendItemType])
   @RequirePermission('config:audit:view')
   async dashboardTrend(
-    @Args('range', { type: () => String, defaultValue: 'week' }) range: 'week' | 'month' | 'year',
+    @Args('range', { type: () => String, defaultValue: 'week' }) range: string,
   ): Promise<DashboardTrendItemType[]> {
-    return this.dashboardService.getTrend(range);
+    // 归一化：非法值回退 week（NestJS 对字符串字面量联合的反射推断有怪癖，schema 用 String 更稳）
+    const normalized = range === 'month' || range === 'year' ? range : 'week';
+    return this.dashboardService.getTrend(normalized);
   }
 
   /** 操作类型分布 —— 需 config:audit:view */

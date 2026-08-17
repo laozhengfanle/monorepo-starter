@@ -11,7 +11,7 @@ import { ZodError } from 'zod';
 import { ZodValidationException } from 'nestjs-zod';
 import { BizException } from './business.exception.js';
 
-const INTERNAL_ERROR_CODE = 'INTERNAL_ERROR';
+const INTERNAL_ERROR_CODE = 'INTERNAL_SERVER_ERROR';
 const VALIDATION_ERROR_CODE = 'VALIDATION_FAILED';
 const VALIDATION_STATUS = HttpStatus.UNPROCESSABLE_ENTITY;
 const BIZ_EXCEPTION_STATUS = HttpStatus.BAD_REQUEST;
@@ -60,7 +60,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
             code: VALIDATION_ERROR_CODE,
             message: '请求参数校验失败',
             details:
-              zodError instanceof ZodError ? this.mapZodDetails(zodError) : undefined,
+              zodError instanceof ZodError
+                ? this.mapZodDetails(zodError)
+                : undefined,
           },
         },
       };

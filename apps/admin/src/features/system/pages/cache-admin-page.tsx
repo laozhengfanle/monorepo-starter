@@ -71,11 +71,15 @@ export function CacheAdminPage(): React.JSX.Element {
     variables: { pattern },
     fetchPolicy: 'network-only',
   });
-  const { data: statsData, refetch: refetchStats } = useCacheStatsQuery({ fetchPolicy: 'network-only' });
+  const { data: statsData, refetch: refetchStats } = useCacheStatsQuery({
+    fetchPolicy: 'network-only',
+  });
   const [getKeyDetail] = useCacheKeyLazyQuery({ fetchPolicy: 'network-only' });
   const [deleteCacheKey] = useDeleteCacheKeyMutation();
-  const [deleteCacheKeys, { loading: deletingBatch }] = useDeleteCacheKeysMutation();
-  const [clearByPattern, { loading: clearingPattern }] = useClearCacheByPatternMutation();
+  const [deleteCacheKeys, { loading: deletingBatch }] =
+    useDeleteCacheKeysMutation();
+  const [clearByPattern, { loading: clearingPattern }] =
+    useClearCacheByPatternMutation();
 
   const keys = useMemo(() => (data?.cacheKeys ?? []) as CacheKey[], [data]);
   const total = totalData?.cacheKeyTotal ?? 0;
@@ -116,18 +120,26 @@ export function CacheAdminPage(): React.JSX.Element {
   const handleDeleteKeys = async (): Promise<void> => {
     try {
       const res = await deleteCacheKeys({ variables: { keys: selectedKeys } });
-      void message.success(`已删除 ${res.data?.deleteCacheKeys.deletedCount ?? 0} 个 key`);
+      void message.success(
+        `已删除 ${res.data?.deleteCacheKeys.deletedCount ?? 0} 个 key`,
+      );
       setSelectedKeys([]);
       await load();
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '批量删除失败');
+      void message.error(
+        error instanceof Error ? error.message : '批量删除失败',
+      );
     }
   };
 
   const handleClearByPattern = async (): Promise<void> => {
     try {
-      const res = await clearByPattern({ variables: { pattern: clearPattern } });
-      void message.success(`已按模式清空 ${res.data?.clearCacheByPattern ?? 0} 个 key`);
+      const res = await clearByPattern({
+        variables: { pattern: clearPattern },
+      });
+      void message.success(
+        `已按模式清空 ${res.data?.clearCacheByPattern ?? 0} 个 key`,
+      );
       setClearModalOpen(false);
       setClearPattern('');
       setOffset(0);
@@ -143,7 +155,10 @@ export function CacheAdminPage(): React.JSX.Element {
       dataIndex: 'key',
       key: 'key',
       render: (v: string) => (
-        <Text style={{ fontFamily: 'monospace', fontSize: 12 }} copyable={{ text: v }}>
+        <Text
+          style={{ fontFamily: 'monospace', fontSize: 12 }}
+          copyable={{ text: v }}
+        >
           {v}
         </Text>
       ),
@@ -175,7 +190,11 @@ export function CacheAdminPage(): React.JSX.Element {
       width: 120,
       render: (_v, record) => (
         <Space size="small">
-          <Button type="link" size="small" onClick={() => void showDetail(record.key)}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => void showDetail(record.key)}
+          >
             详情
           </Button>
           {canDelete && (
@@ -201,7 +220,11 @@ export function CacheAdminPage(): React.JSX.Element {
         <Space size="small">
           {canDelete && (
             <>
-              <Button color="red" variant="outlined" onClick={() => setClearModalOpen(true)}>
+              <Button
+                color="red"
+                variant="outlined"
+                onClick={() => setClearModalOpen(true)}
+              >
                 按 Pattern 清空
               </Button>
               <Popconfirm
@@ -214,7 +237,8 @@ export function CacheAdminPage(): React.JSX.Element {
                   disabled={selectedKeys.length === 0}
                   loading={deletingBatch}
                 >
-                  批量删除{selectedKeys.length > 0 ? ` (${selectedKeys.length})` : ''}
+                  批量删除
+                  {selectedKeys.length > 0 ? ` (${selectedKeys.length})` : ''}
                 </Button>
               </Popconfirm>
             </>
@@ -224,19 +248,35 @@ export function CacheAdminPage(): React.JSX.Element {
       }
     >
       {/* 统计卡 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 16,
+          marginBottom: 16,
+        }}
+      >
         <Card size="small">
-          <Statistic title="已用内存" value={statsData?.cacheStats.usedMemory ?? '-'} />
+          <Statistic
+            title="已用内存"
+            value={statsData?.cacheStats.usedMemory ?? '-'}
+          />
         </Card>
         <Card size="small">
-          <Statistic title="命中率" value={statsData?.cacheStats.hitRate ?? '-'} />
+          <Statistic
+            title="命中率"
+            value={statsData?.cacheStats.hitRate ?? '-'}
+          />
         </Card>
         <Card size="small">
-          <Statistic title="运行时长" value={statsData?.cacheStats.uptime ?? '-'} />
+          <Statistic
+            title="运行时长"
+            value={statsData?.cacheStats.uptime ?? '-'}
+          />
         </Card>
       </div>
 
-            {/* pattern 筛选 */}
+      {/* pattern 筛选 */}
       <Form
         form={searchForm}
         layout="inline"
@@ -247,6 +287,7 @@ export function CacheAdminPage(): React.JSX.Element {
           <Input
             allowClear
             placeholder="如 mono:auth:*（* 表示全部）"
+            autoComplete="off"
             style={{ width: 260 }}
           />
         </Form.Item>
@@ -255,7 +296,13 @@ export function CacheAdminPage(): React.JSX.Element {
             <Button type="primary" htmlType="submit">
               查询
             </Button>
-            <Button onClick={() => { searchForm.setFieldValue('pattern', '*'); setOffset(0); setPattern('*'); }}>
+            <Button
+              onClick={() => {
+                searchForm.setFieldValue('pattern', '*');
+                setOffset(0);
+                setPattern('*');
+              }}
+            >
               重置
             </Button>
           </Space>
@@ -299,7 +346,13 @@ export function CacheAdminPage(): React.JSX.Element {
         width={640}
       >
         {detail && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr',
+              gap: '8px 16px',
+            }}
+          >
             <Text type="secondary">Key</Text>
             <Text style={{ fontFamily: 'monospace' }} copyable>
               {detail.key}

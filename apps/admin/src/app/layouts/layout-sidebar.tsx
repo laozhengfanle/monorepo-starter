@@ -1,55 +1,16 @@
-import {
-  AppstoreOutlined,
-  BookOutlined,
-  DashboardOutlined,
-  DeleteOutlined,
-  FileOutlined,
-  FileTextOutlined,
-  FolderOutlined,
-  GlobalOutlined,
-  MenuOutlined,
-  SafetyCertificateOutlined,
-  SafetyOutlined,
-  SettingOutlined,
-  TeamOutlined,
-  ThunderboltOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { DashboardOutlined } from '@ant-design/icons';
 import { Layout, Menu, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { AdminMenuNode } from '@starter/api-client';
 import { useAuth } from '../auth/auth-context.js';
+import { getMenuIcon } from '../../shared/utils/menu-icons.js';
 import { SiderTrigger } from './sider-trigger.js';
 
 const { Sider } = Layout;
 
 type MenuItem = NonNullable<MenuProps['items']>[number];
-
-/** 后端菜单图标名 → antd 图标节点（与菜单管理页 ICON_OPTIONS 保持一致） */
-const iconMap: Record<string, ReactNode> = {
-  DashboardOutlined: <DashboardOutlined />,
-  DeleteOutlined: <DeleteOutlined />,
-  TeamOutlined: <TeamOutlined />,
-  UserOutlined: <UserOutlined />,
-  SafetyOutlined: <SafetyOutlined />,
-  MenuOutlined: <MenuOutlined />,
-  SettingOutlined: <SettingOutlined />,
-  FileOutlined: <FileOutlined />,
-  AppstoreOutlined: <AppstoreOutlined />,
-  GlobalOutlined: <GlobalOutlined />,
-  FileTextOutlined: <FileTextOutlined />,
-  FolderOutlined: <FolderOutlined />,
-  ThunderboltOutlined: <ThunderboltOutlined />,
-  SafetyCertificateOutlined: <SafetyCertificateOutlined />,
-  BookOutlined: <BookOutlined />,
-};
-
-function resolveIcon(icon?: string | null): ReactNode {
-  return icon ? (iconMap[icon] ?? null) : null;
-}
 
 interface BuildResult {
   items: MenuItem[];
@@ -80,7 +41,7 @@ function buildMenuData(nodes: AdminMenuNode[]): BuildResult {
       }
       result.push({
         key,
-        ...(depth === 0 ? { icon: resolveIcon(node.icon) } : {}),
+        ...(depth === 0 ? { icon: getMenuIcon(node.icon) } : {}),
         label: node.name,
         ...(children.length > 0
           ? { children: build(children, depth + 1) }
