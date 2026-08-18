@@ -29,8 +29,16 @@ WORKDIR /workspace
 # 先复制清单文件，利用 Docker 层缓存（源码不变时 install 层不失效）
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/server/package.json ./apps/server/
+# 关键：pnpm workspace 的 install 需要**全部成员包的 manifest** 先就位，
+# 否则 node_modules 只链接 install 时存在的包（实测只 COPY 3 个 → "Scope: all 4 workspace
+# projects"，server 构建时无法解析缺失成员的链接，Release 镜像构建失败）。
+# 因此这里必须 COPY 全部 workspace 包的 package.json（源码仍留到 build 阶段再 COPY）。
+COPY apps/admin/package.json ./apps/admin/
 COPY packages/shared/contracts/package.json ./packages/shared/contracts/
 COPY packages/shared/server-core/package.json ./packages/shared/server-core/
+COPY packages/shared/api-client/package.json ./packages/shared/api-client/
+COPY packages/shared/ui/package.json ./packages/shared/ui/
+COPY packages/shared/test-utils/package.json ./packages/shared/test-utils/
 
 # 全量安装（build 需要 devDeps）
 RUN pnpm install --frozen-lockfile
