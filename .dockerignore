@@ -43,7 +43,9 @@ k8s/
 .agents
 
 # 生成文件（构建期重新生成）
-**/generated
+# 注意：只排除 server 的 prisma 生成客户端（不入库）；admin 的 graphql.ts 与
+# api-client 的 generated/*.ts 是**入库**的，vite 构建需要它们，不能排除（曾用
+# **/generated 误排除导致 admin 镜像构建失败）
 apps/server/src/generated
 pnpm-debug.log*
 *.tsbuildinfo
