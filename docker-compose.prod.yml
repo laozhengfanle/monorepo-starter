@@ -45,6 +45,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-monorepo_starter}?schema=public
       REDIS_URL: redis://redis:${REDIS_PORT:-6379}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 必填}
+      # 上传目录显式指定（与 volume 挂载 /app/uploads 一致，避免依赖 WORKDIR）
+      UPLOAD_DIR: /app/uploads
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://admin.example.com}
     depends_on:
