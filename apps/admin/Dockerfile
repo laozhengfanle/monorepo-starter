@@ -46,8 +46,9 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 COPY apps/admin/ ./apps/admin/
 
 # 4) 构建：vite build（生成 dist/）
-#    admin 的 build target 依赖 api-client:generate-api（orval 从 openapi.json 生成），
-#    需要先准备 openapi.json；此处直接跑 vite build，跳过 codegen（openapi.json 已入库）
+#    admin 直接引用 @starter/api-client 已提交的生成类型（src/generated/** 入库），
+#    无需在镜像内跑 orval codegen（openapi.json 是生成物、不入库——方案 A）；
+#    若后续 api-client generated 改为 CI 现生成，则此处需先跑 nx run @starter/api-client:generate-api
 RUN pnpm exec vite build --config apps/admin/vite.config.mts
 
 # ============================================

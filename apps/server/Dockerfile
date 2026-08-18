@@ -45,7 +45,7 @@ FROM deps AS build
 #   避免 nx workspace 图在缺文件时行为变化，属保守选择；.dockerignore 已排除 docs/k8s/.github/.husky。
 COPY apps/ ./apps/
 COPY packages/ ./packages/
-COPY openapi/ ./openapi/
+# 注意：openapi/ 属生成物（方案 A 不入库，CI 现生成），server 构建不依赖它，故不 COPY
 COPY nx.json eslint.config.mjs ./
 
 # 构建：server 的 build target 依赖 prisma-generate + ^build（共享包），
