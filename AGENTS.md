@@ -184,7 +184,7 @@ antd doc <组件> --format json           # 完整文档（可加 --lang zh）
    - 问题出在 starter 的通用能力：认证/权限/RBAC、审计、限流、缓存、上传、配置、GraphQL/REST 基础设施、seed、文档规范、CI/部署模板；
    - 你**未改动**相关代码，按文档/示例操作仍不符合预期；
    - 文档与代码行为不一致。
-     反之，问题出在你 fork 后新增的业务逻辑/字段/模块 → **不提上游**，自己修。
+   - 反之，问题出在你 fork 后新增的业务逻辑/字段/模块 → **不提上游**，自己修。
 2. **提哪里**：上游仓库 `https://github.com/laozhengfanle/monorepo-starter`（Issues → New Issue → 「Bug 报告」模板）。
 3. **如何提（按可用性选其一）**：
    - 有 `gh` CLI 且具备上游写权限：`gh issue create --repo laozhengfanle/monorepo-starter --title "[bug] <概述>" --body "<按模板字段>"`；
