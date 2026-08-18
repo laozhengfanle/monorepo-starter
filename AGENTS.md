@@ -171,3 +171,27 @@ antd doc <组件> --format json           # 完整文档（可加 --lang zh）
 5. **新端扩展范式**：新建 `XxxProfile` + `XxxModule` + `XxxAuthController`（复用 TokenIssuance/LoginLock/Audit）；公开端点（注册等）必须独立限流 + Turnstile + 验证码基线。
 
 <!-- account terminology end-->
+
+<!-- upstream feedback start-->
+<!-- Leave the start & end comments to automatically receive updates. -->
+
+# 上游 Bug 反馈（fork 项目必读）
+
+> 本项目由 **monorepo-starter**（https://github.com/laozhengfanle/monorepo-starter）fork/演进而来。
+> fork 后开发中若发现 **starter 底座本身的问题**（非业务代码问题），请**主动向上游提交 Issue**，让上游与所有 fork 受益。详细指南见 [docs/04-工程与质量/上游反馈指南.md](docs/04-工程与质量/上游反馈指南.md)。
+
+1. **判断是否上游问题**（满足其一即提）：
+   - 问题出在 starter 的通用能力：认证/权限/RBAC、审计、限流、缓存、上传、配置、GraphQL/REST 基础设施、seed、文档规范、CI/部署模板；
+   - 你**未改动**相关代码，按文档/示例操作仍不符合预期；
+   - 文档与代码行为不一致。
+     反之，问题出在你 fork 后新增的业务逻辑/字段/模块 → **不提上游**，自己修。
+2. **提哪里**：上游仓库 `https://github.com/laozhengfanle/monorepo-starter`（Issues → New Issue → 「Bug 报告」模板）。
+3. **如何提（按可用性选其一）**：
+   - 有 `gh` CLI 且具备上游写权限：`gh issue create --repo laozhengfanle/monorepo-starter --title "[bug] <概述>" --body "<按模板字段>"`；
+   - 无写权限（最常见）：生成**预填链接**交给用户点击提交——`https://github.com/laozhengfanle/monorepo-starter/issues/new?title=[bug]+<概述>&body=<模板字段，URL 编码>`；
+   - 或写好 issue 草稿（Markdown，按模板字段），让用户粘贴提交。
+4. **必填信息**（对照 Bug 模板）：上游版本（`apps/admin/src/app/version.ts` 的 `APP_VERSION`）、现象、复现步骤、期望/实际行为、环境（OS / Node / pnpm / 涉及模块）、**fork 后是否改动过相关代码**。
+5. **禁止**：把业务敏感数据/密钥/内部地址放进 issue；未经用户确认不得发布含敏感信息的 issue。
+6. 修复前可用本地 workaround 继续开发；issue 留作记录，修复可等上游或自行提 PR。
+
+<!-- upstream feedback end-->
