@@ -2,6 +2,9 @@
 # CI 主流程（push main + PR）
 # 覆盖：lint → typecheck → test → build → e2e → 安全审计 → Docker 构建 + Trivy 扫描
 # 基于 Nx affected 增量执行；矩阵验证 node/pnpm 多版本
+#
+# 安全（P3）：第三方 actions 一律钉 commit SHA（防供应链投毒，tag 可被移动）。
+#   版本号保留在行尾注释；升级 = 用 `git ls-remote <repo> refs/tags/<major>` 取新 SHA 后替换。
 # ============================================
 name: CI
 
@@ -43,7 +46,8 @@ jobs:
     # 没有 services 时 createApp() 直连失败 → CI 必红。此处按 GitHub Actions 标准配置。
     services:
       postgres:
-        image: postgres:16-alpine
+        # 与 compose/k8s 对齐（P2-10）：postgres:17-alpine
+        image: postgres:17-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -72,25 +76,25 @@ jobs:
       JWT_SECRET: ci-test-jwt-secret-0123456789
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
       # 计算 affected 所需的 base/head（必须在 install 前设置，供 nx-set-shas 使用）
-      - uses: nrwl/nx-set-shas@v4
+      - uses: nrwl/nx-set-shas@3e9ad7370203c1e93d109be57f3b72eb0eb511b1 # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
 
       # 显式缓存 pnpm store（与 setup-node 的 cache: pnpm 互补）
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.local/share/pnpm/store
           key: ${{ runner.os }}-pnpm-store-${{ env.PNPM_VERSION }}-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -147,15 +151,15 @@ jobs:
       security-events: write # 上传 SARIF 需要
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build server image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           file: apps/server/Dockerfile
@@ -165,7 +169,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build admin image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           file: apps/admin/Dockerfile
@@ -175,7 +179,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trivy scan (server)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.24.0
         with:
           image-ref: server:ci-${{ github.sha }}
           format: sarif
@@ -185,7 +189,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Trivy scan (admin)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.24.0
         with:
           image-ref: admin:ci-${{ github.sha }}
           format: sarif
@@ -196,12 +200,12 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3
         with:
           sarif_file: trivy-server.sarif
 
       - name: Upload Trivy results (admin)
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3
         with:
           sarif_file: trivy-admin.sarif

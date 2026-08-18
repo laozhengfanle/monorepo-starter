@@ -256,7 +256,8 @@ export function SystemSettingsPage(): React.JSX.Element {
                     {logoPreview && (
                       <Button
                         size="small"
-                        danger
+                        color="red"
+                        variant="outlined"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleLogoRemove();

@@ -86,13 +86,29 @@ services:
       retries: 5
       start_period: 60s
     develop:
+      # docker compose watch 语义（P3 基础设施项）：
+      #   - sync：源码同步到容器**运行时实际路径**（Dockerfile runtime 阶段 WORKDIR=/app，
+      #     旧值 /workspace/apps/server 是 build 阶段路径，运行时不存在）。
+      #     dist/（构建产物）与 node_modules/（镜像内 install）不可覆盖；package.json 由
+      #     rebuild 动作负责（避免覆盖 runtime 的 pruned manifest）。当前镜像跑的是构建产物
+      #     （node dist/main.js），sync 的源码要热重载需 dev-target 镜像 + 容器内文件监听，
+      #     此处作为基线语义保留。
+      #   - rebuild：依赖清单变化（package.json / lockfile / workspace 配置）→ 重建镜像
       watch:
         - action: sync
           path: ./apps/server
-          target: /workspace/apps/server
+          target: /app
           ignore:
             - node_modules/
             - dist/
+            - src/generated/
+            - package.json
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: pnpm-lock.yaml
+        - action: rebuild
+          path: pnpm-workspace.yaml
 
   # ──────────────────────────────────────────────
   # 管理后台 Admin（nginx 静态服务 + 反代）
@@ -105,6 +121,9 @@ services:
     depends_on:
       server:
         condition: service_healthy
+    environment:
+      # 反代上游：compose 网络内通过服务名解析（k8s 下由 admin-deployment env 注入为 server-service:3301）
+      UPSTREAM_SERVER: server:3301
     ports:
       - '127.0.0.1:${ADMIN_PORT:-3302}:80'
     healthcheck:

@@ -1,0 +1,77 @@
+# k8s/network-policy.yaml — 命名空间网络策略（P3 加固）
+#
+# 策略组合（叠加生效，NetworkPolicy 规则是并集）：
+#   1) default-deny-ingress            ：所有 pod 默认拒绝入站（外部无法直连任意 pod）
+#   2) allow-internal-and-ingress      ：放行同命名空间互通 + 集群 DNS + nginx ingress controller
+#
+# 生效后的行为：
+#   - 入站：默认拒绝；仅允许
+#       a) 同命名空间内任意 pod 互通（server→postgres:5432 / redis:6379，admin→server:3301 反代）
+#       b) nginx ingress controller（任意命名空间的 app.kubernetes.io/component=controller pod）
+#          访问 server:3301 / admin:80（外部 80/443 由 ingress controller 终结，本策略放行的是
+#          controller → 后端 Service 端口；443 也一并放行以兼容 TLS passthrough 场景）
+#   - 出站：未做默认拒绝（server 可能需要访问外部服务：Cloudflare Turnstile 人机验证 /
+#     通知 Provider / webhook）。同命名空间与 DNS 显式放行；如需全出站锁定，在
+#     default-deny 策略的 policyTypes 加入 Egress 并补充 kube-apiserver / 节点网络放行。
+#
+# 注意：
+#   - ingress controller 的 pod 标签约定：app.kubernetes.io/component: controller
+#     （ingress-nginx 等主流控制器默认带该标签；若你的控制器不带，改成实际标签或用
+#     namespaceSelector 限定其命名空间，如 matchLabels: { kubernetes.io/metadata.name: ingress-nginx }）
+#   - 需要 NetworkPolicy 能力：CNI 需支持（Calico / Cilium / Weave / Antrea 等）。
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: monorepo-starter
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-and-ingress-controller
+  namespace: monorepo-starter
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # 同命名空间内任意 pod 互通（server↔postgres/redis，admin→server）
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monorepo-starter
+    # 放行 nginx ingress controller → 后端端口（server 3301 / admin 80；443 兼容 passthrough）
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: controller
+      ports:
+        - protocol: TCP
+          port: 3301
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+  egress:
+    # 同命名空间互通（与 ingress 对称）
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monorepo-starter
+    # 集群 DNS（kube-dns / CoreDNS 在 kube-system；node-local-dns 环境需另行放行节点网段）
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

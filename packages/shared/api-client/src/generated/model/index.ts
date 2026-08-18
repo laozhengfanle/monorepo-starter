@@ -3,7 +3,7 @@
  * Do not edit manually.
  * monorepo-starter API
  * 企业级 monorepo starter 的 NestJS + Express API
- * OpenAPI spec version: 0.0.1
+ * OpenAPI spec version: 0.2.0
  */
 
 export * from './changePasswordDto';

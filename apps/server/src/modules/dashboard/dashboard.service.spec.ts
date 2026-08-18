@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { vi, describe, expect, it, beforeEach } from 'vitest';
+import { vi, describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { DashboardService } from './dashboard.service.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 
@@ -20,6 +20,8 @@ function createPrismaStub(
       accountIdentity: {
         findMany: vi.fn<any>().mockResolvedValue([]),
       },
+      // getTrend 走 SQL 预聚合（$queryRaw），不拉全量审计入内存
+      $queryRaw: vi.fn<any>().mockResolvedValue([]),
       ...overrides,
     },
   } as unknown as PrismaService;
@@ -40,6 +42,10 @@ describe('DashboardService', () => {
     service = moduleRef.get(DashboardService);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('getStats：返回统计卡片与趋势', async () => {
     const stats = await service.getStats();
 
@@ -58,25 +64,85 @@ describe('DashboardService', () => {
     ]);
   });
 
-  it('getTrend(week)：按风险等级拆分审计操作', async () => {
-    // 构造 3 种风险的日志：高危（login_locked）、中危（login_failed）、低危（login_success）
-    (
-      prisma.client.auditLog.findMany as ReturnType<typeof vi.fn>
-    ).mockResolvedValue([
-      { action: 'login_locked', createdAt: new Date() },
-      { action: 'login_failed', createdAt: new Date() },
-      { action: 'login_success', createdAt: new Date() },
+  it('getTrend(week)：SQL 预聚合行 → 按风险等级拆分到天桶', async () => {
+    // 2026-01-05（周一）固定系统时钟，桶标签确定
+    vi.setSystemTime(new Date('2026-01-05T10:00:00Z'));
+    (prisma.client.$queryRaw as ReturnType<typeof vi.fn>).mockResolvedValue([
+      // 高危（login_locked）/ 中危（login_failed）/ 低危（login_success）
+      { bucket: '2026-01-05', action: 'login_locked', count: 1 },
+      { bucket: '2026-01-05', action: 'login_failed', count: 1 },
+      { bucket: '2026-01-05', action: 'login_success', count: 1 },
     ]);
 
     const trend = await service.getTrend('week');
-    const today = trend.find(
-      (t) => t.label === `${new Date().getMonth() + 1}/${new Date().getDate()}`,
-    );
+    const monday = trend.find((t) => t.label === '1/5');
 
-    expect(today).toBeDefined();
-    expect(today?.highRisk).toBe(1);
-    expect(today?.midRisk).toBe(1);
-    expect(today?.lowRisk).toBe(1);
+    expect(monday).toBeDefined();
+    expect(monday?.highRisk).toBe(1);
+    expect(monday?.midRisk).toBe(1);
+    expect(monday?.lowRisk).toBe(1);
+  });
+
+  it('getTrend：不再走 auditLog.findMany 全量拉取（防 OOM 上限）', async () => {
+    vi.setSystemTime(new Date('2026-01-05T10:00:00Z'));
+
+    await service.getTrend('week');
+
+    expect(
+      prisma.client.auditLog.findMany as ReturnType<typeof vi.fn>,
+    ).not.toHaveBeenCalled();
+    expect(
+      prisma.client.$queryRaw as ReturnType<typeof vi.fn>,
+    ).toHaveBeenCalledTimes(1);
+    // 参数化 Prisma.sql（模板对象含 strings/values），非字符串拼接 SQL
+    const [sql] = (prisma.client.$queryRaw as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [unknown];
+    expect(sql).toBeTypeOf('object');
+    expect((sql as { strings?: unknown }).strings).toBeDefined();
+    expect((sql as { values?: unknown }).values).toBeDefined();
+  });
+
+  it('getTrend(year)：按月聚合为 12 个桶（label 为 N月）', async () => {
+    vi.setSystemTime(new Date('2026-06-15T10:00:00Z'));
+    (prisma.client.$queryRaw as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { bucket: '2026-03-01', action: 'login_failed', count: 4 }, // 中危 → 3月
+      { bucket: '2026-06-01', action: 'password_changed', count: 2 }, // 高危 → 6月
+      { bucket: '2026-06-02', action: 'logout', count: 7 }, // 低危 → 6月
+    ]);
+
+    const result = await service.getTrend('year');
+
+    expect(result).toHaveLength(12);
+    expect(result[2]).toEqual({
+      label: '3月',
+      highRisk: 0,
+      midRisk: 4,
+      lowRisk: 0,
+    });
+    expect(result[5]).toEqual({
+      label: '6月',
+      highRisk: 2,
+      midRisk: 0,
+      lowRisk: 7,
+    });
+  });
+
+  it('getTrend(month)：本月 1 号至今逐日分桶', async () => {
+    vi.setSystemTime(new Date('2026-02-03T10:00:00Z'));
+    (prisma.client.$queryRaw as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { bucket: '2026-02-02', action: 'login_success', count: 1 },
+    ]);
+
+    const result = await service.getTrend('month');
+
+    // 2 月（非闰年）1-3 日，共 3 桶
+    expect(result.map((r) => r.label)).toEqual(['2/1', '2/2', '2/3']);
+    expect(result[1]).toEqual({
+      label: '2/2',
+      highRisk: 0,
+      midRisk: 0,
+      lowRisk: 1,
+    });
   });
 
   it('getDistribution：计算百分比并按 Top 排序', async () => {

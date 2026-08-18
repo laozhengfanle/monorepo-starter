@@ -1,6 +1,9 @@
 # Admin Deployment（nginx 静态服务 + 反代 /api /graphql /uploads）
 # - SPA 无状态，多副本 + HPA 无压力
 # - 探针打 /healthz（nginx 内置端点）
+# - readOnlyRootFilesystem: true 时 nginx 需要写入的目录必须挂 emptyDir（/var/cache/nginx 临时文件、/var/run pid/临时 socket）
+# - 通过 env 注入上游 server 地址（UPSTREAM_SERVER），由 admin 容器的 entrypoint 脚本 envsubst 替换 nginx.conf 模板，
+#   这样 docker compose / k8s 用同一份 nginx.conf 模板：compose 下默认 server:3301，k8s 下注入 server-service:3301
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,12 +26,22 @@ spec:
       labels:
         app: admin
     spec:
+      # nginx 镜像内置 nginx 用户 uid=101；显式声明对齐
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101 # nginx 镜像内置用户
+        runAsUser: 101
         runAsGroup: 101
         fsGroup: 101
         readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false # 安全基线（P3）：禁止提权
+      # nginx 运行时需要写入的目录（与 compose prod 的 tmpfs 行为对齐）
+      volumes:
+        - name: nginx-cache
+          emptyDir:
+            sizeLimit: 32Mi
+        - name: nginx-run
+          emptyDir:
+            sizeLimit: 8Mi
       containers:
         - name: admin
           image: <registry>/monorepo-starter-admin:<tag>
@@ -36,6 +49,15 @@ spec:
           ports:
             - containerPort: 80
               name: http
+          env:
+            # 上游 server 地址（k8s 内用 service DNS；compose 用容器名）
+            - name: UPSTREAM_SERVER
+              value: 'server-service:3301'
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
           resources:
             requests:
               memory: 64Mi

@@ -65,18 +65,32 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     // 2. jti 黑名单（精确撤销 / '*' 账号全量）
-    if (payload.jti && (await this.tokenBlacklist.isRevoked(payload.jti, payload.sub))) {
+    if (
+      payload.jti &&
+      (await this.tokenBlacklist.isRevoked(payload.jti, payload.sub))
+    ) {
       throw new UnauthorizedException('Token 已撤销，请重新登录');
     }
 
-    req.user = { accountId: payload.sub, userType: payload.userType } satisfies AuthUser;
+    req.user = {
+      accountId: payload.sub,
+      userType: payload.userType,
+    } satisfies AuthUser;
     return true;
   }
 
   private extractToken(req: Request): string | null {
+    // 优先 Authorization: Bearer（API 客户端/测试）；回退 httpOnly cookie（admin 前端，P1-7 改造后
+    // token 不再落 localStorage，由后端 Set-Cookie 下发，JS 不可读 → XSS 无法窃取）
     const header = req.headers?.['authorization'];
     if (typeof header === 'string' && header.startsWith('Bearer ')) {
       return header.slice(7);
+    }
+    const cookieToken = (req.cookies as Record<string, string> | undefined)?.[
+      'admin_access_token'
+    ];
+    if (typeof cookieToken === 'string' && cookieToken) {
+      return cookieToken;
     }
     return null;
   }

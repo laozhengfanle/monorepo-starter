@@ -22,6 +22,7 @@ spec:
         runAsUser: 999
         runAsGroup: 999
         fsGroup: 999
+        allowPrivilegeEscalation: false # 安全基线（P3）：禁止提权
       containers:
         - name: redis
           image: redis:7-alpine

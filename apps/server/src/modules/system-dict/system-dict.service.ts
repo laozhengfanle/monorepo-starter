@@ -8,17 +8,8 @@ import {
 } from '@starter/contracts';
 import type { SysDictItem, SysDictType } from '@starter/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { isUniqueConstraintError } from '../../common/prisma/prisma-error.util.js';
 import { AuditService, AUDIT_ACTIONS } from '../auth/audit.service.js';
-
-/** Prisma 唯一约束冲突检测（P2002） */
-function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code: unknown }).code === 'P2002'
-  );
-}
 
 /** 字典项行 → 契约 */
 function toItem(row: {
@@ -126,24 +117,36 @@ export class SysDictService {
       await this.audit.write({
         accountId: operatorId,
         action: AUDIT_ACTIONS.DICT_CREATED,
-          resourceId: row.id,
+        resourceId: row.id,
         detail: { dictTypeId: row.id, code: row.code },
       });
       return toType(row);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        throw new BizException({ code: 'DICT_CODE_EXISTS', message: '字典编码已存在' });
+        throw new BizException({
+          code: 'DICT_CODE_EXISTS',
+          message: '字典编码已存在',
+        });
       }
       throw error;
     }
   }
 
   /** 更新字典类型 */
-  async updateType(id: string, input: unknown, operatorId: string): Promise<SysDictType> {
+  async updateType(
+    id: string,
+    input: unknown,
+    operatorId: string,
+  ): Promise<SysDictType> {
     const data = UpdateDictTypeSchema.parse(input);
-    const existing = await this.prisma.client.sysDictType.findUnique({ where: { id } });
+    const existing = await this.prisma.client.sysDictType.findUnique({
+      where: { id },
+    });
     if (!existing) {
-      throw new BizException({ code: 'DICT_TYPE_NOT_FOUND', message: '字典类型不存在' });
+      throw new BizException({
+        code: 'DICT_TYPE_NOT_FOUND',
+        message: '字典类型不存在',
+      });
     }
     const row = await this.prisma.client.sysDictType.update({
       where: { id },
@@ -166,9 +169,14 @@ export class SysDictService {
 
   /** 删除字典类型（级联删除其 items） */
   async removeType(id: string, operatorId: string): Promise<{ success: true }> {
-    const existing = await this.prisma.client.sysDictType.findUnique({ where: { id } });
+    const existing = await this.prisma.client.sysDictType.findUnique({
+      where: { id },
+    });
     if (!existing) {
-      throw new BizException({ code: 'DICT_TYPE_NOT_FOUND', message: '字典类型不存在' });
+      throw new BizException({
+        code: 'DICT_TYPE_NOT_FOUND',
+        message: '字典类型不存在',
+      });
     }
     await this.prisma.client.sysDictType.delete({ where: { id } });
     await this.audit.write({
@@ -187,7 +195,10 @@ export class SysDictService {
       where: { id: data.dictTypeId },
     });
     if (!type) {
-      throw new BizException({ code: 'DICT_TYPE_NOT_FOUND', message: '字典类型不存在' });
+      throw new BizException({
+        code: 'DICT_TYPE_NOT_FOUND',
+        message: '字典类型不存在',
+      });
     }
     try {
       const row = await this.prisma.client.sysDictItem.create({
@@ -206,23 +217,39 @@ export class SysDictService {
         action: AUDIT_ACTIONS.DICT_CREATED,
         resourceType: 'sys_dict_item',
         resourceId: row.id,
-        detail: { dictItemId: row.id, dictTypeId: row.dictTypeId, value: row.value },
+        detail: {
+          dictItemId: row.id,
+          dictTypeId: row.dictTypeId,
+          value: row.value,
+        },
       });
       return toItem(row);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        throw new BizException({ code: 'DICT_VALUE_EXISTS', message: '该字典项值已存在' });
+        throw new BizException({
+          code: 'DICT_VALUE_EXISTS',
+          message: '该字典项值已存在',
+        });
       }
       throw error;
     }
   }
 
   /** 更新字典项 */
-  async updateItem(id: string, input: unknown, operatorId: string): Promise<SysDictItem> {
+  async updateItem(
+    id: string,
+    input: unknown,
+    operatorId: string,
+  ): Promise<SysDictItem> {
     const data = UpdateDictItemSchema.parse(input);
-    const existing = await this.prisma.client.sysDictItem.findUnique({ where: { id } });
+    const existing = await this.prisma.client.sysDictItem.findUnique({
+      where: { id },
+    });
     if (!existing) {
-      throw new BizException({ code: 'DICT_ITEM_NOT_FOUND', message: '字典项不存在' });
+      throw new BizException({
+        code: 'DICT_ITEM_NOT_FOUND',
+        message: '字典项不存在',
+      });
     }
     const row = await this.prisma.client.sysDictItem.update({
       where: { id },
@@ -245,9 +272,14 @@ export class SysDictService {
 
   /** 删除字典项 */
   async removeItem(id: string, operatorId: string): Promise<{ success: true }> {
-    const existing = await this.prisma.client.sysDictItem.findUnique({ where: { id } });
+    const existing = await this.prisma.client.sysDictItem.findUnique({
+      where: { id },
+    });
     if (!existing) {
-      throw new BizException({ code: 'DICT_ITEM_NOT_FOUND', message: '字典项不存在' });
+      throw new BizException({
+        code: 'DICT_ITEM_NOT_FOUND',
+        message: '字典项不存在',
+      });
     }
     await this.prisma.client.sysDictItem.delete({ where: { id } });
     await this.audit.write({
@@ -255,7 +287,11 @@ export class SysDictService {
       action: AUDIT_ACTIONS.DICT_DELETED,
       resourceType: 'sys_dict_item',
       resourceId: id,
-      detail: { dictItemId: id, dictTypeId: existing.dictTypeId, value: existing.value },
+      detail: {
+        dictItemId: id,
+        dictTypeId: existing.dictTypeId,
+        value: existing.value,
+      },
     });
     return { success: true };
   }

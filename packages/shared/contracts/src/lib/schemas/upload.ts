@@ -28,3 +28,14 @@ export const UploadFileSchema = z.object({
 });
 
 export type UploadFile = z.infer<typeof UploadFileSchema>;
+
+/** 文件列表分页参数（GraphQL @Args 逐参校验；与 paginationQuerySchema 对齐） */
+export const FilePageSchema = z.coerce.number().int().positive().default(1);
+
+/** 文件列表分页大小上限：1-100（防超大分页拖垮 DB） */
+export const FilePageSizeSchema = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(100)
+  .default(20);

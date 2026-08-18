@@ -3,7 +3,6 @@ import {
   App,
   Button,
   Card,
-  Checkbox,
   Dropdown,
   Form,
   Input,
@@ -17,6 +16,7 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { SearchBar, type SearchValues } from '@starter/ui';
 import {
   DeliveredProcedureOutlined,
   FileExcelOutlined,
@@ -25,7 +25,6 @@ import {
   PlusOutlined,
   RedoOutlined,
   SafetyCertificateOutlined,
-  SearchOutlined,
 } from '@ant-design/icons';
 import {
   CreateAdminAccountSchema,
@@ -36,7 +35,7 @@ import { usePermission } from '../../../app/auth/use-permission.js';
 import { useSystemConfig } from '../../../app/providers/system-config-provider.js';
 import { AccountPermissionModal } from '../account-permission-modal.js';
 import { hardRemoveAccountApi, restoreAccountApi } from '../api.js';
-import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
+import { useColumnControl } from '../../../shared/hooks/use-column-control.js';
 import {
   applyZodErrors,
   showMutationError,
@@ -69,27 +68,14 @@ export function AdminAccountsPage(): React.JSX.Element {
     email?: string;
     roleCode?: string;
     enabled?: boolean;
+    includeDeleted?: boolean;
   }>({});
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
-    () =>
-      new Set([
-        'username',
-        'nickname',
-        'email',
-        'roleCodes',
-        'status',
-        'actions',
-      ]),
-  );
   const [form] = Form.useForm();
-  const [searchForm] = Form.useForm();
   // 特例授权弹窗
   const [permAccount, setPermAccount] = useState<{
     id: string;
     name: string;
   } | null>(null);
-  // 软删除视图（显示已删除记录）
-  const [includeDeleted, setIncludeDeleted] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const { settings: sysSettings } = useSystemConfig();
@@ -110,7 +96,7 @@ export function AdminAccountsPage(): React.JSX.Element {
         ...(filters.email ? { email: filters.email } : {}),
         ...(filters.roleCode ? { roleCode: filters.roleCode } : {}),
         ...(filters.enabled !== undefined ? { enabled: filters.enabled } : {}),
-        includeDeleted,
+        includeDeleted: filters.includeDeleted ?? false,
       },
     },
   });
@@ -129,7 +115,7 @@ export function AdminAccountsPage(): React.JSX.Element {
   const total = data?.adminAccounts.total ?? 0;
   const roleOptions = (rolesData?.adminRoles ?? []).map((role) => ({
     value: role.code,
-    label: `${role.name}（${role.code}）`,
+    label: role.name,
   }));
 
   const refreshList = async (): Promise<void> => {
@@ -141,7 +127,7 @@ export function AdminAccountsPage(): React.JSX.Element {
         ...(filters.email ? { email: filters.email } : {}),
         ...(filters.roleCode ? { roleCode: filters.roleCode } : {}),
         ...(filters.enabled !== undefined ? { enabled: filters.enabled } : {}),
-        includeDeleted,
+        includeDeleted: filters.includeDeleted ?? false,
       },
     });
   };
@@ -342,186 +328,98 @@ export function AdminAccountsPage(): React.JSX.Element {
     },
   ];
 
-  // 列控制：切换显隐（操作列固定显示，至少保留一列）
-  const toggleColumn = (key: string): void => {
-    setVisibleKeys((prev) => {
-      if (prev.has(key)) {
-        if (prev.size <= 1) {
-          void message.warning('至少保留一列');
-          return prev;
+  // 列控制 + 导出（共享 hook，行为与既有实现一致：操作列固定、至少保留一列、导可见列）
+  const { columnMenuItems, columns, handleExport } =
+    useColumnControl<AdminAccount>({
+      fullColumns,
+      initialVisibleKeys: [
+        'username',
+        'nickname',
+        'email',
+        'roleCodes',
+        'status',
+        'actions',
+      ],
+      exportFileNamePrefix: '账户管理',
+      exportData: accounts,
+      exportCell: (key, account) => {
+        if (key === 'status') {
+          return account.deletedAt
+            ? `已删除 ${account.deletedAt.slice(0, 10)}`
+            : account.enabled
+              ? '正常'
+              : '禁用';
         }
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      }
-      const next = new Set(prev);
-      next.add(key);
-      return next;
+        if (key === 'roleCodes') return account.roleCodes.join(' / ');
+        return undefined;
+      },
     });
-  };
-
-  const columnMenuItems = fullColumns.map((c) => ({
-    key: c.key as string,
-    label: (
-      <Checkbox
-        checked={visibleKeys.has(c.key as string)}
-        disabled={c.key === 'actions'}
-        onClick={(e) => e.stopPropagation()}
-        onChange={() => toggleColumn(c.key as string)}
-      >
-        {String(c.title)}
-      </Checkbox>
-    ),
-  }));
-
-  // 列过滤开销极小，直接计算（避免 fullColumns 引用变化导致的 useMemo 抖动）
-  const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
-
-  // 导出 CSV：导出当前筛选条件下的账户（含可见列）
-  const handleExport = (format: 'excel' | 'csv'): void => {
-    const exportCols = fullColumns.filter(
-      (c) => visibleKeys.has(c.key as string) && c.key !== 'actions',
-    );
-    const header = exportCols.map((c) => String(c.title));
-    const rows: (string | number | boolean | null | undefined)[][] = [
-      header,
-      ...accounts.map((a) =>
-        exportCols.map((c) => {
-          if (c.key === 'status')
-            return a.deletedAt
-              ? `已删除 ${a.deletedAt.slice(0, 10)}`
-              : a.enabled
-                ? '正常'
-                : '禁用';
-          if (c.key === 'roleCodes') return a.roleCodes.join(' / ');
-          const dataIdx =
-            (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
-          const v = (a as unknown as Record<string, unknown>)[dataIdx];
-          return (v as string | number | boolean | null | undefined) ?? '';
-        }),
-      ),
-    ];
-    const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
-    if (format === 'excel') {
-      downloadBlob(
-        toExcel(rows),
-        `账户管理_${ts}.xls`,
-        'application/vnd.ms-excel;charset=utf-8;',
-      );
-    } else {
-      downloadBlob(
-        toCSV(rows),
-        `账户管理_${ts}.csv`,
-        'text/csv;charset=utf-8;',
-      );
-    }
-    void message.success(`已导出 ${accounts.length} 条`);
-  };
 
   return (
     <div>
-      {/* 搜索卡：服务端筛选（点「查询」才请求，对标老项目 Vue） */}
-      <Card style={{ marginBottom: 16 }}>
-        <Form
-          form={searchForm}
-          layout="inline"
-          style={{ rowGap: 12 }}
-          onFinish={(values: {
-            username?: string;
-            email?: string;
-            roleCode?: string;
-            enabled?: string;
-          }) => {
-            setPage(1);
-            setFilters({
-              username: values.username || undefined,
-              email: values.email || undefined,
-              roleCode: values.roleCode || undefined,
-              enabled:
-                values.enabled === 'enabled'
-                  ? true
-                  : values.enabled === 'disabled'
-                    ? false
-                    : undefined,
-            });
-          }}
-        >
-          <Form.Item name="username" label="用户名" style={{ marginBottom: 0 }}>
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="请输入用户名"
-              autoComplete="off"
-              style={{ width: 160 }}
-            />
-          </Form.Item>
-          <Form.Item name="email" label="邮箱" style={{ marginBottom: 0 }}>
-            <Input
-              allowClear
-              placeholder="请输入邮箱"
-              autoComplete="off"
-              style={{ width: 180 }}
-            />
-          </Form.Item>
-          <Form.Item name="roleCode" label="角色" style={{ marginBottom: 0 }}>
-            <Select
-              allowClear
-              placeholder="全部"
-              style={{ width: 160 }}
-              options={roleOptions}
-            />
-          </Form.Item>
-          <Form.Item name="enabled" label="状态" style={{ marginBottom: 0 }}>
-            <Select
-              allowClear
-              placeholder="全部"
-              style={{ width: 120 }}
-              options={[
-                { value: 'enabled', label: '正常' },
-                { value: 'disabled', label: '禁用' },
-              ]}
-            />
-          </Form.Item>
-          {canViewTrash && (
-            <Form.Item
-              name="includeDeleted"
-              valuePropName="checked"
-              style={{ marginBottom: 0 }}
-            >
-              <Checkbox
-                checked={includeDeleted}
-                onChange={(e) => {
-                  setIncludeDeleted(e.target.checked);
-                  searchForm.setFieldValue('includeDeleted', e.target.checked);
-                }}
-              >
-                显示已删除
-              </Checkbox>
-            </Form.Item>
-          )}
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Space>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<SearchOutlined />}
-              >
-                查询
-              </Button>
-              <Button
-                onClick={() => {
-                  searchForm.resetFields();
-                  setFilters({});
-                  setIncludeDeleted(false);
-                  setPage(1);
-                }}
-              >
-                重置
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
+      {/* 搜索卡：独立 Card 位于列表正上方（列表页规范）；点「查询」才请求 */}
+      <SearchBar
+        fields={[
+          {
+            name: 'username',
+            label: '用户名',
+            type: 'input',
+            placeholder: '请输入用户名',
+          },
+          {
+            name: 'email',
+            label: '邮箱',
+            type: 'input',
+            placeholder: '请输入邮箱',
+          },
+          {
+            name: 'roleCode',
+            label: '角色',
+            type: 'select',
+            placeholder: '全部',
+            options: roleOptions,
+          },
+          {
+            name: 'enabled',
+            label: '状态',
+            type: 'select',
+            placeholder: '全部',
+            options: [
+              { value: 'enabled', label: '正常' },
+              { value: 'disabled', label: '禁用' },
+            ],
+          },
+          ...(canViewTrash
+            ? [
+                {
+                  name: 'includeDeleted',
+                  label: '',
+                  type: 'checkbox' as const,
+                  checkLabel: '显示已删除',
+                },
+              ]
+            : []),
+        ]}
+        onSearch={(values: SearchValues) => {
+          setPage(1);
+          setFilters({
+            username: (values.username as string | undefined) || undefined,
+            email: (values.email as string | undefined) || undefined,
+            roleCode: (values.roleCode as string | undefined) || undefined,
+            enabled:
+              values.enabled === 'enabled'
+                ? true
+                : values.enabled === 'disabled'
+                  ? false
+                  : undefined,
+            includeDeleted: Boolean(values.includeDeleted),
+          });
+        }}
+        onReset={() => {
+          setFilters({});
+          setPage(1);
+        }}
+      />
 
       {/* 表格卡：标题 + 工具条（新建 / 列控制 / 导出 / 刷新） */}
       <Card

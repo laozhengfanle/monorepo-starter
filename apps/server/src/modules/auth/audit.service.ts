@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { newId } from '@starter/server-core';
+import { Prisma } from '../../generated/prisma-client/client.js';
 import { BusinessMetrics } from '../../common/metrics/business.metrics.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import {
@@ -29,6 +30,7 @@ export interface AuditEntry {
  * - 自动补全：未传 resourceType 时按 action 映射补全（如 login_* → auth），杜绝漏填不对称
  * - fail-open 校验：action/resourceType 不在词表内仅 Logger.error，不阻塞主流程
  *   （安全敏感路径如登录失败/锁定：审计失败只损失日志本身，不影响既定安全判定）
+ * - 可观测：写入成功计 audit_log_writes_total、失败计 audit_log_write_failures_total（按 action）
  */
 @Injectable()
 export class AuditService {
@@ -73,7 +75,7 @@ export class AuditService {
           action: entry.action,
           resourceType,
           resourceId: entry.resourceId,
-          detail: entry.detail as never,
+          detail: entry.detail as Prisma.InputJsonValue | undefined,
           ip: entry.ip,
           userAgent: entry.userAgent,
         },
@@ -86,6 +88,9 @@ export class AuditService {
           (err as Error).message
         }`,
       );
+      // 业务指标：审计写入失败计数（fail-open 语义下审计旁路失败也能被 Prometheus 观测，
+      // 避免「审计静默丢失」成为盲区）
+      this.metrics.incAuditLogWriteFailure(entry.action);
     }
   }
 }

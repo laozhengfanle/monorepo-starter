@@ -63,6 +63,18 @@ export class LoginLockService {
     return this.envAccountThreshold;
   }
 
+  /**
+   * 是否已锁定（账号阈值优先读后台配置，IP 固定 50 次/窗口）。
+   *
+   * 阈值边界竞态说明：isLocked 的「读计数 → 比对阈值」与 recordFailure 的「incr」
+   * 是两个独立步骤。Redis 后端下并发失败（同一账号多端同时提交）可能出现：
+   * 本请求读到 N-1 未锁，同时另一请求已 incr 到 N，双双通过 isLocked 后各自再
+   * incr，导致窗口内计数略超阈值才真正拦截。此为「尽力而为」的爆破速率限制，
+   * 不追求强一致，可接受。
+   * 演进方向：Redis 后端可在 recordFailure 用 INCR 返回值直接判锁
+   * （next >= threshold 即锁定），一次原子操作完成「计数 + 判定」，消除读-改-写竞态；
+   * 内存后端在 JS 单线程下无此竞态。
+   */
   async isLocked(accountId: string, ip: string): Promise<boolean> {
     const threshold = await this.getAccountThreshold();
     const accountFails =
@@ -80,6 +92,7 @@ export class LoginLockService {
   }
 
   async recordFailure(accountId: string, ip: string): Promise<void> {
+    // incr(key, ttl)：固定窗口原子递增（Redis 后端 INCR + 首次 EXPIRE；内存后端同语义）
     await this.cache.incr(`auth:lock:${accountId}`, this.lockTtl);
     await this.cache.incr(`auth:lock:ip:${ip}`, this.lockTtl);
     // 业务指标：登录失败计数（按账户/IP 维度合并为一次）

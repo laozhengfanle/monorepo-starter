@@ -25,7 +25,11 @@ export class AuditLogResolver {
   @Query(() => PaginatedAuditLogsType)
   @RequirePermission('config:audit:view')
   async adminLogs(
-    @Args('query', { type: () => AuditLogQueryInputType }, new ZodArgsPipe(AuditLogQuerySchema))
+    @Args(
+      'query',
+      { type: () => AuditLogQueryInputType },
+      new ZodArgsPipe(AuditLogQuerySchema),
+    )
     query: AuditLogQuery,
   ): Promise<PaginatedAuditLogsType> {
     const result = await this.auditLogService.findAll(query);
@@ -40,7 +44,11 @@ export class AuditLogResolver {
   @Query(() => [AuditLogItemType])
   @RequirePermission('config:audit:export')
   async exportAuditLogs(
-    @Args('query', { type: () => AuditLogQueryInputType }, new ZodArgsPipe(AuditLogQuerySchema))
+    @Args(
+      'query',
+      { type: () => AuditLogQueryInputType },
+      new ZodArgsPipe(AuditLogQuerySchema),
+    )
     query: AuditLogQuery,
   ): Promise<AuditLogItemType[]> {
     return this.auditLogService.exportLogs({
@@ -53,14 +61,19 @@ export class AuditLogResolver {
 
   @Mutation(() => ClearAuditLogsResultType)
   @RequirePermission('config:audit:clear')
-  clearAuditLogs(@CurrentUser() user: AuthUser): Promise<ClearAuditLogsResultType> {
+  clearAuditLogs(
+    @CurrentUser() user: AuthUser,
+  ): Promise<ClearAuditLogsResultType> {
     return this.auditLogService.clear(user.accountId);
   }
 
   @Mutation(() => Boolean)
   @RequirePermission('config:audit:delete')
-  async deleteAuditLog(@Args('id', { type: () => ID }) id: string): Promise<boolean> {
-    await this.auditLogService.deleteOne(id);
+  async deleteAuditLog(
+    @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<boolean> {
+    await this.auditLogService.deleteOne(id, user.accountId);
     return true;
   }
 }

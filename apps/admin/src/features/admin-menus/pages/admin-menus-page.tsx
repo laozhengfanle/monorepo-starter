@@ -3,7 +3,6 @@ import {
   App,
   Button,
   Card,
-  Checkbox,
   Dropdown,
   Form,
   Input,
@@ -32,7 +31,7 @@ import { CreateMenuSchema, UpdateMenuSchema } from '@starter/api-client';
 
 import type { MenuType } from '@starter/api-client';
 import { usePermission } from '../../../app/auth/use-permission.js';
-import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
+import { useColumnControl } from '../../../shared/hooks/use-column-control.js';
 import {
   applyZodErrors,
   showMutationError,
@@ -124,20 +123,6 @@ export function AdminMenusPage(): React.JSX.Element {
   const { message } = App.useApp();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
-    () =>
-      new Set([
-        'name',
-        'code',
-        'type',
-        'path',
-        'icon',
-        'sort',
-        'enabled',
-        'visible',
-        'actions',
-      ]),
-  );
   const [form] = Form.useForm();
   const menuType = Form.useWatch('type', form) as MenuType | undefined;
 
@@ -339,40 +324,6 @@ export function AdminMenusPage(): React.JSX.Element {
     },
   ];
 
-  const toggleColumn = (key: string): void => {
-    setVisibleKeys((prev) => {
-      if (prev.has(key)) {
-        if (prev.size <= 1) {
-          void message.warning('至少保留一列');
-          return prev;
-        }
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      }
-      const next = new Set(prev);
-      next.add(key);
-      return next;
-    });
-  };
-
-  const columnMenuItems = fullColumns.map((c) => ({
-    key: c.key as string,
-    label: (
-      <Checkbox
-        checked={visibleKeys.has(c.key as string)}
-        disabled={c.key === 'actions'}
-        onClick={(e) => e.stopPropagation()}
-        onChange={() => toggleColumn(c.key as string)}
-      >
-        {String(c.title)}
-      </Checkbox>
-    ),
-  }));
-
-  // 列过滤开销极小，直接计算（避免 fullColumns 引用变化导致的 useMemo 抖动）
-  const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
-
   // 树形数据扁平化（导出用）
   const flattenTree = (
     nodes: MenuRowItem[],
@@ -385,41 +336,30 @@ export function AdminMenusPage(): React.JSX.Element {
     return acc;
   };
 
-  const handleExport = (format: 'excel' | 'csv'): void => {
-    const exportCols = fullColumns.filter(
-      (c) => visibleKeys.has(c.key as string) && c.key !== 'actions',
-    );
-    const header = exportCols.map((c) => String(c.title));
-    const rows: (string | number | boolean | null | undefined)[][] = [
-      header,
-      ...flattenTree(tree).map((n) =>
-        exportCols.map((c) => {
-          if (c.key === 'enabled') return n.enabled ? '正常' : '禁用';
-          if (c.key === 'visible') return n.visible ? '显示' : '隐藏';
-          if (c.key === 'type') return TYPE_LABELS[n.type] ?? n.type;
-          const dataIdx =
-            (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
-          const v = (n as unknown as Record<string, unknown>)[dataIdx];
-          return (v as string | number | boolean | null | undefined) ?? '';
-        }),
-      ),
-    ];
-    const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
-    if (format === 'excel') {
-      downloadBlob(
-        toExcel(rows),
-        `菜单管理_${ts}.xls`,
-        'application/vnd.ms-excel;charset=utf-8;',
-      );
-    } else {
-      downloadBlob(
-        toCSV(rows),
-        `菜单管理_${ts}.csv`,
-        'text/csv;charset=utf-8;',
-      );
-    }
-    void message.success(`已导出 ${flattenTree(tree).length} 条`);
-  };
+  // 列控制 + 导出（共享 hook，行为与既有实现一致：操作列固定、至少保留一列、导可见列）
+  const { columnMenuItems, columns, handleExport } =
+    useColumnControl<MenuRowItem>({
+      fullColumns,
+      initialVisibleKeys: [
+        'name',
+        'code',
+        'type',
+        'path',
+        'icon',
+        'sort',
+        'enabled',
+        'visible',
+        'actions',
+      ],
+      exportFileNamePrefix: '菜单管理',
+      exportData: flattenTree(tree),
+      exportCell: (key, node) => {
+        if (key === 'enabled') return node.enabled ? '正常' : '禁用';
+        if (key === 'visible') return node.visible ? '显示' : '隐藏';
+        if (key === 'type') return TYPE_LABELS[node.type] ?? node.type;
+        return undefined;
+      },
+    });
 
   return (
     <div>

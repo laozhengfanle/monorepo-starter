@@ -13,6 +13,8 @@ describe.skipIf(!process.env['DATABASE_URL'])(
   () => {
     let app: INestApplication;
     let authToken: string;
+    /** P1-7：登录响应下发的 access token cookie（httpOnly 断言用） */
+    let loginSetCookie: string[] | undefined;
 
     beforeAll(async () => {
       app = await createApp();
@@ -21,6 +23,9 @@ describe.skipIf(!process.env['DATABASE_URL'])(
         .post('/auth/login')
         .send({ username: 'root', password: 'Root!123' });
       authToken = login.body.accessToken as string;
+      // superagent 的 headers['set-cookie'] 类型为 string，实际是多值数组，先经 unknown 收窄
+      loginSetCookie = login.headers['set-cookie'] as unknown as
+        string[] | undefined;
     });
 
     afterAll(async () => {
@@ -65,6 +70,18 @@ describe.skipIf(!process.env['DATABASE_URL'])(
       expect(res.body.roleCodes).toContain('super_admin');
     });
 
+    it('P1-7：登录响应下发 httpOnly + SameSite=Strict 的 access token cookie', async () => {
+      const cookie = loginSetCookie?.find((c) =>
+        c.startsWith('admin_access_token='),
+      );
+      expect(cookie).toBeTruthy();
+      expect(cookie).toMatch(/HttpOnly/i);
+      expect(cookie).toMatch(/SameSite=Strict/i);
+      // cookie 值与响应 body 的 access token 一致（jwt-auth.guard cookie 回退路径）
+      const cookieToken = cookie!.split(';')[0]!.split('=')[1]!;
+      expect(cookieToken).toBe(authToken);
+    });
+
     it('未知路由 → 404', async () => {
       const res = await request(app.getHttpServer()).get('/no-such-route');
       expect(res.status).toBe(404);
@@ -91,6 +108,79 @@ describe.skipIf(!process.env['DATABASE_URL'])(
       } finally {
         await unlink(out).catch(() => undefined);
       }
+    });
+
+    // ===== S1 修复回归：登出/改密后旧 refresh 必须 401 =====
+    it('S1：login → logout → 旧 refresh 调 /auth/refresh 必须 401', async () => {
+      // 1. 登录拿双 token
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ username: 'root', password: 'Root!123' });
+      expect(login.status).toBe(201);
+      const { refreshToken } = login.body as { refreshToken: string };
+
+      // 2. 登出（撤销所有 token：tokenVersion++ + 写 '*' 撤销行）
+      const logout = await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Authorization', `Bearer ${login.body.accessToken}`);
+      expect(logout.status).toBe(201);
+
+      // 3. 旧 refresh 调 /auth/refresh 必须 401（S1 修复前会通过 + 签发新 token）
+      const staleRefresh = await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken });
+      expect(staleRefresh.status).toBe(401);
+    });
+
+    it('S1：login → changePassword → 旧 refresh 调 /auth/refresh 必须 401', async () => {
+      // 1. 登录拿双 token
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ username: 'root', password: 'Root!123' });
+      expect(login.status).toBe(201);
+      const { refreshToken, accessToken } = login.body as {
+        refreshToken: string;
+        accessToken: string;
+      };
+
+      // 2. 改密（成功后撤销所有 token）
+      const changePw = await request(app.getHttpServer())
+        .post('/auth/me/password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ currentPassword: 'Root!123', newPassword: 'Root!1234' });
+      expect(changePw.status).toBe(201);
+
+      // 3. 旧 refresh 必须 401
+      const staleRefresh = await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken });
+      expect(staleRefresh.status).toBe(401);
+
+      // 4. 还原密码（避免污染其他 e2e 用例）
+      const newLogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ username: 'root', password: 'Root!1234' });
+      const restore = await request(app.getHttpServer())
+        .post('/auth/me/password')
+        .set('Authorization', `Bearer ${newLogin.body.accessToken}`)
+        .send({ currentPassword: 'Root!1234', newPassword: 'Root!123' });
+      expect(restore.status).toBe(201);
+    });
+
+    it('S1：login → refresh → 新 refresh 仍可用（撤销/重登闭环）', async () => {
+      // 1. 登录
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ username: 'root', password: 'Root!123' });
+      const { refreshToken } = login.body as { refreshToken: string };
+
+      // 2. 正常 refresh 成功
+      const refresh = await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken });
+      expect(refresh.status).toBe(201);
+      expect(refresh.body.accessToken).toBeTruthy();
+      expect(refresh.body.refreshToken).toBeTruthy();
     });
   },
 );

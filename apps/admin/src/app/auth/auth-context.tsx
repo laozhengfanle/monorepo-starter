@@ -29,43 +29,40 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * 认证状态提供者：
- * - 挂载时若有 token 则调 /auth/me 恢复用户信息（token 失效则清除）
- * - login：登录 → 存 token → 拉取用户
- * - logout：撤销 + 清 token + 清用户
+ * 认证状态提供者（P1-7 改造：token 在 httpOnly cookie，前端无 localStorage 凭证）：
+ * - 挂载时总是调 /auth/me 探测登录态（cookie 自动携带；401 → 未登录）
+ * - login：登录（后端 Set-Cookie）→ 拉取用户
+ * - logout：撤销 + 清 cookie + 清前端状态
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminMe | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = authStorage.getAccessToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    fetchMe(token)
+    // token 在 httpOnly cookie 里 JS 不可读，登录态以 /auth/me 探测为准：
+    // 有 cookie → 返回用户；无/失效 → 401 → 未登录。
+    fetchMe()
       .then(setUser)
-      .catch(() => authStorage.clear())
+      .catch(() => {
+        authStorage.clear();
+        setUser(null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(
     async (username: string, password: string, turnstileToken?: string) => {
-      const result = await loginApi({ username, password, turnstileToken });
-      // 只存 access token（refresh token 无刷新流程消费，不落 localStorage）
-      authStorage.setAccessToken(result.accessToken);
-      const me = await fetchMe(result.accessToken);
+      await loginApi({ username, password, turnstileToken });
+      // 后端已 Set-Cookie（httpOnly）；内存标记仅同步前端状态
+      authStorage.setAccessToken('');
+      const me = await fetchMe();
       setUser(me);
     },
     [],
   );
 
   const logout = useCallback(async () => {
-    const token = authStorage.getAccessToken();
-    if (token) {
-      await logoutApi(token).catch(() => undefined);
-    }
+    await logoutApi().catch(() => undefined);
     authStorage.clear();
     setUser(null);
     // 清空 Apollo 缓存与 TanStack Query 缓存，防止跨账号数据残留
@@ -74,11 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshMe = useCallback(async () => {
-    const token = authStorage.getAccessToken();
-    if (!token) {
-      return;
-    }
-    const me = await fetchMe(token);
+    const me = await fetchMe();
     setUser(me);
   }, []);
 

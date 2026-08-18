@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { BizException, newId } from '@starter/server-core';
 import {
   CreateAdminAccountSchema,
@@ -16,19 +16,11 @@ import type {
 } from '@starter/contracts';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { isUniqueConstraintError } from '../../common/prisma/prisma-error.util.js';
+import { StorageService } from '../../common/storage/storage.service.js';
 import { resolveAccountPermissions } from '../auth/account-permission.util.js';
 import { AUDIT_ACTIONS, AuditService } from '../auth/audit.service.js';
 import { TokenBlacklistService } from '../auth/token-blacklist.service.js';
-
-/** Prisma 唯一约束冲突检测（P2002） */
-function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code: unknown }).code === 'P2002'
-  );
-}
 
 /** Prisma 账户行（含 profile/roles/identity）→ AdminAccount */
 function toAdminAccount(row: {
@@ -66,10 +58,13 @@ function toAdminAccount(row: {
  */
 @Injectable()
 export class AdminAccountService {
+  private readonly logger = new Logger(AdminAccountService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokenBlacklist: TokenBlacklistService,
     private readonly audit: AuditService,
+    private readonly storage: StorageService,
   ) {}
 
   private readonly accountInclude = {
@@ -242,7 +237,7 @@ export class AdminAccountService {
     }
 
     // 超管保护：本次更新若使该账户不再是「启用且绑定 super_admin」的账户（移除 super_admin 角色或禁用），
-    // 则必须仍有其他启用且绑定 super_admin 的账户兜底
+    // 则必须由超管本人操作（防非超管逐个降权/禁用其他管理员），且仍需有其他启用超管兜底
     const currentRoleCodes = account.adminRoles.map((r) => r.role.code);
     const nextEnabled =
       data.enabled !== undefined ? data.enabled : account.enabled;
@@ -253,6 +248,13 @@ export class AdminAccountService {
       currentRoleCodes.includes('super_admin') &&
       (!nextEnabled || !nextRoleCodes.includes('super_admin'));
     if (willLoseSuperAdmin) {
+      const operator = await this.loadOperatorRoles(operatorId);
+      if (!operator.isSuperAdmin) {
+        throw new BizException({
+          code: 'SUPER_ADMIN_DEMOTE_FORBIDDEN',
+          message: '非超级管理员不得降权或禁用超管账户',
+        });
+      }
       await this.assertSuperAdminRemains(id);
     }
 
@@ -350,11 +352,19 @@ export class AdminAccountService {
         message: '账户不存在',
       });
     }
-    // 超管保护：不允许删掉最后一个启用且绑定 super_admin 的账户
+    // 超管保护：删除超管账户必须由超管本人操作（防非超管逐个删除其他管理员），
+    // 且不允许删掉最后一个启用且绑定 super_admin 的账户
     const isSuperAdmin = account.adminRoles.some(
       (r) => r.role.code === 'super_admin',
     );
     if (isSuperAdmin) {
+      const operator = await this.loadOperatorRoles(operatorId);
+      if (!operator.isSuperAdmin) {
+        throw new BizException({
+          code: 'SUPER_ADMIN_DEMOTE_FORBIDDEN',
+          message: '非超级管理员不得删除超管账户',
+        });
+      }
       await this.assertSuperAdminRemains(id);
     }
     // 记录删除前的角色绑定（restore 时按此还原）
@@ -548,11 +558,18 @@ export class AdminAccountService {
         message: '账户不存在',
       });
     }
-    // 超管保护：不允许硬删最后一个启用且绑定 super_admin 的账户
+    // 超管保护：硬删超管账户必须由超管本人操作，且不允许硬删最后一个启用超管
     const isSuperAdmin = account.adminRoles.some(
       (r) => r.role.code === 'super_admin',
     );
     if (isSuperAdmin) {
+      const operator = await this.loadOperatorRoles(operatorId);
+      if (!operator.isSuperAdmin) {
+        throw new BizException({
+          code: 'SUPER_ADMIN_DEMOTE_FORBIDDEN',
+          message: '非超级管理员不得硬删超管账户',
+        });
+      }
       await this.assertSuperAdminRemains(id);
     }
     // 审计必须先写（audit_log.account_id 是 FK Restrict，账户行删除后就写不进去了；
@@ -563,6 +580,26 @@ export class AdminAccountService {
       resourceId: id,
       detail: { accountId: id },
     });
+    // 物理文件清理（P3 #8 修复）：先取该账户全部上传文件元数据（含已软删行，rawClient 绕过软删过滤），
+    // 逐个删物理文件（幂等、失败仅告警不阻塞），再删元数据——避免硬删后遗留孤儿文件占磁盘
+    const uploadFiles = await this.prisma.rawClient.uploadFile.findMany({
+      where: { accountId: id },
+      select: { storedName: true, url: true },
+    });
+    for (const file of uploadFiles) {
+      try {
+        await this.storage.delete({
+          storedName: file.storedName,
+          folder: this.folderFromUrl(file.url),
+        });
+      } catch (err) {
+        // 物理文件删除失败不阻塞账户硬删（元数据照删）；仅告警，防孤儿文件排查时无从下手
+        this.logger.warn(
+          `硬删账户 ${id} 时清理物理文件失败 (storedName=${file.storedName}): ${(err as Error).message}`,
+        );
+      }
+    }
+
     await this.prisma.rawClient.$transaction(async (tx) => {
       await tx.adminAccountMenu.deleteMany({ where: { accountId: id } });
       await tx.adminAccountRole.deleteMany({ where: { accountId: id } });
@@ -579,6 +616,15 @@ export class AdminAccountService {
       adminRoles: [],
       identities: [],
     });
+  }
+
+  /** 从 url（/uploads/{folder}/{storedName}）解析 folder；解析失败回退 files（与 file-manager 同语义） */
+  private folderFromUrl(url: string): string {
+    const parts = url.split('/').filter(Boolean);
+    if (parts.length >= 3 && parts[0] === 'uploads') {
+      return parts[1]!;
+    }
+    return 'files';
   }
 
   /**

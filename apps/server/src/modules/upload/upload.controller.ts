@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -47,6 +48,9 @@ export class UploadController {
   @Post()
   @ApiConsumes('multipart/form-data')
   @ApiOkResponse({ description: '上传成功返回文件信息' })
+  // 上传端点单独收紧：按 IP 10 次/分钟（H6 修复：全局限流 100/min × 10MB ≈ 1GB/min 磁盘 DoS，
+  // 这里把上限压到 ~100MB/min，后续建议叠加账号级每日配额）
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),

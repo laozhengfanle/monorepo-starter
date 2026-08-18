@@ -1,6 +1,19 @@
-import { Args, Field, ID, InputType, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import {
+  Args,
+  Field,
+  ID,
+  InputType,
+  Int,
+  Mutation,
+  Query,
+  Resolver,
+} from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { AdminAccountQuerySchema, CreateAdminAccountSchema, UpdateAdminAccountSchema } from '@starter/contracts';
+import {
+  AdminAccountQuerySchema,
+  CreateAdminAccountSchema,
+  UpdateAdminAccountSchema,
+} from '@starter/contracts';
 import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
@@ -67,7 +80,11 @@ export class AdminAccountResolver {
   @Query(() => PaginatedAdminAccountsType)
   @RequirePermission('account:list')
   async adminAccounts(
-    @Args('query', { type: () => AdminAccountQueryInputType }, new ZodArgsPipe(AdminAccountQuerySchema))
+    @Args(
+      'query',
+      { type: () => AdminAccountQueryInputType },
+      new ZodArgsPipe(AdminAccountQuerySchema),
+    )
     query: AdminAccountListQuery,
   ): Promise<PaginatedAdminAccountsType> {
     const result = await this.adminAccountService.list(query);
@@ -82,22 +99,31 @@ export class AdminAccountResolver {
   @Mutation(() => AdminAccountType)
   @RequirePermission('account:create')
   async createAdminAccount(
-    @Args('input', { type: () => CreateAdminAccountInputType }, new ZodArgsPipe(CreateAdminAccountSchema))
+    @Args(
+      'input',
+      { type: () => CreateAdminAccountInputType },
+      new ZodArgsPipe(CreateAdminAccountSchema),
+    )
     input: CreateAdminAccountInputType,
     @CurrentUser() user: AuthUser,
   ): Promise<AdminAccountType> {
-    return this.adminAccountService.create(input as never, user.accountId);
+    // input 类 implements CreateAdminAccountInput（契约），ZodArgsPipe 已按 schema 解析
+    return this.adminAccountService.create(input, user.accountId);
   }
 
   @Mutation(() => AdminAccountType)
   @RequirePermission('account:update')
   async updateAdminAccount(
     @Args('id', { type: () => ID }) id: string,
-    @Args('input', { type: () => UpdateAdminAccountInputType }, new ZodArgsPipe(UpdateAdminAccountSchema))
+    @Args(
+      'input',
+      { type: () => UpdateAdminAccountInputType },
+      new ZodArgsPipe(UpdateAdminAccountSchema),
+    )
     input: UpdateAdminAccountInputType,
     @CurrentUser() user: AuthUser,
   ): Promise<AdminAccountType> {
-    return this.adminAccountService.update(id, input as never, user.accountId);
+    return this.adminAccountService.update(id, input, user.accountId);
   }
 
   @Mutation(() => AdminAccountType)

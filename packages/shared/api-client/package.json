@@ -21,6 +21,9 @@
     "targets": {
       "generate-api": {
         "executor": "nx:run-commands",
+        "dependsOn": [
+          "server:generate-openapi"
+        ],
         "options": {
           "cwd": "{projectRoot}",
           "command": "pnpm exec orval --config orval.config.ts"

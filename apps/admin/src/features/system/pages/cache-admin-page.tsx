@@ -16,6 +16,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { CacheKey } from '@starter/api-client';
+import { SearchBar, type SearchValues } from '@starter/ui';
 import {
   useCacheKeyLazyQuery,
   useCacheKeysQuery,
@@ -52,7 +53,6 @@ function formatTtl(ttl: number): string {
 /** 缓存管理页（对标老项目 配置中心/缓存管理）：统计卡 + pattern 筛选 + key 列表 + 删除/清空 */
 export function CacheAdminPage(): React.JSX.Element {
   const { message } = App.useApp();
-  const [searchForm] = Form.useForm();
   const [pattern, setPattern] = useState('*');
   const [offset, setOffset] = useState(0);
   const [pageSize, setPageSize] = useState(50);
@@ -93,10 +93,15 @@ export function CacheAdminPage(): React.JSX.Element {
   }, [load, pattern, offset, pageSize]);
 
   /** 查询（pattern 切换不自动请求，点查询才发） */
-  const handleSearch = (): void => {
-    const values = searchForm.getFieldsValue();
+  const handleSearch = (values: SearchValues): void => {
     setOffset(0);
-    setPattern(values.pattern || '*');
+    setPattern((values.pattern as string) || '*');
+  };
+
+  /** 重置（SearchBar 已 resetFields，这里回默认 pattern + 第一页） */
+  const handleReset = (): void => {
+    setOffset(0);
+    setPattern('*');
   };
 
   /** 查看详情 */
@@ -203,7 +208,7 @@ export function CacheAdminPage(): React.JSX.Element {
               onConfirm={() => void handleDeleteKey(record.key)}
               onPopupClick={(e) => e.preventDefault()}
             >
-              <Button type="link" size="small" danger>
+              <Button color="red" variant="link" size="small">
                 删除
               </Button>
             </Popconfirm>
@@ -214,204 +219,190 @@ export function CacheAdminPage(): React.JSX.Element {
   ];
 
   return (
-    <Card
-      title="缓存管理"
-      extra={
-        <Space size="small">
-          {canDelete && (
-            <>
-              <Button
-                color="red"
-                variant="outlined"
-                onClick={() => setClearModalOpen(true)}
-              >
-                按 Pattern 清空
-              </Button>
-              <Popconfirm
-                title={`确认删除选中的 ${selectedKeys.length} 个 key？`}
-                onConfirm={() => void handleDeleteKeys()}
-              >
-                <Button
-                  color="red"
-                  variant="solid"
-                  disabled={selectedKeys.length === 0}
-                  loading={deletingBatch}
-                >
-                  批量删除
-                  {selectedKeys.length > 0 ? ` (${selectedKeys.length})` : ''}
-                </Button>
-              </Popconfirm>
-            </>
-          )}
-          <Button onClick={() => void load()}>刷新</Button>
-        </Space>
-      }
-    >
-      {/* 统计卡 */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16,
-          marginBottom: 16,
-        }}
-      >
-        <Card size="small">
-          <Statistic
-            title="已用内存"
-            value={statsData?.cacheStats.usedMemory ?? '-'}
-          />
-        </Card>
-        <Card size="small">
-          <Statistic
-            title="命中率"
-            value={statsData?.cacheStats.hitRate ?? '-'}
-          />
-        </Card>
-        <Card size="small">
-          <Statistic
-            title="运行时长"
-            value={statsData?.cacheStats.uptime ?? '-'}
-          />
-        </Card>
-      </div>
-
-      {/* pattern 筛选 */}
-      <Form
-        form={searchForm}
-        layout="inline"
-        style={{ marginBottom: 16 }}
-        onFinish={handleSearch}
-      >
-        <Form.Item name="pattern" label="Pattern" initialValue="*">
-          <Input
-            allowClear
-            placeholder="如 mono:auth:*（* 表示全部）"
-            autoComplete="off"
-            style={{ width: 260 }}
-          />
-        </Form.Item>
-        <Form.Item>
-          <Space size="small">
-            <Button type="primary" htmlType="submit">
-              查询
-            </Button>
-            <Button
-              onClick={() => {
-                searchForm.setFieldValue('pattern', '*');
-                setOffset(0);
-                setPattern('*');
-              }}
-            >
-              重置
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
-
-      <Table<CacheKey>
-        rowKey="key"
-        columns={columns}
-        dataSource={keys}
-        loading={loading}
-        rowSelection={
-          canDelete
-            ? {
-                selectedRowKeys: selectedKeys,
-                onChange: (rows) => setSelectedKeys(rows as string[]),
-              }
-            : undefined
-        }
-        pagination={{
-          current: Math.floor(offset / pageSize) + 1,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          pageSizeOptions: [10, 20, 50, 100],
-          showTotal: (t) => `共 ${t} 个 key`,
-          onChange: (p, ps) => {
-            setOffset((p - 1) * ps);
-            setPageSize(ps);
-            setSelectedKeys([]); // 翻页清空勾选防跨页误删
+    <div>
+      {/* 搜索卡：独立 Card 位于列表正上方（列表页规范） */}
+      <SearchBar
+        fields={[
+          {
+            name: 'pattern',
+            label: 'Pattern',
+            type: 'input',
+            placeholder: '如 mono:auth:*（* 表示全部）',
+            initialValue: '*',
           },
-        }}
+        ]}
+        onSearch={handleSearch}
+        onReset={handleReset}
       />
 
-      {/* 详情 Modal */}
-      <Modal
-        title="缓存 Key 详情"
-        open={detail !== null}
-        onCancel={() => setDetail(null)}
-        footer={<Button onClick={() => setDetail(null)}>关闭</Button>}
-        width={640}
+      <Card
+        title="缓存管理"
+        extra={
+          <Space size="small">
+            {canDelete && (
+              <>
+                <Button
+                  color="red"
+                  variant="outlined"
+                  onClick={() => setClearModalOpen(true)}
+                >
+                  按 Pattern 清空
+                </Button>
+                <Popconfirm
+                  title={`确认删除选中的 ${selectedKeys.length} 个 key？`}
+                  onConfirm={() => void handleDeleteKeys()}
+                >
+                  <Button
+                    color="red"
+                    variant="solid"
+                    disabled={selectedKeys.length === 0}
+                    loading={deletingBatch}
+                  >
+                    批量删除
+                    {selectedKeys.length > 0 ? ` (${selectedKeys.length})` : ''}
+                  </Button>
+                </Popconfirm>
+              </>
+            )}
+            <Button onClick={() => void load()}>刷新</Button>
+          </Space>
+        }
       >
-        {detail && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'auto 1fr',
-              gap: '8px 16px',
-            }}
-          >
-            <Text type="secondary">Key</Text>
-            <Text style={{ fontFamily: 'monospace' }} copyable>
-              {detail.key}
-            </Text>
-            <Text type="secondary">类型</Text>
-            <Tag color={typeColor[detail.type] ?? 'default'}>{detail.type}</Tag>
-            <Text type="secondary">TTL</Text>
-            <Text>{formatTtl(detail.ttl)}</Text>
-            <Text type="secondary">大小</Text>
-            <Text>{detail.size} 字符</Text>
-            <Text type="secondary">Value</Text>
-            <pre
+        {/* 统计卡 */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 16,
+            marginBottom: 16,
+          }}
+        >
+          <Card size="small">
+            <Statistic
+              title="已用内存"
+              value={statsData?.cacheStats.usedMemory ?? '-'}
+            />
+          </Card>
+          <Card size="small">
+            <Statistic
+              title="命中率"
+              value={statsData?.cacheStats.hitRate ?? '-'}
+            />
+          </Card>
+          <Card size="small">
+            <Statistic
+              title="运行时长"
+              value={statsData?.cacheStats.uptime ?? '-'}
+            />
+          </Card>
+        </div>
+
+        <Table<CacheKey>
+          rowKey="key"
+          columns={columns}
+          dataSource={keys}
+          loading={loading}
+          rowSelection={
+            canDelete
+              ? {
+                  selectedRowKeys: selectedKeys,
+                  onChange: (rows) => setSelectedKeys(rows as string[]),
+                }
+              : undefined
+          }
+          pagination={{
+            current: Math.floor(offset / pageSize) + 1,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+            showTotal: (t) => `共 ${t} 个 key`,
+            onChange: (p, ps) => {
+              setOffset((p - 1) * ps);
+              setPageSize(ps);
+              setSelectedKeys([]); // 翻页清空勾选防跨页误删
+            },
+          }}
+        />
+
+        {/* 详情 Modal */}
+        <Modal
+          title="缓存 Key 详情"
+          open={detail !== null}
+          onCancel={() => setDetail(null)}
+          footer={<Button onClick={() => setDetail(null)}>关闭</Button>}
+          width={640}
+        >
+          {detail && (
+            <div
               style={{
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-                background: 'rgba(0,0,0,0.03)',
-                padding: 8,
-                borderRadius: 4,
-                fontSize: 12,
-                maxHeight: 320,
-                overflow: 'auto',
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr',
+                gap: '8px 16px',
               }}
             >
-              {detail.value ?? '(空)'}
-            </pre>
-          </div>
-        )}
-      </Modal>
+              <Text type="secondary">Key</Text>
+              <Text style={{ fontFamily: 'monospace' }} copyable>
+                {detail.key}
+              </Text>
+              <Text type="secondary">类型</Text>
+              <Tag color={typeColor[detail.type] ?? 'default'}>
+                {detail.type}
+              </Tag>
+              <Text type="secondary">TTL</Text>
+              <Text>{formatTtl(detail.ttl)}</Text>
+              <Text type="secondary">大小</Text>
+              <Text>{detail.size} 字符</Text>
+              <Text type="secondary">Value</Text>
+              <pre
+                style={{
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                  background: 'rgba(0,0,0,0.03)',
+                  padding: 8,
+                  borderRadius: 4,
+                  fontSize: 12,
+                  maxHeight: 320,
+                  overflow: 'auto',
+                }}
+              >
+                {detail.value ?? '(空)'}
+              </pre>
+            </div>
+          )}
+        </Modal>
 
-      {/* 按 pattern 清空 Modal */}
-      <Modal
-        title="按 Pattern 清空缓存"
-        open={clearModalOpen}
-        onCancel={() => setClearModalOpen(false)}
-        onOk={() => void handleClearByPattern()}
-        okText="确认清空"
-        cancelText="取消"
-        confirmLoading={clearingPattern}
-        okButtonProps={{ color: 'red', variant: 'solid' }}
-        width={480}
-      >
-        <Alert
-          type="warning"
-          showIcon
-          title="此操作不可恢复"
-          description="将删除所有匹配该模式的缓存 key，请谨慎操作"
-          style={{ marginBottom: 16 }}
-        />
-        <Form layout="vertical">
-          <Form.Item label="Pattern" required>
-            <Input
-              value={clearPattern}
-              onChange={(e) => setClearPattern(e.target.value)}
-              placeholder="如 mono:auth:*（不允许以 * 开头）"
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </Card>
+        {/* 按 pattern 清空 Modal */}
+        <Modal
+          title="按 Pattern 清空缓存"
+          open={clearModalOpen}
+          onCancel={() => setClearModalOpen(false)}
+          onOk={() => void handleClearByPattern()}
+          okText="确认清空"
+          cancelText="取消"
+          confirmLoading={clearingPattern}
+          okButtonProps={{ color: 'red', variant: 'solid' }}
+          width={480}
+        >
+          <Alert
+            type="warning"
+            showIcon
+            title="此操作不可恢复"
+            description="将删除所有匹配该模式的缓存 key，请谨慎操作"
+            style={{ marginBottom: 16 }}
+          />
+          <Form layout="vertical">
+            <Form.Item label="Pattern" required>
+              <Input
+                value={clearPattern}
+                onChange={(e) => setClearPattern(e.target.value)}
+                placeholder="如 mono:auth:*（不允许以 * 开头）"
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </Card>
+    </div>
   );
 }

@@ -22,6 +22,41 @@ allowBuilds:
 # 依赖版本统一由 catalog 管理；pnpm add 只允许 catalog 中已存在的包
 catalogMode: strict
 
+# 依赖安全：强制升级存在已知漏洞的传递依赖（pnpm audit 报告，2026-08）
+overrides:
+  # 跨大版本可安全升级（@fastify/static 是 @nestjs/swagger 的可选 peer，Express 下不加载）
+  '@fastify/static': ^10.1.2
+  lodash: ^4.17.24
+  tmp: ^0.2.6
+  'ws@^8.0.0': ^8.21.0
+  'glob@^11.0.0': ^11.1.0
+  'brace-expansion@^5.0.0': ^5.0.9
+  'js-yaml@^5.0.0': ^5.2.2
+  # 同大版本内补丁（ReDoS / 越界检查）
+  'ansi-regex@^4.0.0': ^4.1.1
+  'ansi-regex@^5.0.0': ^5.0.1
+  'semver@^5.0.0': ^5.7.2
+  # sockjs → webpack-dev-server 用 uuid@8 的 v4()（无 buf 参数）；升到已修复的 11.x
+  'uuid@^8.0.0': ^11.1.1
+  # deepmerge-ts：@prisma/config 用动态 import() 加载，v8（ESM-only）兼容；
+  # 修复 GHSA-ggr8-5vv4-36mx（递归对象图合并栈耗尽 DoS，CI audit 门）
+  'deepmerge-ts': ^8.0.0
+
+# 已知但无法安全修复的漏洞：仅列出理由充分的开发期依赖（生产代码不受影响）
+# image-size（0.5.5，仅经 less→@nx/webpack/vite 的开发期链路引入，项目无 .less 文件，
+# 漏洞路径 ICNS/JXL/HEIF 解析在构建期不可达；修复需跨大版本升到 ESM-only 的 2.x，会破坏 less）
+audit:
+  ignore:
+    - GHSA-w3rx-r6r6-pgpr
+    - GHSA-5p2g-fcmc-qvqq
+
+# @nestjs/apollo 打包了已废弃的 @apollo/server-plugin-landing-page-graphql-playground@4.0.1
+# （v4 时代旧 playground 插件；项目用 @apollo/server v5 内置 landing page，实际不加载）。
+# 该插件 peer 要求 @apollo/server@^4，这里显式允许 v5 满足 peer 检查，消除 unmet peer 告警。
+peerDependencyRules:
+  allowedVersions:
+    '@apollo/server': ^5.0.0
+
 catalog:
   # ---- 工作区工具链（模板锁定版本） ----
   nx: 23.1.1
@@ -53,7 +88,7 @@ catalog:
   '@swc/cli': 0.8.1
   '@swc/core': ^1.15.47
   '@swc/helpers': ^0.5.23
-  esbuild: ^0.27.7
+  esbuild: ^0.28.2
   jiti: ^2.7.0
   ts-node: ^10.9.2
   tsx: ^4.22.4

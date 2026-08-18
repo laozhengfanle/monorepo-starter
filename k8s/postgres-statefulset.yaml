@@ -1,6 +1,10 @@
 # PostgreSQL StatefulSet
 # - 单实例 StatefulSet（生产建议用云托管 RDS）
 # - 环境变量通过 envFrom 引用 Secret/ConfigMap
+# - 镜像：postgres:17-alpine 内置 postgres 用户 uid=70（不是 999），必须对齐
+#   * runAsUser / runAsGroup / fsGroup 都设 70
+#   * 若改用 postgres:17（debian based）则这些值应改回 999
+# - 镜像 tag 固定为 17-alpine（不漂移；版本升级需手动改 + 跑迁移）
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -21,9 +25,11 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 999 # postgres 镜像内置用户
-        runAsGroup: 999
-        fsGroup: 999
+        # postgres:17-alpine 镜像内置 postgres 用户 uid=70
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        allowPrivilegeEscalation: false # 安全基线（P3）：禁止提权
       containers:
         - name: postgres
           image: postgres:17-alpine
@@ -44,6 +50,8 @@ spec:
                   key: password
             - name: POSTGRES_DB
               value: monorepo_starter
+            # PGDATA 必须显式指向 postgres 用户可写的目录（fsGroup 70 后 /var/lib/postgresql/data 可写）
+            # 默认 /var/lib/postgresql/data 由 postgres 用户拥有，配合 fsGroup 70 OK
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data

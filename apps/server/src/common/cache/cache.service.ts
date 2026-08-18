@@ -73,7 +73,15 @@ class MemoryCacheBackend implements ICacheService {
   async incr(key: string, ttl: number): Promise<number> {
     const current = (await this.get<number>(key)) ?? 0;
     const next = current + 1;
-    await this.setex(key, ttl, next);
+    const entry = this.store.get(key);
+    if (entry) {
+      // 固定窗口：键已存在只递增，不重置 TTL（与 Redis 后端 INCR + 首次 EXPIRE 语义对齐，
+      // 保证登录锁定窗口从第一次失败开始计时，两端实现行为一致）
+      this.store.set(key, { value: next, expiresAt: entry.expiresAt });
+    } else {
+      // 键不存在（或已过期被 get 清理）：首次计数并设置 TTL
+      this.store.set(key, { value: next, expiresAt: Date.now() + ttl * 1000 });
+    }
     return next;
   }
 
@@ -164,6 +172,10 @@ class RedisCacheBackend implements ICacheService {
   }
 
   async incr(key: string, ttl: number): Promise<number> {
+    // INCR 为 Redis 单命令，天然原子；仅当返回 1（首次）时补 EXPIRE ——
+    // 固定窗口语义：已有键不重置 TTL（与内存后端行为一致）。
+    // 极端竞态（键恰好在本请求 incr 后、expire 前过期并被其他请求重建）只会把
+    // TTL 套在重建后的键上，窗口误差可忽略，不影响锁定正确性。
     const next = await this.client.incr(key);
     if (next === 1) {
       await this.client.expire(key, ttl);

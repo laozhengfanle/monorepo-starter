@@ -26,6 +26,12 @@ uploads/
 .gitignore
 .pnpm-store
 
+# 文档 / 编排 / CI / git hooks（构建不需要，减小上下文体积）
+docs/
+k8s/
+.github/
+.husky/
+
 # 编辑器 / AI 配置（不需要进镜像）
 .vscode
 .idea

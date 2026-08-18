@@ -1,0 +1,38 @@
+# k8s/rbac.yaml — Namespace 级 RBAC 占位（可选加固项，默认不启用）
+#
+# 说明：
+#   - 本文件只是占位模板，**未加入 kustomization.yaml 的 resources**（纯注释文件无法 apply）。
+#     需要时取消下方注释、按需调整后，把 `- rbac.yaml` 加进 kustomization resources。
+#   - 当前工作负载（server / admin / postgres / redis）都运行在默认 ServiceAccount 下；
+#     若要最小权限，给每个工作负载建专用 ServiceAccount + 空规则 Role（或按需授权）。
+#   - 无需 ClusterRole / ClusterRoleBinding：应用不访问集群级资源（P3 最小权限原则）。
+#   - 本文件只允许 Namespace 级 Role / RoleBinding / ServiceAccount，禁止引入 ClusterRole。
+#
+# 启用示例（按工作负载复制，把名字换成 server-sa / admin-sa 等）：
+#
+# apiVersion: v1
+# kind: ServiceAccount
+# metadata:
+#   name: server-sa
+#   namespace: monorepo-starter
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: Role
+# metadata:
+#   name: server-role
+#   namespace: monorepo-starter
+# rules: []   # 最小权限：应用不应需要任何 RBAC 权限；确需时按需添加
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: RoleBinding
+# metadata:
+#   name: server-rolebinding
+#   namespace: monorepo-starter
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: Role
+#   name: server-role
+# subjects:
+#   - kind: ServiceAccount
+#     name: server-sa
+#     namespace: monorepo-starter

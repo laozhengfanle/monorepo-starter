@@ -37,6 +37,33 @@ const PUBLIC_CONFIG_SENSITIVE_FIELDS: ReadonlyMap<
 /** 敏感字段脱敏占位符（前端约定：保存时仍为占位符则不提交该字段） */
 export const MASK_PLACEHOLDER = '******';
 
+/**
+ * 对任意配置值按 key 做敏感字段脱敏（P1-3 修复：cache-admin 读取缓存原始值也用同一逻辑，
+ * 避免 sys:config:* 缓存里的 secretKey/accessKey 经缓存管理页泄露）。
+ * 非敏感 key / 非对象值原样返回。
+ */
+export function maskSensitiveValue(
+  key: string,
+  value: unknown,
+): Record<string, unknown> {
+  const sensitive = PUBLIC_CONFIG_SENSITIVE_FIELDS.get(key);
+  if (
+    !sensitive ||
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value)
+  ) {
+    return (value ?? {}) as Record<string, unknown>;
+  }
+  const masked = { ...(value as Record<string, unknown>) };
+  for (const field of sensitive) {
+    if (masked[field] !== undefined) {
+      masked[field] = MASK_PLACEHOLDER;
+    }
+  }
+  return masked;
+}
+
 /** Prisma SystemConfig 行 → 契约 SystemConfig */
 function toSystemConfig(row: {
   id: string;
@@ -135,16 +162,7 @@ export class SystemConfigService {
 
   /** 敏感字段脱敏：按 key 剔除/替换 value 中的敏感字段（如 turnstile.config 的 secretKey） */
   private maskSensitive(config: SystemConfig): SystemConfig {
-    const sensitive = PUBLIC_CONFIG_SENSITIVE_FIELDS.get(config.key);
-    if (!sensitive || !config.value || typeof config.value !== 'object') {
-      return config;
-    }
-    const value = { ...config.value };
-    for (const field of sensitive) {
-      if (value[field] !== undefined) {
-        value[field] = MASK_PLACEHOLDER;
-      }
-    }
+    const value = maskSensitiveValue(config.key, config.value);
     return { ...config, value };
   }
 

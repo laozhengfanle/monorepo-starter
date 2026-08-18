@@ -29,10 +29,12 @@ export interface ClientInfo {
 
 /**
  * Token 签发与刷新：
- * - issueTokens：签发双 token（access 15min + refresh 7d），payload 带 tokenVersion + jti
- * - refresh：校验 refresh token → reuse 检测 → 签发新双 token
+ * - issueTokens：签发双 token（access 15min + refresh 7d），payload 带 tokenVersion + jti；
+ *   顺带清理该账号历史 '*' 撤销行（避免登出后 stale '*' 误伤新会话）
+ * - refresh：校验 refresh token → 账户有效 + tokenVersion 一致（与 JwtAuthGuard 对齐）
+ *   → 黑名单 → reuse 检测 → 签发新双 token
  *   - 成功写审计 TOKEN_REFRESHED；复用检测命中写审计 TOKEN_REUSED（安全事件，先记后撤）
- * - logout：撤销账号所有 token（tokenVersion 自增）
+ * - logout：撤销账号所有 token（tokenVersion 自增 + 写 '*' 撤销行）
  */
 @Injectable()
 export class TokenIssuanceService {
@@ -65,17 +67,20 @@ export class TokenIssuanceService {
       expiresIn: REFRESH_TTL,
     });
 
-    // refresh token 状态缓存（reuse 检测）：active 表示可用
-    await this.cache.setex(
-      `auth:refresh:${accountId}:${this.hash(refreshToken)}`,
-      REFRESH_TTL,
-      'active',
-    );
+    // refresh token 不预占 auth:refresh:{accountId}:{hash} 键——
+    // refresh() 用 setnx 原子认领（key 不存在才成功），预占会令首次 refresh 必失败。
+    // 登出/撤销时 delByPattern 清理 setnx 留下的 'used' 标记。
+
+    // 清除该账号历史 '*' 撤销行（登出/改密后写入，新登录即清理，
+    // 否则 stale '*' 会误伤新会话的 refresh——与 tokenVersion++ 配合实现"撤销 → 重登"闭环）
+    await this.prisma.client.tokenRevocation.deleteMany({
+      where: { accountId, jti: '*' },
+    });
 
     return { accessToken, refreshToken, expiresIn: accessTtl };
   }
 
-  /** 刷新 token：校验签名 → 黑名单 → reuse 检测 → 签发新双 token（成功/重用均写审计） */
+  /** 刷新 token：校验签名 → 账户有效性 + tokenVersion → 黑名单 → reuse 检测 → 签发新双 token */
   async refresh(
     oldRefreshToken: string,
     clientInfo?: ClientInfo,
@@ -89,11 +94,23 @@ export class TokenIssuanceService {
     if (!payload.jti || !payload.sub) {
       throw new UnauthorizedException('Refresh Token 无效');
     }
-    // 黑名单（jti 精确撤销 / '*' 账号全量）
+    // 1. 账户存在 + 启用 + tokenVersion 一致（与 JwtAuthGuard 对齐，关闭 S1 漏洞：
+    //    登出/改密后旧 refresh 仅靠 isRevoked 拦截不够，tokenVersion 自增才是终局防线）
+    const account = await this.prisma.client.account.findUnique({
+      where: { id: payload.sub },
+      select: { enabled: true, tokenVersion: true },
+    });
+    if (!account || !account.enabled) {
+      throw new UnauthorizedException('账户不存在或已禁用');
+    }
+    if ((payload.tokenVersion ?? 0) !== account.tokenVersion) {
+      throw new UnauthorizedException('Token 已失效，请重新登录');
+    }
+    // 2. 黑名单（账号级 '*' 通配 / 精确 jti）
     if (await this.tokenBlacklist.isRevoked(payload.jti, payload.sub)) {
       throw new UnauthorizedException('Refresh Token 已撤销');
     }
-    // reuse 检测：SET NX 原子认领 —— 仅当 key 不存在（从未使用过）时认领成功并标记为 used；
+    // 3. reuse 检测：SET NX 原子认领 —— 仅当 key 不存在（从未使用过）时认领成功并标记为 used；
     // 并发刷新时只有一个请求能认领成功，其余视为重用，杜绝 get→set 两步竞态导致的双签
     const claimed = await this.cache.setnx(
       `auth:refresh:${payload.sub}:${this.hash(oldRefreshToken)}`,

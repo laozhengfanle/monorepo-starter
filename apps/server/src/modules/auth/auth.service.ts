@@ -4,6 +4,7 @@ import { BizException } from '@starter/server-core';
 import {
   ChangePasswordSchema,
   LoginSchema,
+  RefreshSchema,
   UpdateSelfSchema,
 } from '@starter/contracts';
 import type {
@@ -153,8 +154,10 @@ export class AuthService {
 
   /** 刷新 token（refresh → 新双 token；成功/重用均写审计） */
   async refresh(refreshToken: string, req?: Request): Promise<IssuedTokens> {
+    // 入口 zod 校验（与 controller 层校验互为兜底）：非字符串/空 refreshToken 直接拒绝
+    const { refreshToken: validated } = RefreshSchema.parse({ refreshToken });
     const info = req ? clientInfo(req) : undefined;
-    return this.tokenIssuance.refresh(refreshToken, info);
+    return this.tokenIssuance.refresh(validated, info);
   }
 
   /** 登出：撤销账号所有 token + 审计 */

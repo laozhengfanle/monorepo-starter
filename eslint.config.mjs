@@ -15,6 +15,8 @@ export default [
       '**/out-tsc',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*',
+      // webpack 配置读取 workspace 包的 package.json 取版本号（构建期合法用法）
+      '**/webpack.config.js',
     ],
   },
   {
@@ -30,13 +32,25 @@ export default [
           allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
             // 共享层只允许依赖共享层，禁止反向依赖应用
-            { sourceTag: 'scope:shared', onlyDependOnLibsWithTags: ['scope:shared'] },
+            {
+              sourceTag: 'scope:shared',
+              onlyDependOnLibsWithTags: ['scope:shared'],
+            },
             // 管理端只能依赖管理端与共享层（直接依赖 @starter/contracts 由 admin 专属 no-restricted-imports 拦截）
-            { sourceTag: 'scope:admin', onlyDependOnLibsWithTags: ['scope:admin', 'scope:shared'] },
+            {
+              sourceTag: 'scope:admin',
+              onlyDependOnLibsWithTags: ['scope:admin', 'scope:shared'],
+            },
             // C 端只能依赖 C 端与共享层（预留，创建 member 应用时生效）
-            { sourceTag: 'scope:member', onlyDependOnLibsWithTags: ['scope:member', 'scope:shared'] },
+            {
+              sourceTag: 'scope:member',
+              onlyDependOnLibsWithTags: ['scope:member', 'scope:shared'],
+            },
             // server 端只能依赖 server 端与共享层
-            { sourceTag: 'scope:server', onlyDependOnLibsWithTags: ['scope:server', 'scope:shared'] },
+            {
+              sourceTag: 'scope:server',
+              onlyDependOnLibsWithTags: ['scope:server', 'scope:shared'],
+            },
           ],
         },
       ],

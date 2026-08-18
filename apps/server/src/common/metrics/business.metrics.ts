@@ -38,6 +38,7 @@ function getOrCreateGauge<T extends string>(
  * - login_lockouts_total{reason}      — 登录锁定触发计数
  * - rate_limit_blocked_total{route,reason} — 限流拦截计数（按路由 + 原因）
  * - audit_log_writes_total{action}    — 审计日志写入计数（按动作）
+ * - audit_log_write_failures_total{action} — 审计日志写入失败计数（按动作，审计旁路可观测）
  * - file_uploads_total{category}      — 文件上传计数（按类别）
  * - cache_hit_ratio{key_prefix}       — 缓存命中率（0~1，由调用方周期性计算后 set）
  * - active_connections_total          — 当前活跃 WebSocket 连接数（Gauge）
@@ -55,6 +56,9 @@ export class BusinessMetrics {
 
   /** 审计日志写入计数（按动作） */
   public readonly auditLogWrites: Counter<string>;
+
+  /** 审计日志写入失败计数（按动作；fail-open 下审计旁路失败也能被观测） */
+  public readonly auditLogWriteFailures: Counter<string>;
 
   /** 文件上传计数（按类别） */
   public readonly fileUploads: Counter<string>;
@@ -95,6 +99,14 @@ export class BusinessMetrics {
       {
         name: 'audit_log_writes_total',
         help: '审计日志写入计数（按动作）',
+        labelNames: ['action'],
+      },
+      registry,
+    );
+    this.auditLogWriteFailures = getOrCreateCounter(
+      {
+        name: 'audit_log_write_failures_total',
+        help: '审计日志写入失败计数（按动作）',
         labelNames: ['action'],
       },
       registry,
@@ -143,6 +155,11 @@ export class BusinessMetrics {
   /** 审计日志写入埋点 */
   incAuditLogWrite(action: string): void {
     this.auditLogWrites.inc({ action });
+  }
+
+  /** 审计日志写入失败埋点（fail-open：审计旁路失败仅计数，不抛错） */
+  incAuditLogWriteFailure(action: string): void {
+    this.auditLogWriteFailures.inc({ action });
   }
 
   /** 文件上传埋点 */

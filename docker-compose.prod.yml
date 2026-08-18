@@ -9,7 +9,8 @@
 #   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 #
 # 资源：所有服务声明 cpus / memory / pids_limit（防资源争抢）
-# 安全：所有服务 security_opt no-new-privileges；server/postgres/redis 非 root 运行
+# 安全：所有服务 security_opt no-new-privileges；server/admin/postgres/redis 全部非 root 运行
+# 镜像：IMAGE_REPOSITORY_OWNER 与 IMAGE_TAG 必填（fail-fast，禁止 your-org/latest 占位默认值）
 # ============================================
 
 name: ${COMPOSE_PROJECT_NAME:-monorepo-starter-prod}
@@ -19,7 +20,11 @@ services:
   # Backend: NestJS
   # ==========================================
   server:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:-your-org}/monorepo-starter-server:${IMAGE_TAG:-latest}
+    # IMAGE_REPOSITORY_OWNER / IMAGE_TAG 必填（`:?` fail-fast，P3 基础设施项）：
+    #   - 不再提供 your-org / latest 占位默认值——生产编排必须显式指定发布仓库 owner 与
+    #     真实版本 tag（禁止 latest，发布不可复现）；部署时由 deploy.yml 在 SSH 脚本里
+    #     export IMAGE_TAG=<真实版本> 注入，.env.production 里配 IMAGE_REPOSITORY_OWNER。
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:?IMAGE_REPOSITORY_OWNER 必填（发布镜像的 GHCR owner）}/monorepo-starter-server:${IMAGE_TAG:?IMAGE_TAG 必填（真实版本，禁止 latest）}
     container_name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}-server
     restart: unless-stopped
     user: '${SERVER_UID:-1001}:${SERVER_UID:-1001}'
@@ -74,9 +79,13 @@ services:
   # Admin: nginx 静态服务
   # ==========================================
   admin:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:-your-org}/monorepo-starter-admin:${IMAGE_TAG:-latest}
+    # nginx 官方镜像内置 nginx 用户 uid=101，显式声明非 root（与 k8s admin-deployment 对齐）；
+    # read_only 下可写目录全部由 tmpfs 提供（/var/cache/nginx 渲染配置、/var/run pid、/tmp），
+    # uid 101 对 tmpfs(1777) 可写，entrypoint 渲染与 nginx 缓存均正常。
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPOSITORY_OWNER:?IMAGE_REPOSITORY_OWNER 必填（发布镜像的 GHCR owner）}/monorepo-starter-admin:${IMAGE_TAG:?IMAGE_TAG 必填（真实版本，禁止 latest）}
     container_name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}-admin
     restart: unless-stopped
+    user: '101:101'
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -88,6 +97,9 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
+    environment:
+      # 反代上游：compose 网络内通过服务名解析
+      UPSTREAM_SERVER: server:3301
     depends_on:
       server:
         condition: service_healthy
@@ -111,6 +123,10 @@ services:
     image: postgres:17-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}-postgres
     restart: unless-stopped
+    # postgres:17-alpine 内置 postgres 用户 uid=70（不是 999，与 k8s postgres-statefulset 对齐）。
+    # 非 root 运行下官方 entrypoint 直接用当前用户 initdb/起库；postgres-data 命名卷首建时
+    # 从镜像继承 postgres(70) 属主，写入权限成立。
+    user: '70:70'
     security_opt:
       - no-new-privileges:true
     environment:
@@ -143,6 +159,9 @@ services:
     image: redis:7-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-monorepo-starter}-redis
     restart: unless-stopped
+    # redis 官方镜像默认即 redis 用户（uid 999），显式声明非 root（与 k8s redis-statefulset 对齐）；
+    # appendonly 写 /data，redis-data 命名卷首建时继承镜像 redis(999) 属主。
+    user: '999:999'
     security_opt:
       - no-new-privileges:true
     command: ['redis-server', '--appendonly', 'yes']

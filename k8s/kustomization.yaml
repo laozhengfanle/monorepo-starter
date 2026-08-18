@@ -5,34 +5,72 @@
 #   - Nginx Ingress Controller（ingressClassName: nginx）
 #   - metrics-server（HPA 需要）
 #
-# 部署顺序（或直接 kubectl apply -k k8s/）：
-#   1. kubectl apply -f k8s/namespace.yaml
-#   2. kubectl apply -f k8s/postgres-statefulset.yaml（含 PVC 模板 + Service）
-#   3. kubectl apply -f k8s/redis-statefulset.yaml
-#   4. kubectl create secret generic postgres-credentials --from-literal=username=postgres --from-literal=password=...
-#   5. kubectl apply -f k8s/server-deployment.yaml
-#   6. kubectl apply -f k8s/admin-deployment.yaml
-#   7. kubectl apply -f k8s/ingress.yaml
+# 部署前必做（与 docs/用户指南/06-部署运维.md 步骤同步）：
+#   1) 编辑 k8s/server-config.yaml，把 <替换> 占位改成实际值（DATABASE_URL / REDIS_URL / CORS_ORIGINS）
+#   2) 创建 postgres 凭据：
+#        kubectl -n monorepo-starter create secret generic postgres-credentials \
+#          --from-literal=username=postgres --from-literal=password=<强密码>
+#   3) 创建 server-secrets（不要把真值提交到 Git！）：
+#        kubectl -n monorepo-starter create secret generic server-secrets \
+#          --from-literal=JWT_SECRET=$(openssl rand -hex 32)
+#   4) 替换镜像 tag（默认 newTag 仅为占位 0.0.0；生产必须用 kustomize edit set image 改成真实版本）：
+#        cd k8s && kustomize edit set image \
+#          server=<registry>/monorepo-starter-server:v1.2.3 \
+#          admin=<registry>/monorepo-starter-admin:v1.2.3
+#      newTag 禁止 latest（latest 在生产是不可接受的，发布不可复现）
+#   5) 一键部署：kubectl apply -k k8s/
+#   6) 观察就绪：kubectl -n monorepo-starter get pods
+#
+# 部署顺序（直接 kubectl apply -k k8s/ 会按 kustomization resources 顺序）：
+#   1. namespace
+#   2. postgres-statefulset（PVC + Service）
+#   3. redis-statefulset
+#   4. postgres-pvc / server-uploads-pvc
+#   5. server-config / server-secrets（需先 kubectl create）
+#   6. server-deployment + HPA + Service
+#   7. admin-deployment + Service
+#   8. network-policy（默认拒绝入站 + 内部互通 + ingress controller 放行）
+#   9. ingress
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
   - namespace.yaml
   - postgres-statefulset.yaml
+  - postgres-pvc.yaml
   - redis-statefulset.yaml
+  - server-uploads-pvc.yaml
+  - server-config.yaml
+  # server-secrets.yaml 仅作模板占位；不要直接 apply（包含明文占位），
+  # 用 kubectl create secret generic 单独创建（见顶部注释）
   - server-deployment.yaml
   - admin-deployment.yaml
+  # 网络策略：默认拒绝入站 + 内部互通（CNI 需支持 NetworkPolicy，如 Calico/Cilium）
+  - network-policy.yaml
   - ingress.yaml
+  # rbac.yaml 是可选占位（Namespace 级 Role/ServiceAccount 模板），默认不启用——
+  # 需要时取消该文件内注释并在此加入：  - rbac.yaml
 
-commonLabels:
-  app.kubernetes.io/part-of: monorepo-starter
-  app.kubernetes.io/managed-by: kustomize
+# 资源标签（kustomize v5 labels API）：
+#   includeSelectors: false —— 只加到 metadata.labels，**不**合并进 selector/matchLabels。
+#   若用旧的 commonLabels，kustomize 会把标签写进 NetworkPolicy 的 podSelector.matchLabels，
+#   导致「ingress controller 放行」规则永远匹配不上（控制器 pod 没有这些标签）而把外网入口全挡掉。
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: monorepo-starter
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
 
-# 镜像 tag 占位（生产替换为实际版本，或用 kustomize edit set image）
+# 镜像 tag 占位（**禁止 latest**）
+# 生产替换方式：
+#   kustomize edit set image \
+#     server=<registry>/monorepo-starter-server:vX.Y.Z \
+#     admin=<registry>/monorepo-starter-admin:vX.Y.Z
+# newTag 默认给 0.0.0 让 kubectl apply 时立即可见（避免误用 latest 默认值）
 images:
   - name: server
     newName: <registry>/monorepo-starter-server
-    newTag: latest
+    newTag: 0.0.0
   - name: admin
     newName: <registry>/monorepo-starter-admin
-    newTag: latest
+    newTag: 0.0.0

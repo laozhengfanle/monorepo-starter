@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { vi, describe, expect, it, beforeEach } from 'vitest';
 import { AuditLogService } from './audit-log.service.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { AUDIT_ACTIONS, AuditService } from '../auth/audit.service.js';
 
 function makeLogRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -37,6 +38,7 @@ describe('AuditLogService', () => {
       };
     };
   };
+  let audit: { write: ReturnType<typeof vi.fn<any>> };
 
   beforeEach(async () => {
     prisma = {
@@ -60,10 +62,12 @@ describe('AuditLogService', () => {
         },
       },
     };
+    audit = { write: vi.fn<any>().mockResolvedValue(undefined) };
     const moduleRef = await Test.createTestingModule({
       providers: [
         AuditLogService,
         { provide: PrismaService, useValue: prisma },
+        { provide: AuditService, useValue: audit },
       ],
     }).compile();
     service = moduleRef.get(AuditLogService);
@@ -146,9 +150,36 @@ describe('AuditLogService', () => {
   it('deleteOne：日志不存在 → 抛 AUDIT_LOG_NOT_FOUND', async () => {
     prisma.client.auditLog.findUnique.mockResolvedValue(null);
 
-    await expect(service.deleteOne('nope')).rejects.toMatchObject({
+    await expect(service.deleteOne('nope', 'op-1')).rejects.toMatchObject({
       code: 'AUDIT_LOG_NOT_FOUND',
     });
+    expect(prisma.rawClient.auditLog.delete).not.toHaveBeenCalled();
+  });
+
+  it('deleteOne：删除后写 audit_log_deleted 留痕（记录被删条目信息）', async () => {
+    await service.deleteOne('log-1', 'op-1');
+
+    // 删除动作本身
+    expect(prisma.rawClient.auditLog.delete).toHaveBeenCalledWith({
+      where: { id: 'log-1' },
+    });
+    // 留痕：记录被删条目的 action/资源/时间（先删后写，与 clear 一致）
+    expect(audit.write).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: 'op-1',
+        action: AUDIT_ACTIONS.AUDIT_LOG_DELETED,
+        resourceId: 'log-1',
+        detail: expect.objectContaining({
+          deletedLogId: 'log-1',
+          deletedAction: 'login_success',
+          deletedResourceType: 'auth',
+        }),
+      }),
+    );
+    const deleteOrder =
+      prisma.rawClient.auditLog.delete.mock.invocationCallOrder[0];
+    const auditOrder = audit.write.mock.invocationCallOrder[0];
+    expect(deleteOrder).toBeLessThan(auditOrder);
   });
 
   it('exportLogs：上限 10000 条', async () => {

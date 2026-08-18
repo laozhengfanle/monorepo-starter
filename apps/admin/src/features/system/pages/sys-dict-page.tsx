@@ -63,7 +63,9 @@ export function SysDictPage(): React.JSX.Element {
 
   const canUpdate = usePermission('config:dict:update');
 
-  const { data, loading, refetch } = useSysDictTypesQuery({ fetchPolicy: 'network-only' });
+  const { data, loading, refetch } = useSysDictTypesQuery({
+    fetchPolicy: 'network-only',
+  });
   const [createDictType] = useCreateDictTypeMutation();
   const [updateDictType] = useUpdateDictTypeMutation();
   const [deleteDictType] = useDeleteDictTypeMutation();
@@ -71,7 +73,10 @@ export function SysDictPage(): React.JSX.Element {
   const [updateDictItem] = useUpdateDictItemMutation();
   const [deleteDictItem] = useDeleteDictItemMutation();
 
-  const types = useMemo(() => (data?.sysDictTypes ?? []) as SysDictType[], [data]);
+  const types = useMemo(
+    () => (data?.sysDictTypes ?? []) as SysDictType[],
+    [data],
+  );
   const selected = useMemo(
     () => types.find((t) => t.id === selectedId) ?? null,
     [types, selectedId],
@@ -121,7 +126,10 @@ export function SysDictPage(): React.JSX.Element {
       if (editingType) {
         const { code: _code, ...rest } = values;
         await updateDictType({
-          variables: { id: editingType.id, input: { ...rest, enabled: rest.enabled ?? true } },
+          variables: {
+            id: editingType.id,
+            input: { ...rest, enabled: rest.enabled ?? true },
+          },
         });
         void message.success('字典类型已更新');
       } else {
@@ -133,7 +141,9 @@ export function SysDictPage(): React.JSX.Element {
       setTypeModalOpen(false);
       await load();
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '操作失败，请重试');
+      void message.error(
+        error instanceof Error ? error.message : '操作失败，请重试',
+      );
     }
   };
 
@@ -146,7 +156,9 @@ export function SysDictPage(): React.JSX.Element {
       }
       await load();
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '删除失败，请重试');
+      void message.error(
+        error instanceof Error ? error.message : '删除失败，请重试',
+      );
     }
   };
 
@@ -184,13 +196,20 @@ export function SysDictPage(): React.JSX.Element {
       if (editingItem) {
         const { value: _value, ...rest } = values;
         await updateDictItem({
-          variables: { id: editingItem.id, input: { ...rest, enabled: rest.enabled ?? true } },
+          variables: {
+            id: editingItem.id,
+            input: { ...rest, enabled: rest.enabled ?? true },
+          },
         });
         void message.success('字典项已更新');
       } else {
         await createDictItem({
           variables: {
-            input: { ...values, dictTypeId: selected.id, enabled: values.enabled ?? true },
+            input: {
+              ...values,
+              dictTypeId: selected.id,
+              enabled: values.enabled ?? true,
+            },
           },
         });
         void message.success('字典项已创建');
@@ -198,7 +217,9 @@ export function SysDictPage(): React.JSX.Element {
       setItemModalOpen(false);
       await load();
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '操作失败，请重试');
+      void message.error(
+        error instanceof Error ? error.message : '操作失败，请重试',
+      );
     }
   };
 
@@ -208,7 +229,9 @@ export function SysDictPage(): React.JSX.Element {
       void message.success('字典项已删除');
       await load();
     } catch (error) {
-      void message.error(error instanceof Error ? error.message : '删除失败，请重试');
+      void message.error(
+        error instanceof Error ? error.message : '删除失败，请重试',
+      );
     }
   };
 
@@ -231,7 +254,10 @@ export function SysDictPage(): React.JSX.Element {
       key: 'value',
       width: 200,
       render: (v: string) => (
-        <Text style={{ fontFamily: 'monospace', fontSize: 12 }} copyable={{ text: v }}>
+        <Text
+          style={{ fontFamily: 'monospace', fontSize: 12 }}
+          copyable={{ text: v }}
+        >
           {v}
         </Text>
       ),
@@ -242,7 +268,12 @@ export function SysDictPage(): React.JSX.Element {
       key: 'sort',
       width: 70,
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', render: (v: string | null) => v ?? '-' },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      render: (v: string | null) => v ?? '-',
+    },
     {
       title: '操作',
       key: 'actions',
@@ -251,11 +282,18 @@ export function SysDictPage(): React.JSX.Element {
         <Space size="small">
           {canUpdate && (
             <>
-              <Button type="link" size="small" onClick={() => openEditItem(record)}>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => openEditItem(record)}
+              >
                 编辑
               </Button>
-              <Popconfirm title="确认删除该字典项？" onConfirm={() => void handleDeleteItem(record.id)}>
-                <Button type="link" size="small" danger>
+              <Popconfirm
+                title="确认删除该字典项？"
+                onConfirm={() => void handleDeleteItem(record.id)}
+              >
+                <Button color="red" variant="link" size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -294,8 +332,13 @@ export function SysDictPage(): React.JSX.Element {
                   padding: '8px 12px',
                   borderRadius: 6,
                   border:
-                    selectedId === type.id ? '1px solid #1677ff' : '1px solid transparent',
-                  background: selectedId === type.id ? 'rgba(22,119,255,0.06)' : 'transparent',
+                    selectedId === type.id
+                      ? '1px solid #1677ff'
+                      : '1px solid transparent',
+                  background:
+                    selectedId === type.id
+                      ? 'rgba(22,119,255,0.06)'
+                      : 'transparent',
                 }}
               >
                 <button
@@ -313,11 +356,16 @@ export function SysDictPage(): React.JSX.Element {
                     padding: 0,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
                     <Text strong>{type.name}</Text>
                     {!type.enabled && <Tag color="default">禁用</Tag>}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 12, fontFamily: 'monospace' }}>
+                  <Text
+                    type="secondary"
+                    style={{ fontSize: 12, fontFamily: 'monospace' }}
+                  >
                     {type.code} · {type.items.length} 项
                   </Text>
                 </button>
@@ -338,13 +386,21 @@ export function SysDictPage(): React.JSX.Element {
                       },
                     }}
                   >
-                    <Button type="text" size="small" icon={<EllipsisOutlined />} aria-label="操作" />
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EllipsisOutlined />}
+                      aria-label="操作"
+                    />
                   </Dropdown>
                 )}
               </div>
             ))}
             {types.length === 0 && !loading && (
-              <Text type="secondary" style={{ textAlign: 'center', padding: 24 }}>
+              <Text
+                type="secondary"
+                style={{ textAlign: 'center', padding: 24 }}
+              >
                 暂无字典类型
               </Text>
             )}

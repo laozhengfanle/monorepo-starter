@@ -32,3 +32,35 @@ html.color-blind,
 html.color-blind body {
   filter: grayscale(0.9);
 }
+
+/* ============================================
+ * 浏览器自动填充（autofill）暗黑模式修复
+ * 浏览器会给 autofill 的 input 强制加白色背景，
+ * 覆盖 antd 暗色 token（colorBgContainer），导致输入框突兀发白。
+ * 方案：用 -webkit-autofill 伪类把背景/文字色拉回主题色。
+ * 注意：autofill 背景无法用 background-color 覆盖，必须用
+ * -webkit-box-shadow 内阴影"伪造"背景色（业界标准做法）。
+ * ============================================ */
+
+/* 亮色模式：与 antd 默认 token 一致（#ffffff 背景 / 深色文字） */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.88);
+  caret-color: rgba(0, 0, 0, 0.88);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* 暗黑模式：与 antd darkAlgorithm 的 colorBgContainer(#141414) / 文字色一致 */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active,
+.dark textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #141414 inset;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.85);
+  caret-color: rgba(255, 255, 255, 0.85);
+}

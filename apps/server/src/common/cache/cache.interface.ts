@@ -26,7 +26,11 @@ export interface ICacheService {
   del(key: string): Promise<void>;
   /** 按通配符模式批量删除（如 delByPattern('auth:*')） */
   delByPattern(pattern: string): Promise<void>;
-  /** 计数器 +1（首次设置 TTL，防永久键） */
+  /**
+   * 计数器 +1（固定窗口语义）：键不存在时初始化为 1 并设置 TTL；
+   * 键已存在时仅递增、不重置 TTL。与 Redis `INCR` + 首次 `EXPIRE` 原子实现一致
+   * （登录锁定等场景保证窗口从第一次失败开始计时，避免滑动窗口语义不一致）。
+   */
   incr(key: string, ttl: number): Promise<number>;
   exists(key: string): Promise<boolean>;
   // ── 缓存管理（运维侧，config:cache:*）──

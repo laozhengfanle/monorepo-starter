@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma-client/client.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import {
   AUDIT_ACTION_LABELS,
@@ -220,27 +221,35 @@ export class DashboardService {
               return monday;
             })();
 
-    // 已知限制：Prisma groupBy 不支持日期截断（无法按天/月做 SQL 时间桶），
-    // 这里保持按天分桶 + JS 归类的实现（90 天保留期内数据量可控）。
-    // take 上限防 OOM：极端流量下宁可截断统计也不拉爆内存；
-    // 若未来审计量级超出保留期内可控范围，需改用 SQL 日期截断聚合（如 $queryRaw，
-    // 注意项目规范禁止字符串拼接 SQL，需参数化）。
-    const logs = await this.prisma.client.auditLog.findMany({
-      where: { createdAt: { gte: since } },
-      select: { action: true, createdAt: true },
-      take: 200_000,
-    });
+    // SQL 预聚合：按 天/月 桶 + action 分组，仅返回「桶数 × 动作数」行（≤ 12×35），
+    // 内存占用与审计总量解耦 —— 替代原实现「单次最多拉 20 万行审计入 JS 内存」的 OOM 风险。
+    // 必须参数化（Prisma.sql 模板，项目规范禁止字符串拼接 SQL）；
+    // 桶键与前端约定一致：year → `${月}月`，month/week → `${月}/${日}`。
+    const granularity = range === 'year' ? 'month' : 'day';
+    const rows = await this.prisma.client.$queryRaw<
+      Array<{ bucket: string; action: string; count: number }>
+    >(
+      Prisma.sql`
+        SELECT to_char(date_trunc(${granularity}, "created_at"), 'YYYY-MM-DD') AS "bucket",
+               "action" AS "action",
+               COUNT(*)::int AS "count"
+        FROM "audit_log"
+        WHERE "created_at" >= ${since}
+        GROUP BY 1, 2
+      `,
+    );
 
-    for (const log of logs) {
+    for (const row of rows) {
+      const day = new Date(`${row.bucket}T00:00:00Z`);
       const key =
         range === 'year'
-          ? `${log.createdAt.getMonth() + 1}月`
-          : `${log.createdAt.getMonth() + 1}/${log.createdAt.getDate()}`;
+          ? `${day.getUTCMonth() + 1}月`
+          : `${day.getUTCMonth() + 1}/${day.getUTCDate()}`;
       const bucket = buckets.get(key);
       if (!bucket) continue; // month 模式下今天之后不存在（日志不可能晚于 now）
-      if (this.HIGH_RISK.has(log.action)) bucket.highRisk++;
-      else if (this.MID_RISK.has(log.action)) bucket.midRisk++;
-      else bucket.lowRisk++;
+      if (this.HIGH_RISK.has(row.action)) bucket.highRisk += row.count;
+      else if (this.MID_RISK.has(row.action)) bucket.midRisk += row.count;
+      else bucket.lowRisk += row.count;
     }
 
     return [...buckets.entries()].map(([label, v]) => ({ label, ...v }));

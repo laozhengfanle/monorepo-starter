@@ -1,19 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  App,
-  Button,
-  Card,
-  DatePicker,
-  Form,
-  Modal,
-  Popconfirm,
-  Select,
-  Space,
-  Table,
-  Tag,
-} from 'antd';
+import { App, Button, Card, Modal, Popconfirm, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { AuditLogItem } from '@starter/api-client';
+import { SearchBar, type SearchValues } from '@starter/ui';
 import {
   useAdminLogsQuery,
   useClearAuditLogsMutation,
@@ -24,8 +13,6 @@ import {
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { downloadBlob, toCSV } from '../../../shared/utils/export.js';
 import { safeParseJson } from '../../../shared/utils/json.js';
-
-const { RangePicker } = DatePicker;
 
 /** 字典类型编码（审计操作 / 审计资源类型） */
 const DICT_ACTION = 'audit_action';
@@ -77,11 +64,6 @@ const actionColor: Record<string, string> = {
 /** 审计日志页（对标老项目 配置中心/审计日志）：分页列表 + 筛选 + 导出 + 清空 + 详情/删除 */
 export function AuditLogsPage(): React.JSX.Element {
   const { message } = App.useApp();
-  const [searchForm] = Form.useForm<{
-    action?: string;
-    resourceType?: string;
-    range?: unknown[];
-  }>();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filters, setFilters] = useState<{
@@ -151,21 +133,20 @@ export function AuditLogsPage(): React.JSX.Element {
     void load();
   }, [load, page, pageSize, filters]);
 
-  /** 查询（筛选条件切换不自动请求，点查询才发） */
-  const handleSearch = (): void => {
-    const values = searchForm.getFieldsValue();
+  /** 查询（SearchBar onSearch：点击查询才发请求） */
+  const handleSearch = (values: SearchValues): void => {
     const range = values.range as (DayjsLike | null)[] | undefined;
     setPage(1);
     setFilters({
-      action: values.action || undefined,
-      resourceType: values.resourceType || undefined,
+      action: (values.action as string | undefined) || undefined,
+      resourceType: (values.resourceType as string | undefined) || undefined,
       startDate: range?.[0] ? toIso(range[0]) : undefined,
       endDate: range?.[1] ? toIso(range[1]) : undefined,
     });
   };
 
+  /** 重置（SearchBar 已 resetFields，这里清空状态 + 回第一页） */
   const handleReset = (): void => {
-    searchForm.resetFields();
     setPage(1);
     setFilters({});
   };
@@ -304,135 +285,124 @@ export function AuditLogsPage(): React.JSX.Element {
   ];
 
   return (
-    <Card
-      title="审计日志"
-      extra={
-        <Space size="small">
-          {canClear && (
-            <Popconfirm
-              title="确认清空所有审计日志？"
-              description="将永久删除所有审计日志，此操作不可恢复"
-              onConfirm={() => void handleClear()}
-            >
-              <Button color="red" variant="outlined" loading={clearing}>
-                清空日志
-              </Button>
-            </Popconfirm>
-          )}
-          {canExport && (
-            <Button onClick={() => void handleExport()}>导出</Button>
-          )}
-          <Button onClick={() => void load()}>刷新</Button>
-        </Space>
-      }
-    >
-      {/* 筛选区 */}
-      <Form
-        form={searchForm}
-        layout="inline"
-        style={{ marginBottom: 16, rowGap: 12 }}
-        onFinish={handleSearch}
-      >
-        <Form.Item name="action" label="操作">
-          <Select
-            allowClear
-            placeholder="全部操作"
-            style={{ width: 200 }}
-            options={dictOptions.actions}
-          />
-        </Form.Item>
-        <Form.Item name="resourceType" label="资源类型">
-          <Select
-            allowClear
-            placeholder="全部资源"
-            style={{ width: 160 }}
-            options={dictOptions.resources}
-          />
-        </Form.Item>
-        <Form.Item name="range" label="时间">
-          <RangePicker showTime />
-        </Form.Item>
-        <Form.Item>
-          <Space size="small">
-            <Button type="primary" htmlType="submit">
-              查询
-            </Button>
-            <Button onClick={handleReset}>重置</Button>
-          </Space>
-        </Form.Item>
-      </Form>
-
-      <Table<AuditLogItem>
-        rowKey="id"
-        columns={columns}
-        dataSource={logs}
-        loading={loading}
-        scroll={{ x: 1100 }}
-        pagination={{
-          current: page,
-          pageSize,
-          total: data?.adminLogs.total ?? 0,
-          showSizeChanger: true,
-          pageSizeOptions: [10, 20, 50, 100],
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: (p, ps) => {
-            setPage(p);
-            setPageSize(ps);
+    <div>
+      {/* 搜索卡：独立 Card 位于列表正上方（列表页规范） */}
+      <SearchBar
+        fields={[
+          {
+            name: 'action',
+            label: '操作',
+            type: 'select',
+            placeholder: '全部操作',
+            options: dictOptions.actions,
           },
-        }}
+          {
+            name: 'resourceType',
+            label: '资源类型',
+            type: 'select',
+            placeholder: '全部资源',
+            options: dictOptions.resources,
+          },
+          { name: 'range', label: '时间', type: 'dateRange' },
+        ]}
+        onSearch={handleSearch}
+        onReset={handleReset}
       />
 
-      {/* 详情 Modal */}
-      <Modal
-        title="审计日志详情"
-        open={detail !== null}
-        onCancel={() => setDetail(null)}
-        footer={<Button onClick={() => setDetail(null)}>关闭</Button>}
+      <Card
+        title="审计日志"
+        extra={
+          <Space size="small">
+            {canClear && (
+              <Popconfirm
+                title="确认清空所有审计日志？"
+                description="将永久删除所有审计日志，此操作不可恢复"
+                onConfirm={() => void handleClear()}
+              >
+                <Button color="red" variant="outlined" loading={clearing}>
+                  清空日志
+                </Button>
+              </Popconfirm>
+            )}
+            {canExport && (
+              <Button onClick={() => void handleExport()}>导出</Button>
+            )}
+            <Button onClick={() => void load()}>刷新</Button>
+          </Space>
+        }
       >
-        {detail && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'auto 1fr',
-              gap: '8px 16px',
-            }}
-          >
-            <span style={{ color: 'rgba(0,0,0,0.45)' }}>时间</span>
-            <span>{formatDateTime(detail.createdAt)}</span>
-            <span style={{ color: 'rgba(0,0,0,0.45)' }}>操作者</span>
-            <span>{detail.accountUsername ?? '系统'}</span>
-            <span style={{ color: 'rgba(0,0,0,0.45)' }}>操作</span>
-            <Tag color={actionColor[detail.action] ?? 'default'}>
-              {actionLabel(detail.action)}
-            </Tag>
-            <span style={{ color: 'rgba(0,0,0,0.45)' }}>资源类型</span>
-            <span>
-              {detail.resourceType ? resourceLabel(detail.resourceType) : '-'}
-            </span>
-            {detail.resourceId && (
-              <>
-                <span style={{ color: 'rgba(0,0,0,0.45)' }}>资源 ID</span>
-                <span>{detail.resourceId}</span>
-              </>
-            )}
-            {detail.ip && (
-              <>
-                <span style={{ color: 'rgba(0,0,0,0.45)' }}>IP</span>
-                <span>{detail.ip}</span>
-              </>
-            )}
-            {detail.detail && (
-              <>
-                <span style={{ color: 'rgba(0,0,0,0.45)' }}>详情</span>
-                {/* 脏数据兜底：JSON.parse 失败时按纯文本展示原始字符串，避免白屏 */}
-                <DetailContent raw={detail.detail} />
-              </>
-            )}
-          </div>
-        )}
-      </Modal>
-    </Card>
+        <Table<AuditLogItem>
+          rowKey="id"
+          columns={columns}
+          dataSource={logs}
+          loading={loading}
+          scroll={{ x: 1100 }}
+          pagination={{
+            current: page,
+            pageSize,
+            total: data?.adminLogs.total ?? 0,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条`,
+            onChange: (p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            },
+          }}
+        />
+
+        {/* 详情 Modal */}
+        <Modal
+          title="审计日志详情"
+          open={detail !== null}
+          onCancel={() => setDetail(null)}
+          footer={<Button onClick={() => setDetail(null)}>关闭</Button>}
+        >
+          {detail && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr',
+                gap: '8px 16px',
+              }}
+            >
+              <span style={{ color: 'rgba(0,0,0,0.45)' }}>时间</span>
+              <span>{formatDateTime(detail.createdAt)}</span>
+              <span style={{ color: 'rgba(0,0,0,0.45)' }}>操作者</span>
+              <span>{detail.accountUsername ?? '系统'}</span>
+              <span style={{ color: 'rgba(0,0,0,0.45)' }}>操作</span>
+              <Tag color={actionColor[detail.action] ?? 'default'}>
+                {actionLabel(detail.action)}
+              </Tag>
+              <span style={{ color: 'rgba(0,0,0,0.45)' }}>资源类型</span>
+              <span>
+                {detail.resourceType ? resourceLabel(detail.resourceType) : '-'}
+              </span>
+              {detail.resourceId && (
+                <>
+                  <span style={{ color: 'rgba(0,0,0,0.45)' }}>资源 ID</span>
+                  <span>{detail.resourceId}</span>
+                </>
+              )}
+              {detail.ip && (
+                <>
+                  <span style={{ color: 'rgba(0,0,0,0.45)' }}>IP</span>
+                  <span>{detail.ip}</span>
+                </>
+              )}
+              {detail.detail && (
+                <>
+                  <span style={{ color: 'rgba(0,0,0,0.45)' }}>详情</span>
+                  {/* 脏数据兜底：JSON.parse 失败时按纯文本展示原始字符串，避免白屏 */}
+                  <DetailContent raw={detail.detail} />
+                </>
+              )}
+            </div>
+          )}
+        </Modal>
+      </Card>
+    </div>
   );
 }
 

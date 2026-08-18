@@ -2,7 +2,9 @@ import { z } from 'zod';
 
 /** 环境变量 schema：启动时由 validateEnv 全量校验，fail-fast */
 export const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'])
+    .default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3301),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'log', 'debug', 'verbose'])
@@ -11,13 +13,25 @@ export const EnvSchema = z.object({
   CORS_ORIGINS: z
     .string()
     .optional()
-    .describe('逗号分隔的允许跨域来源，如 https://admin.example.com,http://localhost:3302'),
+    .describe(
+      '逗号分隔的允许跨域来源，如 https://admin.example.com,http://localhost:3302',
+    ),
   /** PostgreSQL 连接串（Prisma driver adapter 使用） */
   DATABASE_URL: z.string().min(1, 'DATABASE_URL 不能为空'),
   /** JWT 签名密钥（认证模块） */
   JWT_SECRET: z.string().min(16, 'JWT_SECRET 至少 16 个字符'),
   /** JWT 过期时间（秒，默认 15 分钟） */
   JWT_ACCESS_TTL: z.coerce.number().int().positive().default(900),
+  /**
+   * Turnstile dev 本地 bypass 开关（1/true 开启；默认关闭）。
+   * 仅 NODE_ENV=development 且本开关开启时生效，生产永不生效。
+   */
+  TURNSTILE_DEV_BYPASS: z.string().optional(),
+  /**
+   * /metrics 端点 IP 白名单（逗号分隔；默认空 = 仅本机 127.0.0.1/::1）。
+   * k8s 探针 / Prometheus 采集器需把采集出口 IP 加入白名单。
+   */
+  METRICS_ALLOWED_IPS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

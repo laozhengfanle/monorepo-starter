@@ -62,6 +62,20 @@ describe('BusinessMetrics', () => {
     ).toBe(1);
   });
 
+  it('审计写入失败计数按动作累加（审计旁路失败可观测）', () => {
+    const metrics = new BusinessMetrics();
+    metrics.incAuditLogWriteFailure('login_failed');
+    metrics.incAuditLogWriteFailure('login_failed');
+
+    expect(
+      counterValue(metrics.auditLogWriteFailures, { action: 'login_failed' }),
+    ).toBe(2);
+    // 与成功计数相互独立
+    expect(
+      counterValue(metrics.auditLogWrites, { action: 'login_failed' }),
+    ).toBe(0);
+  });
+
   it('缓存命中率 Gauge 可设置 0~1 值', () => {
     const metrics = new BusinessMetrics();
     metrics.setCacheHitRatio('user:', 0.87);

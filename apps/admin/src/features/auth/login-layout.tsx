@@ -1,10 +1,10 @@
 import { Button, Layout, Space, theme as antdTheme } from 'antd';
-import { ExpandOutlined } from '@ant-design/icons';
+import { FullscreenExitOutlined, FullscreenOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import { useSystemConfig } from '../../app/providers/system-config-provider.js';
 import { APP_VERSION } from '../../app/version.js';
+import { useFullscreen } from '../../app/hooks/use-fullscreen.js';
 import { ThemeToggle } from '../../shared/components/theme-toggle.js';
-import { HealthStatus } from '../health/health-status.js';
 import heroPng from '../../assets/hero.png';
 
 const { Header, Footer, Content } = Layout;
@@ -20,6 +20,7 @@ export function LoginLayout({
 }): React.JSX.Element {
   const { token } = antdTheme.useToken();
   const { settings } = useSystemConfig();
+  const { isFullscreen, toggle } = useFullscreen();
 
   return (
     <Layout style={{ minHeight: '100vh', background: token.colorBgLayout }}>
@@ -40,7 +41,13 @@ export function LoginLayout({
 
         <Space>
           <ThemeToggle />
-          <Button icon={<ExpandOutlined />} aria-label="全屏" />
+          <Button
+            icon={
+              isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />
+            }
+            onClick={() => void toggle()}
+            aria-label={isFullscreen ? '退出全屏' : '进入全屏'}
+          />
         </Space>
       </Header>
 
@@ -72,10 +79,6 @@ export function LoginLayout({
             <span>© {new Date().getFullYear()} zhengbo</span>
           )}
         </Space>
-        {/* 后端健康状态（登录页可见，便于部署后自检） */}
-        <div style={{ marginTop: 8 }}>
-          <HealthStatus />
-        </div>
       </Footer>
     </Layout>
   );

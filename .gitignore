@@ -11,6 +11,9 @@ out-tsc
 # dependencies
 node_modules
 
+# TypeDoc 输出（docs.yml 的 typedoc --out docs/api-reference，防误提交）
+docs/api-reference/
+
 # Prisma 生成的客户端（由 prisma generate 生成，不提交）
 apps/server/src/generated/
 
@@ -66,3 +69,11 @@ test-output
 .nx/self-healing
 .nx/migrate-runs
 apps/server/uploads/
+
+# 生成物（方案 A：不提交，CI/本地现生成——openapi 由 server:generate-openapi 产出，
+# schema.gql 由 server 启动时自动生成，erd.md 由 erd:generate 产出）
+openapi/openapi.json
+apps/server/graphql/schema.gql
+docs/erd.md
+# server 启动时按 cwd 生成的 schema（nx serve 的 cwd 是仓库根，产物可能落在根 graphql/）
+**/graphql/schema.gql

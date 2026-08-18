@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { BizException, newId } from '@starter/server-core';
 import type { AuditLogItem, AuditLogQuery } from '@starter/contracts';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import { AUDIT_ACTIONS } from '../auth/audit.service.js';
+import { AUDIT_ACTIONS, AuditService } from '../auth/audit.service.js';
 
 /** 审计日志导出的上限（防止 OOM） */
 const EXPORT_LIMIT = 10_000;
@@ -24,18 +24,20 @@ interface AuditLogRow {
  * 审计日志管理服务（audit_log 表）
  * - 分页 + 多维筛选（action / resourceType / 时间区间），批量 join account_identity 拼 username
  * - 清空：rawClient 先 deleteMany 清空，再写 audit_cleared（否则清空动作本身无记录）
+ * - 单条删除：删除后写 audit_log_deleted 留痕（记录被删条目的 action/资源/时间）
  * - 导出：不分页，上限 10000 条
  */
 @Injectable()
 export class AuditLogService {
   private readonly logger = new Logger(AuditLogService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /** 分页查询审计日志（倒序） */
-  async findAll(
-    query: AuditLogQuery,
-  ): Promise<{
+  async findAll(query: AuditLogQuery): Promise<{
     items: AuditLogItem[];
     total: number;
     page: number;
@@ -99,8 +101,12 @@ export class AuditLogService {
     return { deletedCount };
   }
 
-  /** 删除单条审计日志（硬删除） */
-  async deleteOne(id: string): Promise<void> {
+  /**
+   * 删除单条审计日志（硬删除）。
+   * 删除后写 audit_log_deleted 留痕：记录被删条目的 action / 资源 / 删除时间，
+   * 避免「删除动作本身无记录」的审计盲区（与 clear 的 audit_cleared 同理）。
+   */
+  async deleteOne(id: string, operatorId: string): Promise<void> {
     const log = await this.prisma.client.auditLog.findUnique({ where: { id } });
     if (!log) {
       throw new BizException({
@@ -109,6 +115,19 @@ export class AuditLogService {
       });
     }
     await this.prisma.rawClient.auditLog.delete({ where: { id } });
+    // 留痕：先删后写（与 clear 一致），写入走 AuditService（fail-open + 指标）
+    await this.audit.write({
+      accountId: operatorId,
+      action: AUDIT_ACTIONS.AUDIT_LOG_DELETED,
+      resourceId: id,
+      detail: {
+        deletedLogId: id,
+        deletedAction: log.action,
+        deletedResourceType: log.resourceType,
+        deletedResourceId: log.resourceId,
+        deletedAt: log.createdAt.toISOString(),
+      },
+    });
   }
 
   private buildWhere(

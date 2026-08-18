@@ -102,6 +102,17 @@ export function AccountSettingsPage(): React.JSX.Element {
     confirm: string;
   }>();
   const [passwordSaving, setPasswordSaving] = useState(false);
+  // 改密成功后延迟跳转登录页：用 effect + 清理保证组件卸载时定时器被清除
+  const [redirectToLogin, setRedirectToLogin] = useState(false);
+
+  useEffect(() => {
+    if (!redirectToLogin) return;
+    const timer = window.setTimeout(
+      () => navigate('/login', { replace: true }),
+      600,
+    );
+    return () => window.clearTimeout(timer);
+  }, [redirectToLogin, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -200,8 +211,8 @@ export function AccountSettingsPage(): React.JSX.Element {
       });
       void message.success('密码已修改，请重新登录');
       passwordForm.resetFields();
-      // 后端已撤销全部 token，直接回登录页
-      setTimeout(() => navigate('/login', { replace: true }), 600);
+      // 后端已撤销全部 token，成功提示展示后回登录页（effect 内清理定时器）
+      setRedirectToLogin(true);
     } catch (error) {
       const msg =
         typeof error === 'object' && error !== null && 'response' in error

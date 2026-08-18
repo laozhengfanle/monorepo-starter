@@ -53,6 +53,8 @@ export const AUDIT_ACTIONS = {
   // ── 系统 ──
   CONFIG_UPDATED: 'config_updated',
   AUDIT_CLEARED: 'audit_cleared',
+  /** 单条审计日志删除（运维清理单条记录时留痕；seed 字典由本文件自动同步） */
+  AUDIT_LOG_DELETED: 'audit_log_deleted',
   // ── 缓存管理（运维写操作） ──
   CACHE_KEY_DELETED: 'cache_key_deleted',
   CACHE_PATTERN_CLEARED: 'cache_pattern_cleared',
@@ -111,6 +113,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   [AUDIT_ACTIONS.FILE_DELETED]: '删除文件',
   [AUDIT_ACTIONS.CONFIG_UPDATED]: '配置更新',
   [AUDIT_ACTIONS.AUDIT_CLEARED]: '清空审计',
+  [AUDIT_ACTIONS.AUDIT_LOG_DELETED]: '删除审计日志',
   [AUDIT_ACTIONS.CACHE_KEY_DELETED]: '删除缓存键',
   [AUDIT_ACTIONS.CACHE_PATTERN_CLEARED]: '按模式清空缓存',
   [AUDIT_ACTIONS.DICT_CREATED]: '创建字典',
@@ -169,6 +172,7 @@ export const AUDIT_ACTION_RESOURCE_MAP: Record<AuditAction, AuditResource> = {
   // 系统
   [AUDIT_ACTIONS.CONFIG_UPDATED]: AUDIT_RESOURCES.SYSTEM_CONFIG,
   [AUDIT_ACTIONS.AUDIT_CLEARED]: AUDIT_RESOURCES.AUDIT_LOG,
+  [AUDIT_ACTIONS.AUDIT_LOG_DELETED]: AUDIT_RESOURCES.AUDIT_LOG,
   // 缓存管理（运维写操作）
   [AUDIT_ACTIONS.CACHE_KEY_DELETED]: AUDIT_RESOURCES.CACHE,
   [AUDIT_ACTIONS.CACHE_PATTERN_CLEARED]: AUDIT_RESOURCES.CACHE,

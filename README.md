@@ -52,7 +52,7 @@ pnpm test
 pnpm lint
 pnpm typecheck
 
-# 端到端测试（自动拉起 web）
+# 端到端测试（自动拉起 web；需 macOS 13+ 或 Linux，macOS 12 请用容器/CI）
 pnpm e2e
 ```
 
@@ -79,33 +79,11 @@ pnpm exec nx g @nx/react:lib my-lib --directory=packages/shared/my-lib   # 生�
 
 - **API 响应**：成功响应直接返回领域数据（与 [openapi/openapi.json](openapi/openapi.json) 的 200 schema 一致）；失败响应统一 envelope `{ success: false, error: { code, message, details? } }`（见 [packages/shared/contracts](packages/shared/contracts/src/lib/api-envelope.ts)）
 - **契约变更流程**：改后端 DTO/schema 后，依次运行 `pnpm exec nx run server:generate-openapi`（重新发射 OpenAPI）→ `pnpm generate:api`（orval 重新生成前端 client），再提交生成产物
-- **命名规范**：见 [docs/命名规范.md](docs/命名规范.md)（数据库、后端、前端）
-- **目录结构**：见 [docs/命名规范.md](docs/命名规范.md)（apps 按业务端组织、feature-first、复用下沉规则）
+- **命名规范**：见 [docs/02-开发规范/命名规范.md](docs/02-开发规范/命名规范.md)（数据库、后端、前端）
+- **目录结构**：见 [docs/02-开发规范/命名规范.md](docs/02-开发规范/命名规范.md)（apps 按业务端组织、feature-first、复用下沉规则）
 - **Lint 分层**：`pnpm lint` = oxlint 全仓代码规则（毫秒级，无需按项目缓存）；`pnpm lint:boundaries` = ESLint 只跑 `@nx/enforce-module-boundaries` 与 （oxlint 无法运行 Nx 自定义规则）。边界约束定义在 [eslint.config.mjs](eslint.config.mjs) 的 `depConstraints`（`scope:shared` 只依赖共享层；`scope:admin`/`scope:server` 只能依赖本端 + 共享层）；admin 另有 `no-restricted-imports` 禁止直连 `@starter/contracts`
 - **模块边界**：项目 tags（`scope:server` / `scope:admin` / `scope:shared` / `type:app` …）；前端只从 `@starter/api-client` 获取领域模型与校验 schema，不直接依赖 `@starter/contracts`
 - **版本管理（规定）**：版本单一来源为 `apps/admin/src/app/version.ts`（UI 顶栏右上角与页脚显示 `vX.Y.Z`）。**每次提交到仓库前**运行 `pnpm bump [major|minor|patch]`（默认 patch）：脚本自动升级 version.ts 与根 package.json、提交 `chore(release): vX.Y.Z` 并打注释标签 `vX.Y.Z`。功能改动先自行提交，bump 只提交版本文件
-
-## Roadmap
-
-- [x] 骨架：Nx + pnpm workspace、catalog、契约种子包、CI
-- [x] oxlint 接管代码规则 + ESLint 边界检查分层
-- [x] NestJS + Express API（zod 契约、env fail-fast、health/users CRUD、Swagger、e2e、pino 日志）
-- [x] OpenAPI 发射 + Orval 生成 react-query client
-- [x] ui 库（antd 主题）+ web 管理页
-- [x] Prisma 7 数据层（driver adapter + UUIDv7 + 软删除扩展，users 换 Prisma 仓储）
-- [x] GraphQL 双协议（code-first + zod 单一来源契约层 + ZodArgsPipe + users resolver）
-- [x] 前端 GraphQL（Apollo Client + graphql-codegen 类型化 hooks，users 页面切 GraphQL）
-- [x] 用户体系基础（Account/Identity/Profile + 最小 RBAC + JWT 认证 login/me，REST+GraphQL 双协议）
-- [x] 认证增强（双 token access+refresh、tokenVersion 撤销、jti 黑名单、登录锁定、审计日志）
-- [x] 权限控制（AdminMenu permissionCode + PermissionGuard + @RequirePermission，super_admin 绕过）
-- [x] 前端认证接入（登录页 + AuthContext + 路由守卫 + Apollo 认证 header + header 用户/登出）
-- [x] 管理端账户管理（Account CRUD + 角色分配，REST+GraphQL，权限 account:*）
-- [x] 限流（@nestjs/throttler，全局 100/分 + 登录 5/分 + GraphQL 兼容守卫）
-- [x] 健康检查完善（@nestjs/terminus，/health/readiness：DB + 内存探活）
-- [x] 文件上传（Multer 本地磁盘 + UploadFile 元数据 + 静态访问 + 10MB 限制）
-- [x] WebSocket（socket.io 网关 + 握手 JWT 鉴权 + 示例事件）
-- [x] 监控（Prometheus /metrics + 登录计数业务指标）
-- [x] 后台权限闭环（角色管理 CRUD + 权限点分配，role:_；菜单与权限同一张表：me 下发菜单树 + 侧栏动态渲染 + 菜单管理页 menu:_）
 
 ## 部署
 
@@ -130,25 +108,25 @@ kubectl apply -k k8s/
 
 GitHub Actions（[.github/workflows](.github/workflows)）：
 
-| workflow | 触发                   | 内容                                                                                                           |
-| -------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
-| ci       | push main / PR         | lint + boundaries + typecheck + test + build + e2e + `pnpm audit` + Docker 构建 + Trivy 镜像扫描（SARIF 上传） |
-| docs     | push main（docs 路径） | 生成 OpenAPI + ERD + TypeDoc → GitHub Pages                                                                    |
-| release  | tag `v*.*.*`           | 构建 server/admin 镜像推 GHCR + GitHub Release（changelog）                                                    |
-| deploy   | tag / 手动             | SSH 部署 + 健康检查 + 失败自动回滚                                                                             |
+| workflow | 触发                      | 内容                                                                                                           |
+| -------- | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| ci       | push main / PR            | lint + boundaries + typecheck + test + build + e2e + `pnpm audit` + Docker 构建 + Trivy 镜像扫描（SARIF 上传） |
+| docs     | push main（docs 路径）    | 生成 OpenAPI + ERD + TypeDoc → GitHub Pages                                                                    |
+| release  | tag `v*.*.*`              | 构建 server/admin 镜像推 GHCR + GitHub Release（changelog）                                                    |
+| deploy   | 手动（workflow_dispatch） | 构建 server/admin/migration 镜像推 GHCR + SSH 部署（迁移先行）+ 健康检查 + 失败自动回滚                        |
 
 ## 监控与运维
 
 - **健康检查**：`/health`（基础信息）、`/health/liveness`（存活探针，k8s 用）、`/health/readiness`（terminus：DB + 内存）
 - **指标**：`/metrics`（Prometheus），含业务指标：登录失败/锁定、限流拦截、审计写入、文件上传、缓存命中率、WS 连接数
 - **定时任务**：每日 3 点自动清理过期审计日志（90 天）与 token 撤销记录
-- **通知服务**：短信/邮件可插拔 Provider（默认 mock，生产可接阿里云短信 / nodemailer，见 [docs/开发文档/通知服务.md](docs/开发文档/通知服务.md)）
+- **通知服务**：短信/邮件可插拔 Provider（默认 mock，生产可接阿里云短信 / nodemailer，见 [docs/03-后端能力/通知服务.md](docs/03-后端能力/通知服务.md)）
 
 ## 文档
 
-- 架构图：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)（认证/限流/审计链路 + 数据流 + 部署拓扑）
-- 开发文档：[docs/开发文档](docs/开发文档)（16 篇：API 规范、认证安全、权限、审计、数据库、缓存、监控、定时任务、通知、测试策略、扩展指南、CI-CD 等）
-- 用户指南：[docs/用户指南](docs/用户指南)（9 篇：快速上手、配置参考、部署运维、故障排查等）
+- 架构图：[docs/01-架构与设计/ARCHITECTURE.md](docs/01-架构与设计/ARCHITECTURE.md)（认证/限流/审计链路 + 数据流 + 部署拓扑）
+- 开发文档：[docs](docs)（按分类：01-架构与设计 / 02-开发规范 / 03-后端能力 / 04-工程与质量）
+- 用户指南：[docs/05-用户指南](docs/05-用户指南)（9 篇：快速上手、配置参考、部署运维、故障排查等）
 - 数据库 ERD：[docs/erd.md](docs/erd.md)（`pnpm erd:generate` 重新生成）
 - 文档站（CI 自动发布）：TypeDoc API 参考 + OpenAPI + ERD → GitHub Pages
 

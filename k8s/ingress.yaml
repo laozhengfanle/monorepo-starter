@@ -1,6 +1,10 @@
 # Server Ingress：暴露 /api 与 /graphql 到 server-service
 # - cert-manager 自动签发 TLS
 # - Nginx Ingress Controller
+# - /api 路径通过 rewrite-target 去掉 /api 前缀（NestJS 控制器是 /auth/login 等，无 /api 前缀）：
+#     path: /api(/|$)(.*)   →   rewrite-target: /$2
+#     /api/auth/login       →   /auth/login
+# - 限流用合法注解 limit-rps（nginx.ingress.kubernetes.io/rate-limit 不是合法注解，已删除）
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -11,7 +15,10 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: '10m'
     nginx.ingress.kubernetes.io/proxy-read-timeout: '60'
     nginx.ingress.kubernetes.io/proxy-send-timeout: '60'
-    nginx.ingress.kubernetes.io/rate-limit: '100'
+    # 每秒请求数限流（合法注解：limit-rps / limit-connections / limit-rpm）
+    nginx.ingress.kubernetes.io/limit-rps: '100'
+    # /api 路径重写：把 /api 前缀剥掉（与 admin nginx /api/ 反代行为对齐）
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
 spec:
   ingressClassName: nginx
@@ -23,8 +30,9 @@ spec:
     - host: api.example.com
       http:
         paths:
-          - path: /api
-            pathType: Prefix
+          # 捕获组：$1 = 结尾斜杠或空，$2 = 剩余路径；rewrite 后只剩 /$2 = 去掉 /api 前缀的路径
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: server-service

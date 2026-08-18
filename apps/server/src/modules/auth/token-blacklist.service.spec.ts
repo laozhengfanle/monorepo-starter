@@ -8,8 +8,6 @@ describe('TokenBlacklistService', () => {
   let service: TokenBlacklistService;
   let cache: {
     delByPattern: ReturnType<typeof vi.fn<any>>;
-    setex: ReturnType<typeof vi.fn<any>>;
-    get: ReturnType<typeof vi.fn<any>>;
   };
   let prisma: {
     client: {
@@ -24,8 +22,6 @@ describe('TokenBlacklistService', () => {
   beforeEach(async () => {
     cache = {
       delByPattern: vi.fn<any>().mockResolvedValue(undefined),
-      setex: vi.fn<any>().mockResolvedValue(undefined),
-      get: vi.fn<any>().mockResolvedValue(null),
     };
     prisma = {
       client: {
@@ -46,43 +42,29 @@ describe('TokenBlacklistService', () => {
     service = moduleRef.get(TokenBlacklistService);
   });
 
-  it('revokeAccountTokens：tokenVersion 自增 + 清空该账号 refresh 缓存', async () => {
+  it('revokeAccountTokens：tokenVersion 自增 + 写 jti="*" 通配行 + 清空 refresh 缓存', async () => {
     await service.revokeAccountTokens('acc-1', 'logout');
 
+    // 1. tokenVersion 自增（终局防线）
     expect(prisma.client.account.update).toHaveBeenCalledWith({
       where: { id: 'acc-1' },
       data: { tokenVersion: { increment: 1 } },
     });
-    expect(cache.delByPattern).toHaveBeenCalledWith('auth:refresh:acc-1:*');
-  });
-
-  it('revokeToken：写入撤销记录（7 天过期）+ 缓存 jti', async () => {
-    await service.revokeToken('jti-1', 'acc-1', 'password_changed');
-
+    // 2. 写 jti='*' 通配撤销行（持久化兜底，refresh 的 isRevoked 才能命中）
     expect(prisma.client.tokenRevocation.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          jti: 'jti-1',
           accountId: 'acc-1',
-          reason: 'password_changed',
+          jti: '*',
+          reason: 'logout',
         }),
       }),
     );
-    expect(cache.setex).toHaveBeenCalledWith(
-      'auth:revoked:jti-1',
-      expect.any(Number),
-      '1',
-    );
+    // 3. 清 stale refresh 缓存
+    expect(cache.delByPattern).toHaveBeenCalledWith('auth:refresh:acc-1:*');
   });
 
-  it('isRevoked：缓存命中立即判定已撤销', async () => {
-    cache.get.mockResolvedValue('1');
-
-    expect(await service.isRevoked('jti-1', 'acc-1')).toBe(true);
-    expect(prisma.client.tokenRevocation.findFirst).not.toHaveBeenCalled();
-  });
-
-  it('isRevoked：缓存未命中时查 DB（jti 精确 + 通配 *）', async () => {
+  it('isRevoked：DB 命中精确 jti 或 "*" 通配行 → true', async () => {
     prisma.client.tokenRevocation.findFirst.mockResolvedValue({ id: 'row-1' });
 
     expect(await service.isRevoked('jti-1', 'acc-1')).toBe(true);
@@ -96,7 +78,7 @@ describe('TokenBlacklistService', () => {
     );
   });
 
-  it('isRevoked：无记录返回 false', async () => {
+  it('isRevoked：DB 无记录 → false', async () => {
     expect(await service.isRevoked('jti-1', 'acc-1')).toBe(false);
   });
 });

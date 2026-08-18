@@ -1,0 +1,43 @@
+# Server ConfigMap：明文环境变量（不含敏感信息）
+# - 服务端实际依赖见 apps/server/src/config/env.ts
+# - 必填项：DATABASE_URL（实际必填，postgres 连接串）、REDIS_URL（强烈建议配，否则走内存模式）
+# - CORS_ORIGINS：逗号分隔允许跨域的 origin；未配置时默认仅放行 admin 开发地址
+# - 部署前请把所有 <替换> 占位改成实际值
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: server-config
+  namespace: monorepo-starter
+  labels:
+    app: server
+    app.kubernetes.io/part-of: monorepo-starter
+data:
+  # === 必填（启动会校验） ===
+  # PostgreSQL 连接串（与 postgres-statefulset 服务的 username/password/db 对齐）
+  # 集群内格式：postgresql://<user>:<password>@postgres-service:5432/<db>?schema=public
+  DATABASE_URL: 'postgresql://postgres:<替换为postgres-credentials的password>@postgres-service:5432/monorepo_starter?schema=public'
+  # === 强烈建议配（生产否则走内存缓存，进程重启即丢；分布式 token 锁会失效） ===
+  # Redis 连接串
+  REDIS_URL: 'redis://redis-service:6379'
+
+  # === 可选（有默认值） ===
+  # 运行环境（development / test / production）
+  NODE_ENV: 'production'
+  # 服务端口（默认 3301，与 Dockerfile EXPOSE、Service 端口对齐）
+  PORT: '3301'
+  # 日志级别：fatal / error / warn / log / debug / verbose
+  LOG_LEVEL: 'info'
+  # CORS 跨域白名单（逗号分隔）。生产至少包含 admin 的实际域名。
+  # 例：https://admin.example.com
+  CORS_ORIGINS: '<替换为实际允许跨域的origin，逗号分隔>'
+  # Access token 过期秒数（默认 900 = 15 分钟）
+  JWT_ACCESS_TTL: '900'
+  # 上传目录（容器内路径，与 server-deployment volumeMounts 对齐）
+  UPLOAD_DIR: '/app/uploads'
+  # 公开访问上传文件时的 base URL（默认 /uploads；接入 CDN 时改为 CDN 域名）
+  STORAGE_PUBLIC_BASE_URL: '/uploads'
+  # Cloudflare Turnstile 验证密钥（人机验证；未启用时留空，system_config.turnstile.config 优先）
+  TURNSTILE_SECRET_KEY: ''
+  # 受信代理层数（与 app-setup.ts 中 app.set('trust proxy', N) 保持一致）
+  # 多层代理（LB → nginx → ingress）需上调；1 层 ingress 反代时填 1
+  TRUST_PROXY: '1'

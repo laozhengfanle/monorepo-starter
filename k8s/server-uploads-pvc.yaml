@@ -1,0 +1,25 @@
+# Server 上传文件 PVC
+# - 容量：10Gi（按需调整）
+# - 访问模式：
+#   * ReadWriteOnce：单副本 server 适用（默认；多数云盘存储类支持）
+#   * ReadWriteMany：多副本 server 必须用（部分云存储类不支持 RWM，
+#     此时请把 server-deployment replicas 调为 1，或改用对象存储 S3 等）
+# - storageClassName：留空走集群默认 storage class；
+#   显式指定可避免多类存储集群下被绑到非预期存储（如本地盘 / 云盘混部）
+# - 选 ReadWriteMany 但集群默认 storage class 不支持时，apply 会 Pending
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: server-uploads
+  namespace: monorepo-starter
+  labels:
+    app: server
+    app.kubernetes.io/part-of: monorepo-starter
+spec:
+  # 改为 ReadWriteMany 需在部署集群有相应 storage class；默认 RWO 单副本即可
+  accessModes:
+    - ReadWriteOnce
+  # storageClassName: "" 走集群默认；按需改为具体 storage class 名称
+  resources:
+    requests:
+      storage: 10Gi

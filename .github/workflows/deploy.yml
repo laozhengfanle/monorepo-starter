@@ -2,19 +2,24 @@
 # Deploy 工作流
 # ============================================
 # 触发：
-#   1. 仅手动 dispatch（可指定环境：staging / production；可指定 image_tag）
-#      —— 镜像构建/发布由 release.yml（tag 触发）负责，避免同一 tag 重复 build+push；
-#         deploy 只在人工确认后执行，杜绝发版直连生产无门禁。
+#   1. 仅手动 dispatch（可指定环境：staging / production；必须指定 image_tag）
+#      —— deploy 自带构建+推送（与 release.yml 的 tag 触发构建是刻意保留的双路径：
+#         release 保证打 tag 即出制品，deploy 保证人工门禁后才发布；同一 tag 可能
+#         被两边各构建一次，属预期行为）。deploy 只由人工确认后执行，杜绝发版直连生产无门禁。
 #
 # 流程：
-#   Job 1 (build-and-push)：登录 GHCR → build 2 个镜像（server/admin）→ push
-#   Job 2 (deploy)         ：SSH 到目标服务器 → pull 新镜像 → docker compose up
-#                            → 健康检查 → 失败自动回滚到上一个 tag
+#   Job 1 (build-and-push)：登录 GHCR → build 3 个镜像（server / admin / migration）→ push
+#     - migration 镜像 = server 镜像的 `--target migration` 阶段（含 prisma CLI + schema + migrations），
+#       仅用发布期执行 DB 迁移，不进运行时镜像
+#   Job 2 (deploy)         ：SSH 到目标服务器 → pull 新镜像
+#                            → 【前置】用 migration 镜像跑 `prisma migrate deploy`（迁移先行，失败即中止）
+#                            → docker compose up → 健康检查 → 失败自动回滚到上一个 tag
 #
 # 注意：
 #   - 当前是占位实现（appleboy/ssh-action），实际生产部署目标待定
-#   - 用 concurrency: 同一 tag 不允许多个 deploy 并行
-#   - 镜像标签策略：tag 名（如 v0.2.0）作为主 tag，shorthash 作为辅 tag
+#   - concurrency: 同一 ref 不允许多个 deploy 并行
+#   - 镜像标签策略：手动指定的 image_tag 为主 tag（禁止 latest，发布不可复现）
+#   - environment 白名单：仅 staging / production（Job 1 首步校验，非法值直接失败）
 # ============================================
 
 name: Deploy
@@ -27,10 +32,10 @@ on:
         required: false
         default: 'production'
       image_tag:
-        description: 'Docker image tag to deploy (default: ref_name or latest)'
-        required: false
+        description: 'Docker image tag to deploy（必填，禁止 latest）'
+        required: true
 
-# 同一 tag 不允许多个 deploy 并行
+# 同一 ref 不允许多个 deploy 并行
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
@@ -53,13 +58,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      # environment 白名单校验（P3）：仅允许 staging / production，非法值直接失败，
+      # 避免误把环境名写进 GitHub Environment 保护规则之外的值。
+      - name: Validate environment input
+        run: |
+          ENV="${{ inputs.environment }}"
+          if [ -n "$ENV" ] && [ "$ENV" != "staging" ] && [ "$ENV" != "production" ]; then
+            echo "::error::无效的 environment '${ENV}'，仅允许 staging / production"
+            exit 1
+          fi
+          echo "environment OK: ${ENV:-production(default)}"
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -68,7 +84,7 @@ jobs:
       # ---- server 镜像 ----
       - name: Extract metadata (server)
         id: meta-server
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-starter-server
           tags: |
@@ -82,7 +98,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Build + push (server)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           file: apps/server/Dockerfile
@@ -95,7 +111,7 @@ jobs:
       # ---- admin 镜像 ----
       - name: Extract metadata (admin)
         id: meta-admin
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-starter-admin
           tags: |
@@ -109,7 +125,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Build + push (admin)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           file: apps/admin/Dockerfile
@@ -119,11 +135,44 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # ---- migration 镜像（一次性，仅发布期使用） ----
+      # 与 server 同源同版本（tags 与 server 一致，但推送到独立的 monorepo-starter-migration 仓库名，
+      # 绝不能复用 meta-server 的 images 名——否则会把 migration 镜像覆盖到 server 镜像 tag 上，
+      # 导致运行时 server 容器实际拉取到的是 prisma CLI 镜像，整条发布链路损坏）。
+      # 用途：在 compose/k8s 发布时执行 `prisma migrate deploy`（见 deploy 的迁移步骤），
+      # 不在运行时镜像内置 prisma CLI，保持 server 运行镜像精简。
+      - name: Extract metadata (migration)
+        id: meta-migration
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/monorepo-starter-migration
+          tags: |
+            type=ref,event=tag
+            type=ref,event=branch
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=monorepo-starter-migration
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build + push (migration)
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          target: migration
+          push: true
+          tags: ${{ steps.meta-migration.outputs.tags }}
+          labels: ${{ steps.meta-migration.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   # ============================================
   # Job 2: deploy 到目标环境（占位实现）
   # ============================================
   deploy:
-    name: Deploy to ${{ inputs.environment || 'tag-target' }}
+    name: Deploy to ${{ inputs.environment || 'production' }}
     needs: build-and-push
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -131,29 +180,35 @@ jobs:
       name: ${{ inputs.environment || 'production' }}
       url: ${{ secrets.DEPLOY_URL }}
     steps:
-      # 确定要部署的镜像 tag 优先级：
-      #   1. 手动输入的 image_tag（dispatch 时指定）
-      #   2. tag 推送时 GitHub 自动产生的 ref_name（如 v0.2.0）
-      #   3. 兜底 latest
+      # 确定要部署的镜像 tag（P3：禁止 latest 兜底，发布必须可复现）：
+      #   1. 手动输入的 image_tag（dispatch 时指定）——必须提供
+      #   2. （保留分支兜底逻辑：deploy 只由 workflow_dispatch 触发，ref_type 恒为 branch，
+      #      该分支实际不会命中；留作未来支持 tag 触发时的扩展）
+      #   未提供 image_tag 或值为 latest → 直接失败，不部署
       - name: Determine image tag
         id: tag
         run: |
-          if [ -n "${{ inputs.image_tag }}" ]; then
-            echo "value=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
-          elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref_type }}" == "tag" ]]; then
+          TAG="${{ inputs.image_tag }}"
+          if [ -n "$TAG" ] && [ "$TAG" != "latest" ]; then
+            echo "value=$TAG" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref_type }}" == "tag" ]] && \
+               [ "${{ github.ref_name }}" != "latest" ]; then
             echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
-            echo "value=latest" >> $GITHUB_OUTPUT
+            echo "::error::image_tag 必填（禁止 latest）：请指定要部署的真实镜像版本，如 v1.2.3"
+            exit 1
           fi
 
       # 占位 SSH 部署：
-      # 1) 拉取新镜像
-      # 2) 备份当前 tag（用于回滚）
-      # 3) 启动新容器
-      # 4) 健康检查（失败则自动回滚到上一个 tag）
-      # 5) 清理 dangling 镜像
+      # 1) 拉取新镜像（server / admin / migration）
+      # 2) 【前置】用 migration 镜像对 DB 执行 `prisma migrate deploy`（迁移先行）
+      #    —— 任一迁移失败即中止，不启动新副本（避免新代码打旧库）
+      # 3) 备份当前 tag（用于回滚）
+      # 4) 启动新容器
+      # 5) 健康检查（失败则自动回滚到上一个 tag）
+      # 6) 清理 dangling 镜像
       - name: Deploy via SSH (placeholder)
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -162,19 +217,39 @@ jobs:
             set -e
             cd /opt/monorepo-starter
 
-            # 1) 拉取新镜像
+            # 0) 载入生产环境变量（从 .env.production 读取 POSTGRES_* / COMPOSE_PROJECT_NAME）
+            set -a
+            . ./.env.production
+            set +a
+
+            PROJECT="${COMPOSE_PROJECT_NAME:-monorepo-starter-prod}"
+
             export IMAGE_TAG=${{ steps.tag.outputs.value }}
             echo "Deploying IMAGE_TAG=${IMAGE_TAG}"
 
-            # 2) 备份上一个 tag（用于回滚）
+            # 1) 拉取新镜像（含 migration 镜像）
+            docker compose -f docker-compose.prod.yml --env-file .env.production pull
+            docker pull "ghcr.io/${{ env.OWNER }}/monorepo-starter-migration:${IMAGE_TAG}"
+
+            # 2) 【前置】数据库迁移：迁移先行，失败即中止发布（set -e 生效，不会执行 up）
+            # 主机用 compose 网络内的服务名 `postgres`（比容器名稳定，容器名默认值不带 prod 后缀）；
+            # 网络名 = compose project name + `_default`（docker compose name 字段决定）
+            DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-monorepo_starter}?schema=public"
+            echo "Running prisma migrate deploy (migration first)..."
+            docker run --rm --network "${PROJECT}_default" \
+              -e DATABASE_URL="${DATABASE_URL}" \
+              "ghcr.io/${{ env.OWNER }}/monorepo-starter-migration:${IMAGE_TAG}" \
+              migrate deploy
+            echo "DB migration OK."
+
+            # 3) 备份上一个 tag（用于回滚）
             PREVIOUS_TAG=$(docker compose -f docker-compose.prod.yml ps --format json 2>/dev/null | jq -r '.[].Image' | head -1 | awk -F: '{print $2}' || echo "none")
             echo "Previous tag: ${PREVIOUS_TAG}"
 
-            # 3) 拉新 + 启新
-            docker compose -f docker-compose.prod.yml --env-file .env.production pull
+            # 4) 启新容器
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --remove-orphans
 
-            # 4) 健康检查（server/admin 都是 healthy）
+            # 5) 健康检查（server/admin 都是 healthy；迁移失败已被 #2 拦截，此处只管容器）
             sleep 10
             HEALTHY_COUNT=$(docker compose -f docker-compose.prod.yml ps | grep -c "healthy" || true)
             if [ "$HEALTHY_COUNT" -lt 2 ]; then
@@ -186,7 +261,7 @@ jobs:
               exit 1
             fi
 
-            # 5) 清理 dangling 镜像（保留 7 天内）
+            # 6) 清理 dangling 镜像（保留 7 天内）
             docker image prune -f --filter "until=168h"
 
             echo "✅ Deploy complete: IMAGE_TAG=${IMAGE_TAG}"

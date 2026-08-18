@@ -10,7 +10,6 @@ import {
   Avatar,
   Button,
   Dropdown,
-  Input,
   Layout,
   Space,
   Typography,
@@ -89,7 +88,6 @@ export function LayoutHeader(): React.JSX.Element {
       </div>
 
       <Space size={4}>
-        <Input.Search placeholder="搜索" allowClear style={{ width: 220 }} />
         <ThemeToggle />
 
         <Button

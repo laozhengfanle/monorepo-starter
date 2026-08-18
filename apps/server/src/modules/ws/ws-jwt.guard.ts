@@ -62,6 +62,15 @@ export class WsJwtGuard {
     switchToWs: () => { getClient: () => Socket };
   }): Promise<boolean> {
     const client = context.switchToWs().getClient();
+    return this.validateClient(client);
+  }
+
+  /**
+   * 对单个 socket 重新校验（消息级 guard 与 gateway 周期复核共用）：
+   * token 撤销/账户禁用/tokenVersion 变更后，已连接 socket 通过此方法失效。
+   * 失败抛 WsException，调用方自行决定断开或拒绝消息。
+   */
+  async validateClient(client: Socket): Promise<boolean> {
     const token = extractWsToken(client);
     if (!token) {
       throw new WsException('未认证或 Token 缺失');

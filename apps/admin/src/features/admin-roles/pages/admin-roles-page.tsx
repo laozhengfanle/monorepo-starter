@@ -3,7 +3,6 @@ import {
   App,
   Button,
   Card,
-  Checkbox,
   Dropdown,
   Form,
   Input,
@@ -17,6 +16,7 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { SearchBar, type SearchValues } from '@starter/ui';
 import {
   DeliveredProcedureOutlined,
   FileExcelOutlined,
@@ -24,7 +24,6 @@ import {
   FilterOutlined,
   PlusOutlined,
   RedoOutlined,
-  SearchOutlined,
 } from '@ant-design/icons';
 import { CreateRoleSchema, UpdateRoleSchema } from '@starter/api-client';
 import type {
@@ -40,7 +39,7 @@ import {
   useUpdateRoleMutation,
   useDeleteRoleMutation,
 } from '../../../generated/graphql';
-import { downloadBlob, toCSV, toExcel } from '../../../shared/utils/export.js';
+import { useColumnControl } from '../../../shared/hooks/use-column-control.js';
 import {
   applyZodErrors,
   showMutationError,
@@ -75,19 +74,7 @@ export function AdminRolesPage(): React.JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
-    () =>
-      new Set([
-        'name',
-        'code',
-        'description',
-        'permissionCodes',
-        'enabled',
-        'actions',
-      ]),
-  );
   const [form] = Form.useForm();
-  const [searchForm] = Form.useForm();
 
   const canCreate = usePermission('role:create');
   const canUpdate = usePermission('role:update');
@@ -256,122 +243,48 @@ export function AdminRolesPage(): React.JSX.Element {
     },
   ];
 
-  // 列控制：切换显隐（操作列固定显示，至少保留一列）
-  const toggleColumn = (key: string): void => {
-    setVisibleKeys((prev) => {
-      if (prev.has(key)) {
-        if (prev.size <= 1) {
-          void message.warning('至少保留一列');
-          return prev;
+  // 列控制 + 导出（共享 hook，行为与既有实现一致：操作列固定、至少保留一列、导可见列）
+  const { columnMenuItems, columns, handleExport } =
+    useColumnControl<AdminRole>({
+      fullColumns,
+      initialVisibleKeys: [
+        'name',
+        'code',
+        'description',
+        'permissionCodes',
+        'enabled',
+        'actions',
+      ],
+      exportFileNamePrefix: '角色管理',
+      exportData: filteredRoles,
+      exportCell: (key, role) => {
+        if (key === 'enabled') return role.enabled ? '正常' : '禁用';
+        if (key === 'permissionCodes') {
+          return role.code === SUPER_ADMIN_CODE
+            ? '全部权限'
+            : role.permissionCodes.join(' / ');
         }
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      }
-      const next = new Set(prev);
-      next.add(key);
-      return next;
+        return undefined;
+      },
     });
-  };
-
-  const columnMenuItems = fullColumns.map((c) => ({
-    key: c.key as string,
-    label: (
-      <Checkbox
-        checked={visibleKeys.has(c.key as string)}
-        disabled={c.key === 'actions'}
-        onClick={(e) => e.stopPropagation()}
-        onChange={() => toggleColumn(c.key as string)}
-      >
-        {String(c.title)}
-      </Checkbox>
-    ),
-  }));
-
-  // 列过滤开销极小，直接计算（避免 fullColumns 引用变化导致的 useMemo 抖动）
-  const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
-
-  // 导出 CSV：导出过滤后的角色（含可见列）
-  const handleExport = (format: 'excel' | 'csv'): void => {
-    const exportCols = fullColumns.filter(
-      (c) => visibleKeys.has(c.key as string) && c.key !== 'actions',
-    );
-    const header = exportCols.map((c) => String(c.title));
-    const rows: (string | number | boolean | null | undefined)[][] = [
-      header,
-      ...filteredRoles.map((r) =>
-        exportCols.map((c) => {
-          if (c.key === 'enabled') return r.enabled ? '正常' : '禁用';
-          if (c.key === 'permissionCodes') {
-            return r.code === SUPER_ADMIN_CODE
-              ? '全部权限'
-              : r.permissionCodes.join(' / ');
-          }
-          const dataIdx =
-            (c as { dataIndex?: string }).dataIndex ?? (c.key as string);
-          const v = (r as unknown as Record<string, unknown>)[dataIdx];
-          return (v as string | number | boolean | null | undefined) ?? '';
-        }),
-      ),
-    ];
-    const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
-    if (format === 'excel') {
-      downloadBlob(
-        toExcel(rows),
-        `角色管理_${ts}.xls`,
-        'application/vnd.ms-excel;charset=utf-8;',
-      );
-    } else {
-      downloadBlob(
-        toCSV(rows),
-        `角色管理_${ts}.csv`,
-        'text/csv;charset=utf-8;',
-      );
-    }
-    void message.success(`已导出 ${filteredRoles.length} 条`);
-  };
 
   return (
     <div>
-      {/* 搜索卡 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Form
-          form={searchForm}
-          layout="inline"
-          onFinish={(values: { keyword?: string }) =>
-            setKeyword(values.keyword ?? '')
-          }
-        >
-          <Form.Item name="keyword" label="关键词" style={{ marginBottom: 0 }}>
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="按角色名 / 编码搜索"
-              autoComplete="off"
-              style={{ width: 280 }}
-            />
-          </Form.Item>
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Space>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<SearchOutlined />}
-              >
-                查询
-              </Button>
-              <Button
-                onClick={() => {
-                  searchForm.resetFields();
-                  setKeyword('');
-                }}
-              >
-                重置
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
+      {/* 搜索卡：独立 Card 位于列表正上方（列表页规范） */}
+      <SearchBar
+        fields={[
+          {
+            name: 'keyword',
+            label: '关键词',
+            type: 'input',
+            placeholder: '按角色名 / 编码搜索',
+          },
+        ]}
+        onSearch={(values: SearchValues) =>
+          setKeyword((values.keyword as string | undefined) ?? '')
+        }
+        onReset={() => setKeyword('')}
+      />
 
       {/* 表格卡：标题 + 工具条（新建 / 列控制 / 导出 / 刷新） */}
       <Card

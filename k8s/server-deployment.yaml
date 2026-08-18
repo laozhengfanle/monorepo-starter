@@ -5,7 +5,8 @@
 # - 环境变量通过 envFrom 引用 ConfigMap + Secret
 # - 镜像 tag 占位：<registry>/monorepo-starter-server:<tag>
 # - 上传持久化：PVC server-uploads 挂载到 /app/uploads（readOnlyRootFilesystem 下挂载点仍可写；
-#   生产大流量建议替换为云盘/对象存储，上传走 S3 等）
+#   生产大流量建议替换为云盘/对象存储，上传走 S3 等；
+#   多副本需 ReadWriteMany 存储类，否则会因 PVC 已被绑定而 Pending）
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -34,6 +35,17 @@ spec:
         runAsGroup: 1001
         fsGroup: 1001 # 让 PVC 卷组可写（nestjs uid 1001 属于该组）
         readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false # 安全基线（P3）：禁止提权（setuid/降权 exec 等）
+      # 上传文件 PVC：单副本 ReadWriteOnce 可用；多副本必须用 ReadWriteMany 存储类
+      # （见 k8s/server-uploads-pvc.yaml 注释）；StorageClassName 需在部署集群中存在
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: server-uploads
+        # /tmp 临时目录（NestJS multer 临时缓冲等），容器内可写
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
       containers:
         - name: server
           image: <registry>/monorepo-starter-server:<tag>
@@ -50,6 +62,9 @@ spec:
             # 上传文件目录（Dockerfile 已 mkdir /app/uploads 并 chown nestjs:nodejs）
             - name: uploads
               mountPath: /app/uploads
+            # 临时目录（NestJS 偶尔会写 /tmp，readOnlyRootFilesystem 下必须挂 tmpfs/emptyDir）
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               memory: 256Mi
