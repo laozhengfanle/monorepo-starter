@@ -25,6 +25,7 @@ import {
   type IssuedTokens,
 } from './token-issuance.service.js';
 import { TurnstileService } from '../turnstile/turnstile.service.js';
+import { PasswordPolicyService } from '../system-config/password-policy.service.js';
 import { buildMenuTree } from '../admin-menu/menu-tree.util.js';
 
 const INVALID_CREDENTIALS = 'INVALID_CREDENTIALS';
@@ -59,6 +60,7 @@ export class AuthService {
     private readonly loginLock: LoginLockService,
     private readonly audit: AuditService,
     private readonly turnstile: TurnstileService,
+    private readonly passwordPolicy: PasswordPolicyService,
     @InjectMetric('auth_login_success_total')
     private readonly loginSuccessCounter: Counter<string>,
   ) {}
@@ -290,6 +292,8 @@ export class AuthService {
         message: '当前密码不正确',
       });
     }
+    // 密码策略（后台设置 settings.passwordMinLength / passwordComplexity）
+    await this.passwordPolicy.assertValid(data.newPassword);
     const newHash = await bcrypt.hash(data.newPassword, 10);
     await this.prisma.client.accountIdentity.update({
       where: { id: identity.id },

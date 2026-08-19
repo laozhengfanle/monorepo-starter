@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -149,6 +149,17 @@ function useSystemInfo(): {
 export function DashboardPage(): React.JSX.Element {
   const { token } = theme.useToken();
   const navigate = useNavigate();
+  const location = useLocation();
+  // 图表动画重放：页面被缓存复用时（tab 切换回来）组件不重新挂载，
+  // echarts 动画不会自动重播——检测「进入仪表盘」时递增 replayKey 强制重放。
+  const [chartReplay, setChartReplay] = useState(0);
+  const prevPathRef = useRef(location.pathname);
+  useEffect(() => {
+    if (location.pathname === '/' && prevPathRef.current !== '/') {
+      setChartReplay((n) => n + 1);
+    }
+    prevPathRef.current = location.pathname;
+  }, [location.pathname]);
   const { user } = useAuth();
   const canAudit = usePermission('config:audit:view');
   const quickEntries = useQuickEntries();
@@ -214,8 +225,13 @@ export function DashboardPage(): React.JSX.Element {
     const items = trendData?.dashboardTrend ?? [];
     const labels = items.map((d) => d.label);
     return {
-      animationDuration: 400,
-      tooltip: { trigger: 'axis' },
+      // 入场动画：3 条线按 200ms 错开依次绘制（高危 → 中危 → 低危），cubicOut 缓出
+      // 显式 animation: true —— echarts 6 默认 'auto' 实测不播动画（截图逐帧无变化）
+      animation: true,
+      animationDuration: 1200,
+      animationEasing: 'cubicOut',
+      animationDelay: 0,
+      tooltip: { trigger: 'axis', confine: true },
       legend: { bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8 },
       grid: { top: 16, right: 16, bottom: 40, left: 36 },
       xAxis: {
@@ -239,6 +255,9 @@ export function DashboardPage(): React.JSX.Element {
           smooth: 0.4,
           symbol: 'circle',
           symbolSize: 6,
+          // 入场：本系列延迟 0ms 先画；hover 时聚焦本系列、其余淡化
+          animationDelay: 0,
+          emphasis: { focus: 'series' },
           itemStyle: {
             color: '#fff',
             borderColor: RISK_COLORS.high,
@@ -266,6 +285,8 @@ export function DashboardPage(): React.JSX.Element {
           smooth: 0.4,
           symbol: 'circle',
           symbolSize: 6,
+          animationDelay: 400,
+          emphasis: { focus: 'series' },
           itemStyle: {
             color: '#fff',
             borderColor: RISK_COLORS.mid,
@@ -293,6 +314,8 @@ export function DashboardPage(): React.JSX.Element {
           smooth: 0.4,
           symbol: 'circle',
           symbolSize: 6,
+          animationDelay: 800,
+          emphasis: { focus: 'series' },
           itemStyle: {
             color: '#fff',
             borderColor: RISK_COLORS.low,
@@ -322,6 +345,12 @@ export function DashboardPage(): React.JSX.Element {
   const distItems = distData?.dashboardDistribution ?? [];
   const distOption = useMemo<EChartsCoreOption>(
     () => ({
+      // 入场动画：扇形 scale 缩放入场（cubicOut），延迟 120ms 与趋势图错开
+      animation: true,
+      animationType: 'scale',
+      animationDuration: 1200,
+      animationEasing: 'cubicOut',
+      animationDelay: 250,
       tooltip: {
         trigger: 'item',
         formatter: '{b}<br/>占比: {d}%',
@@ -335,6 +364,12 @@ export function DashboardPage(): React.JSX.Element {
           center: ['50%', '42%'],
           avoidLabelOverlap: true,
           itemStyle: { borderColor: '#fff', borderWidth: 2 },
+          // 微动效：hover 扇区放大并带柔阴影
+          emphasis: {
+            scale: true,
+            scaleSize: 8,
+            itemStyle: { shadowBlur: 14, shadowColor: 'rgba(0,0,0,0.18)' },
+          },
           label: {
             show: true,
             position: 'outside',
@@ -578,7 +613,11 @@ export function DashboardPage(): React.JSX.Element {
                   }}
                 />
               ) : (
-                <EChart option={trendOption} height={300} />
+                <EChart
+                  option={trendOption}
+                  height={300}
+                  replayKey={chartReplay}
+                />
               )}
             </Card>
           </Col>
@@ -596,7 +635,11 @@ export function DashboardPage(): React.JSX.Element {
                   }}
                 />
               ) : (
-                <EChart option={distOption} height={300} />
+                <EChart
+                  option={distOption}
+                  height={300}
+                  replayKey={chartReplay}
+                />
               )}
             </Card>
           </Col>

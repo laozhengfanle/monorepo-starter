@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   Form,
+  Image,
   Input,
   Popconfirm,
   Select,
@@ -23,7 +24,8 @@ import {
   useUploadFilesQuery,
 } from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
-import { downloadBlob, toCSV } from '../../../shared/utils/export.js';
+import { TableToolbar } from '../../../shared/components/table-toolbar.js';
+import { useColumnControl } from '../../../shared/hooks/use-column-control.js';
 
 const { Text } = Typography;
 
@@ -65,6 +67,14 @@ function formatSize(bytes: number): string {
 /** 是否为图片（用于预览） */
 function isImage(mime: string): boolean {
   return mime.startsWith('image/');
+}
+
+/**
+ * 拼完整可访问地址：本地存储的 url 是相对路径（/uploads/xxx），
+ * 云存储驱动可能直接返回完整 URL——已带协议则原样返回，否则拼 window.location.origin。
+ */
+function toFullUrl(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `${window.location.origin}${url}`;
 }
 
 /**
@@ -168,24 +178,41 @@ export function StorageDriverPage(): React.JSX.Element {
     }
   };
 
-  /** 导出文件列表 CSV */
-  const handleExport = (): void => {
-    const header = ['文件名', '类型', '大小', '上传时间', 'URL'];
-    const rows = files.map((f) => [
-      f.originalName,
-      f.mimeType,
-      formatSize(f.size),
-      f.createdAt,
-      f.url,
-    ]);
-    downloadBlob(
-      toCSV([header, ...rows]),
-      `文件列表_${new Date().toISOString().slice(0, 10)}.csv`,
-      'text/csv;charset=utf-8;',
-    );
+  // 图片预览（受控）：点「查看」/缩略图时设置，antd Image 预览浮层打开，关闭后清空
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  /** 复制文件完整地址到剪贴板（navigator.clipboard 失败回退 execCommand） */
+  const handleCopy = async (record: UploadFile): Promise<void> => {
+    const fullUrl = toFullUrl(record.url);
+    const fallback = (): boolean => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = fullUrl;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch {
+        return false;
+      }
+    };
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      void message.success('地址已复制');
+    } catch {
+      if (fallback()) {
+        void message.success('地址已复制');
+      } else {
+        void message.error('复制失败，请手动复制');
+      }
+    }
   };
 
-  const columns: ColumnsType<UploadFile> = [
+  /** 导出文件列表 CSV（改用 useColumnControl 的 handleExport：导可见列 + 列控制三要素统一） */
+  const fullColumns: ColumnsType<UploadFile> = [
     {
       title: '文件名',
       dataIndex: 'originalName',
@@ -194,15 +221,14 @@ export function StorageDriverPage(): React.JSX.Element {
       render: (v: string, record) =>
         isImage(record.mimeType) ? (
           <Space size={8}>
-            <img
+            {/* 图片：点击缩略图触发 antd Image 预览（不走新窗口） */}
+            <Image
+              width={32}
+              height={32}
               src={record.url}
               alt={v}
-              style={{
-                width: 32,
-                height: 32,
-                objectFit: 'cover',
-                borderRadius: 4,
-              }}
+              preview={{ src: toFullUrl(record.url) }}
+              style={{ objectFit: 'cover', borderRadius: 4 }}
             />
             <span>{v}</span>
           </Space>
@@ -234,11 +260,30 @@ export function StorageDriverPage(): React.JSX.Element {
     {
       title: '操作',
       key: 'actions',
-      width: 120,
+      width: 180,
       render: (_v, record) => (
         <Space size="small">
-          <Button type="link" size="small" href={record.url} target="_blank">
-            查看
+          {isImage(record.mimeType) ? (
+            // 图片：点「查看」打开 antd Image 预览（不弹新窗口）
+            <Button
+              type="link"
+              size="small"
+              onClick={() => setPreviewUrl(toFullUrl(record.url))}
+            >
+              查看
+            </Button>
+          ) : (
+            // 非图片（pdf/word 等）：保持新窗口打开
+            <Button type="link" size="small" href={record.url} target="_blank">
+              查看
+            </Button>
+          )}
+          <Button
+            type="link"
+            size="small"
+            onClick={() => void handleCopy(record)}
+          >
+            复制
           </Button>
           {canDeleteFile && (
             <Popconfirm
@@ -255,6 +300,22 @@ export function StorageDriverPage(): React.JSX.Element {
       ),
     },
   ];
+
+  // 列控制 + 导出（三要素：列控制 / 导出 / 刷新）
+  const { columnMenuItems, columns, handleExport } =
+    useColumnControl<UploadFile>({
+      fullColumns,
+      initialVisibleKeys: [
+        'originalName',
+        'mimeType',
+        'size',
+        'createdAt',
+        'actions',
+      ],
+      exportFileNamePrefix: '文件列表',
+      exportData: files,
+      exportCell: (key, f) => (key === 'size' ? formatSize(f.size) : undefined),
+    });
 
   return (
     <div>
@@ -348,10 +409,11 @@ export function StorageDriverPage(): React.JSX.Element {
         title="已上传文件"
         style={{ marginTop: 16 }}
         extra={
-          <Space size="small">
-            <Button onClick={handleExport}>导出</Button>
-            <Button onClick={() => void loadFiles()}>刷新</Button>
-          </Space>
+          <TableToolbar
+            columnMenuItems={columnMenuItems}
+            onExport={handleExport}
+            onRefresh={() => void loadFiles()}
+          />
         }
       >
         <Table<UploadFile>
@@ -373,6 +435,21 @@ export function StorageDriverPage(): React.JSX.Element {
           }}
         />
       </Card>
+
+      {/* 图片预览浮层（受控）：隐藏的 img 仅作锚点，预览在 portal 中打开 */}
+      {previewUrl && (
+        <Image
+          src={previewUrl}
+          alt="文件预览"
+          style={{ display: 'none' }}
+          preview={{
+            visible: true,
+            onVisibleChange: (visible) => {
+              if (!visible) setPreviewUrl(null);
+            },
+          }}
+        />
+      )}
     </div>
   );
 }

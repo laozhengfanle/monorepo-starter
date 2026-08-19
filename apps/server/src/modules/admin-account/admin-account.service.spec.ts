@@ -5,6 +5,7 @@ import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { TokenBlacklistService } from '../auth/token-blacklist.service.js';
 import { AuditService, AUDIT_ACTIONS } from '../auth/audit.service.js';
 import { StorageService } from '../../common/storage/storage.service.js';
+import { PasswordPolicyService } from '../system-config/password-policy.service.js';
 
 /**
  * admin-account.service 测试（P1-2 超管保护重点覆盖）：
@@ -200,6 +201,15 @@ describe('AdminAccountService', () => {
         { provide: TokenBlacklistService, useValue: tokenBlacklist },
         { provide: AuditService, useValue: audit },
         { provide: StorageService, useValue: storage },
+        {
+          provide: PasswordPolicyService,
+          useValue: {
+            assertValid: vi.fn<any>().mockResolvedValue(undefined),
+            getPolicy: vi
+              .fn<any>()
+              .mockResolvedValue({ minLength: 8, complexity: 'medium' }),
+          },
+        },
       ],
     }).compile();
     service = moduleRef.get(AdminAccountService);

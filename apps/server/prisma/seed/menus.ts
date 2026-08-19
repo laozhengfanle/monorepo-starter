@@ -235,6 +235,15 @@ export async function seedMenus(
           type: 'button',
           sort: 12,
         },
+        {
+          // 全局导出权限：所有列表页表格「导出」按钮的统一权限点
+          // （TableToolbar 组件内置检查 global:data:export，无权限则隐藏导出按钮）
+          // 命名遵循权限控制规范 {领域}:{实体}:{动作}（global 领域 / data 实体 / export 动作）
+          code: 'global:data:export',
+          name: '导出数据',
+          type: 'button',
+          sort: 13,
+        },
       ],
     },
   ];

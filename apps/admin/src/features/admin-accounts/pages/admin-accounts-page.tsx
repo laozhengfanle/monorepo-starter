@@ -3,7 +3,6 @@ import {
   App,
   Button,
   Card,
-  Dropdown,
   Form,
   Input,
   Modal,
@@ -17,15 +16,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SearchBar, type SearchValues } from '@starter/ui';
-import {
-  DeliveredProcedureOutlined,
-  FileExcelOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  PlusOutlined,
-  RedoOutlined,
-  SafetyCertificateOutlined,
-} from '@ant-design/icons';
+import { PlusOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import {
   CreateAdminAccountSchema,
   UpdateAdminAccountSchema,
@@ -36,6 +27,8 @@ import { useSystemConfig } from '../../../app/providers/system-config-provider.j
 import { AccountPermissionModal } from '../account-permission-modal.js';
 import { hardRemoveAccountApi, restoreAccountApi } from '../api.js';
 import { useColumnControl } from '../../../shared/hooks/use-column-control.js';
+import { TableToolbar } from '../../../shared/components/table-toolbar.js';
+import { passwordPolicyRule } from '../../../shared/utils/password-policy.js';
 import {
   applyZodErrors,
   showMutationError,
@@ -150,20 +143,36 @@ export function AdminAccountsPage(): React.JSX.Element {
   };
 
   const handleSubmit = async (): Promise<void> => {
+    // 密码策略为后台设置动态值：先用表单动态规则校验（passwordPolicyRule），
+    // zod 静态契约 min(8) 可能严于策略（如设置为 6），故 zod 校验跳过 password 字段
+    try {
+      await form.validateFields();
+    } catch {
+      return;
+    }
     const values = form.getFieldsValue();
     const schema =
       editingId === null ? CreateAdminAccountSchema : UpdateAdminAccountSchema;
     const parsed = schema.safeParse(values);
     if (!parsed.success) {
-      applyZodErrors(form, parsed);
-      return;
+      const nonPasswordIssues = parsed.error.issues.filter(
+        (issue) => issue.path[0] !== 'password',
+      );
+      if (nonPasswordIssues.length > 0) {
+        applyZodErrors(form, {
+          success: false,
+          error: { issues: nonPasswordIssues },
+        });
+        return;
+      }
     }
+    const input = (parsed.success
+      ? parsed.data
+      : values) as unknown as CreateAdminAccountInput;
     try {
       if (editingId === null) {
         await createAccount({
-          variables: {
-            input: parsed.data as unknown as CreateAdminAccountInput,
-          },
+          variables: { input },
         });
         void message.success('创建成功');
       } else {
@@ -271,7 +280,8 @@ export function AdminAccountsPage(): React.JSX.Element {
             )}
             {!isDeleted && canUpdate && (
               <Button
-                type="link"
+                color="purple"
+                variant="link"
                 size="small"
                 icon={<SafetyCertificateOutlined />}
                 onClick={() =>
@@ -425,49 +435,22 @@ export function AdminAccountsPage(): React.JSX.Element {
       <Card
         title="账户列表"
         extra={
-          <Space size="small">
-            {canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={openCreate}
-              >
-                新建账户
-              </Button>
-            )}
-            <Dropdown
-              trigger={['click']}
-              arrow
-              menu={{
-                items: columnMenuItems,
-                onClick: (info) => info.domEvent.stopPropagation(),
-              }}
-            >
-              <Button icon={<FilterOutlined />} aria-label="列控制" />
-            </Dropdown>
-            <Dropdown
-              trigger={['click']}
-              arrow
-              menu={{
-                items: [
-                  {
-                    key: 'excel',
-                    label: '导出 Excel',
-                    icon: <FileExcelOutlined />,
-                  },
-                  { key: 'csv', label: '导出 CSV', icon: <FileTextOutlined /> },
-                ],
-                onClick: ({ key }) => handleExport(key as 'excel' | 'csv'),
-              }}
-            >
-              <Button icon={<DeliveredProcedureOutlined />} aria-label="导出" />
-            </Dropdown>
-            <Button
-              icon={<RedoOutlined />}
-              onClick={() => void refreshList()}
-              aria-label="刷新"
-            />
-          </Space>
+          <TableToolbar
+            columnMenuItems={columnMenuItems}
+            onExport={handleExport}
+            onRefresh={() => void refreshList()}
+            extra={
+              canCreate && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={openCreate}
+                >
+                  新建账户
+                </Button>
+              )
+            }
+          />
         }
       >
         <Table<AdminAccount>
@@ -510,10 +493,7 @@ export function AdminAccountsPage(): React.JSX.Element {
                 name="password"
                 rules={[
                   { required: true, message: '请输入密码' },
-                  {
-                    min: sysSettings.passwordMinLength,
-                    message: `密码至少 ${sysSettings.passwordMinLength} 位`,
-                  },
+                  passwordPolicyRule(sysSettings),
                 ]}
               >
                 <Input.Password

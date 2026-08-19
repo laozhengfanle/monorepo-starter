@@ -18,6 +18,7 @@ import bcrypt from 'bcrypt';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { isUniqueConstraintError } from '../../common/prisma/prisma-error.util.js';
 import { StorageService } from '../../common/storage/storage.service.js';
+import { PasswordPolicyService } from '../system-config/password-policy.service.js';
 import { resolveAccountPermissions } from '../auth/account-permission.util.js';
 import { AUDIT_ACTIONS, AuditService } from '../auth/audit.service.js';
 import { TokenBlacklistService } from '../auth/token-blacklist.service.js';
@@ -65,6 +66,7 @@ export class AdminAccountService {
     private readonly tokenBlacklist: TokenBlacklistService,
     private readonly audit: AuditService,
     private readonly storage: StorageService,
+    private readonly passwordPolicy: PasswordPolicyService,
   ) {}
 
   private readonly accountInclude = {
@@ -147,6 +149,8 @@ export class AdminAccountService {
     if (!operator.isSuperAdmin) {
       this.assertAssignableRoles(data.roleCodes, operator.roleCodes);
     }
+    // 密码策略（后台设置 settings.passwordMinLength / passwordComplexity）
+    await this.passwordPolicy.assertValid(data.password);
     const passwordHash = await bcrypt.hash(data.password, 10);
     const accountId = newId();
     const roleRows = await this.prisma.client.adminRole.findMany({

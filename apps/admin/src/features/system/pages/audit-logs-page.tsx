@@ -12,6 +12,8 @@ import {
 } from '../../../generated/graphql';
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { downloadBlob, toCSV } from '../../../shared/utils/export.js';
+import { TableToolbar } from '../../../shared/components/table-toolbar.js';
+import { useColumnControl } from '../../../shared/hooks/use-column-control.js';
 import { safeParseJson } from '../../../shared/utils/json.js';
 
 /** 字典类型编码（审计操作 / 审计资源类型） */
@@ -211,7 +213,7 @@ export function AuditLogsPage(): React.JSX.Element {
     }
   };
 
-  const columns: ColumnsType<AuditLogItem> = [
+  const fullColumns: ColumnsType<AuditLogItem> = [
     {
       title: '操作者',
       dataIndex: 'accountUsername',
@@ -284,6 +286,20 @@ export function AuditLogsPage(): React.JSX.Element {
     },
   ];
 
+  // 列控制（三要素：列控制 / 导出 / 刷新；导出仍走服务端全量 exportAuditLogs）
+  const { columnMenuItems, columns } = useColumnControl<AuditLogItem>({
+    fullColumns,
+    initialVisibleKeys: [
+      'accountUsername',
+      'createdAt',
+      'action',
+      'resourceType',
+      'resourceId',
+      'ip',
+      'actions',
+    ],
+  });
+
   return (
     <div>
       {/* 搜索卡：独立 Card 位于列表正上方（列表页规范） */}
@@ -312,23 +328,25 @@ export function AuditLogsPage(): React.JSX.Element {
       <Card
         title="审计日志"
         extra={
-          <Space size="small">
-            {canClear && (
-              <Popconfirm
-                title="确认清空所有审计日志？"
-                description="将永久删除所有审计日志，此操作不可恢复"
-                onConfirm={() => void handleClear()}
-              >
-                <Button color="red" variant="outlined" loading={clearing}>
-                  清空日志
-                </Button>
-              </Popconfirm>
-            )}
-            {canExport && (
-              <Button onClick={() => void handleExport()}>导出</Button>
-            )}
-            <Button onClick={() => void load()}>刷新</Button>
-          </Space>
+          <TableToolbar
+            columnMenuItems={columnMenuItems}
+            exportFormats={['csv']}
+            onExport={canExport ? () => void handleExport() : undefined}
+            onRefresh={() => void load()}
+            extra={
+              canClear && (
+                <Popconfirm
+                  title="确认清空所有审计日志？"
+                  description="将永久删除所有审计日志，此操作不可恢复"
+                  onConfirm={() => void handleClear()}
+                >
+                  <Button color="red" variant="outlined" loading={clearing}>
+                    清空日志
+                  </Button>
+                </Popconfirm>
+              )
+            }
+          />
         }
       >
         <Table<AuditLogItem>

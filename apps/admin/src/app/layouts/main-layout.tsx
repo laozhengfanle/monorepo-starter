@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import type { AdminMenuNode } from '@starter/api-client';
 import { useAuth } from '../auth/auth-context.js';
 import { useSettings } from '../providers/settings-provider.js';
+import { useSystemConfig } from '../providers/system-config-provider.js';
 import { LayoutHeader } from './layout-header.js';
 import { LayoutSidebar } from './layout-sidebar.js';
 import { LayoutFooter } from './layout-footer.js';
@@ -46,6 +47,7 @@ export function MainLayout({
   const { token } = theme.useToken();
   const location = useLocation();
   const { user } = useAuth();
+  const { settings } = useSystemConfig();
   const {
     showTabBar,
     showBreadcrumb,
@@ -131,10 +133,21 @@ export function MainLayout({
     </Layout>
   );
 
+  // 水印优先级：个人偏好（设置抽屉，localStorage）> 后台设置系统水印（全站默认）
+  // 变量替换与后台设置预览一致：{{username}} → 当前账户昵称、{{date}} → 当天日期
+  const rawWatermark = isWatermarkVisible
+    ? watermarkContent
+    : settings.watermarkContent;
+  const effectiveWatermark = rawWatermark
+    ? rawWatermark
+        .replace(/\{\{username\}\}/g, user?.nickname || user?.username || '')
+        .replace(/\{\{date\}\}/g, new Date().toISOString().slice(0, 10))
+    : '';
+
   return (
     <TabBarProvider>
-      {isWatermarkVisible && watermarkContent ? (
-        <Watermark content={watermarkContent}>{layout}</Watermark>
+      {effectiveWatermark ? (
+        <Watermark content={effectiveWatermark}>{layout}</Watermark>
       ) : (
         layout
       )}

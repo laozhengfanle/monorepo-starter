@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
+import { PasswordPolicyService } from './password-policy.service.js';
 import { PublicConfigResolver } from './public-config.resolver.js';
 import { SystemConfigResolver } from './system-config.resolver.js';
 import { SystemConfigService } from './system-config.service.js';
@@ -12,7 +13,12 @@ import { SystemConfigService } from './system-config.service.js';
 @Global()
 @Module({
   imports: [AuthModule],
-  providers: [SystemConfigService, SystemConfigResolver, PublicConfigResolver],
-  exports: [SystemConfigService],
+  providers: [
+    SystemConfigService,
+    PasswordPolicyService,
+    SystemConfigResolver,
+    PublicConfigResolver,
+  ],
+  exports: [SystemConfigService, PasswordPolicyService],
 })
 export class SystemConfigModule {}

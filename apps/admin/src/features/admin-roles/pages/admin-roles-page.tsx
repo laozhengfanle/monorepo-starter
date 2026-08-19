@@ -3,7 +3,6 @@ import {
   App,
   Button,
   Card,
-  Dropdown,
   Form,
   Input,
   Modal,
@@ -17,14 +16,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { SearchBar, type SearchValues } from '@starter/ui';
-import {
-  DeliveredProcedureOutlined,
-  FileExcelOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  PlusOutlined,
-  RedoOutlined,
-} from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import { CreateRoleSchema, UpdateRoleSchema } from '@starter/api-client';
 import type {
   AdminRole,
@@ -40,6 +32,7 @@ import {
   useDeleteRoleMutation,
 } from '../../../generated/graphql';
 import { useColumnControl } from '../../../shared/hooks/use-column-control.js';
+import { TableToolbar } from '../../../shared/components/table-toolbar.js';
 import {
   applyZodErrors,
   showMutationError,
@@ -290,49 +283,22 @@ export function AdminRolesPage(): React.JSX.Element {
       <Card
         title="角色列表"
         extra={
-          <Space size="small">
-            {canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={openCreate}
-              >
-                新建角色
-              </Button>
-            )}
-            <Dropdown
-              trigger={['click']}
-              arrow
-              menu={{
-                items: columnMenuItems,
-                onClick: (info) => info.domEvent.stopPropagation(),
-              }}
-            >
-              <Button icon={<FilterOutlined />} aria-label="列控制" />
-            </Dropdown>
-            <Dropdown
-              trigger={['click']}
-              arrow
-              menu={{
-                items: [
-                  {
-                    key: 'excel',
-                    label: '导出 Excel',
-                    icon: <FileExcelOutlined />,
-                  },
-                  { key: 'csv', label: '导出 CSV', icon: <FileTextOutlined /> },
-                ],
-                onClick: ({ key }) => handleExport(key as 'excel' | 'csv'),
-              }}
-            >
-              <Button icon={<DeliveredProcedureOutlined />} aria-label="导出" />
-            </Dropdown>
-            <Button
-              icon={<RedoOutlined />}
-              onClick={() => void refreshList()}
-              aria-label="刷新"
-            />
-          </Space>
+          <TableToolbar
+            columnMenuItems={columnMenuItems}
+            onExport={handleExport}
+            onRefresh={() => void refreshList()}
+            extra={
+              canCreate && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={openCreate}
+                >
+                  新建角色
+                </Button>
+              )
+            }
+          />
         }
       >
         <Table<AdminRole>

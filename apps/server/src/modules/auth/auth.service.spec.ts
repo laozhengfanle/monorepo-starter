@@ -8,6 +8,7 @@ import { TokenIssuanceService } from './token-issuance.service.js';
 import { LoginLockService } from './login-lock.service.js';
 import { AuditService, AUDIT_ACTIONS } from './audit.service.js';
 import { TurnstileService } from '../turnstile/turnstile.service.js';
+import { PasswordPolicyService } from '../system-config/password-policy.service.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 
 // mock bcrypt：避免真实哈希（测试速度 + 可控返回值）
@@ -86,20 +87,16 @@ describe('AuthService', () => {
     };
     audit = { write: vi.fn<any>().mockResolvedValue(undefined) };
     tokenIssuance = {
-      issueTokens: vi
-        .fn<any>()
-        .mockResolvedValue({
-          accessToken: 'at',
-          refreshToken: 'rt',
-          expiresIn: 900,
-        }),
-      refresh: vi
-        .fn<any>()
-        .mockResolvedValue({
-          accessToken: 'at2',
-          refreshToken: 'rt2',
-          expiresIn: 900,
-        }),
+      issueTokens: vi.fn<any>().mockResolvedValue({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        expiresIn: 900,
+      }),
+      refresh: vi.fn<any>().mockResolvedValue({
+        accessToken: 'at2',
+        refreshToken: 'rt2',
+        expiresIn: 900,
+      }),
     };
     turnstile = { verify: vi.fn<any>().mockResolvedValue(undefined) };
     loginSuccessCounter = new Counter({
@@ -115,6 +112,15 @@ describe('AuthService', () => {
         { provide: LoginLockService, useValue: loginLock },
         { provide: AuditService, useValue: audit },
         { provide: TurnstileService, useValue: turnstile },
+        {
+          provide: PasswordPolicyService,
+          useValue: {
+            assertValid: vi.fn<any>().mockResolvedValue(undefined),
+            getPolicy: vi
+              .fn<any>()
+              .mockResolvedValue({ minLength: 8, complexity: 'medium' }),
+          },
+        },
         { provide: ConfigService, useValue: { get: () => undefined } },
         {
           provide: 'PROM_METRIC_AUTH_LOGIN_SUCCESS_TOTAL',

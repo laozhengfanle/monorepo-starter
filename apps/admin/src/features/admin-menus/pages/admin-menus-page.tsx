@@ -3,7 +3,6 @@ import {
   App,
   Button,
   Card,
-  Dropdown,
   Form,
   Input,
   InputNumber,
@@ -19,19 +18,13 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import {
-  DeliveredProcedureOutlined,
-  FileExcelOutlined,
-  FileTextOutlined,
-  FilterOutlined,
-  PlusOutlined,
-  RedoOutlined,
-} from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import { CreateMenuSchema, UpdateMenuSchema } from '@starter/api-client';
 
 import type { MenuType } from '@starter/api-client';
 import { usePermission } from '../../../app/auth/use-permission.js';
 import { useColumnControl } from '../../../shared/hooks/use-column-control.js';
+import { TableToolbar } from '../../../shared/components/table-toolbar.js';
 import {
   applyZodErrors,
   showMutationError,
@@ -246,13 +239,16 @@ export function AdminMenusPage(): React.JSX.Element {
   };
 
   // 父节点可选范围：button 只能挂 menu 下；menu/directory 只能挂 directory 下
-  let parentAllowedTypes: MenuType[] | null = null;
-  if (menuType === 'button') {
-    parentAllowedTypes = ['menu'];
-  } else if (menuType === 'directory' || menuType === 'menu') {
-    parentAllowedTypes = ['directory'];
-  }
-  const parentOptions = toTreeSelectData(tree, parentAllowedTypes);
+  // useMemo 避免每次渲染都递归重建树（菜单节点多时开销明显）
+  const parentOptions = useMemo(() => {
+    let allowed: MenuType[] | null = null;
+    if (menuType === 'button') {
+      allowed = ['menu'];
+    } else if (menuType === 'directory' || menuType === 'menu') {
+      allowed = ['directory'];
+    }
+    return toTreeSelectData(tree, allowed);
+  }, [menuType, tree]);
 
   const fullColumns: ColumnsType<MenuRowItem> = [
     { title: '名称', dataIndex: 'name', key: 'name' },
@@ -366,49 +362,22 @@ export function AdminMenusPage(): React.JSX.Element {
       <Card
         title="菜单树"
         extra={
-          <Space size="small">
-            {canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={openCreate}
-              >
-                新建菜单
-              </Button>
-            )}
-            <Dropdown
-              trigger={['click']}
-              arrow
-              menu={{
-                items: columnMenuItems,
-                onClick: (info) => info.domEvent.stopPropagation(),
-              }}
-            >
-              <Button icon={<FilterOutlined />} aria-label="列控制" />
-            </Dropdown>
-            <Dropdown
-              trigger={['click']}
-              arrow
-              menu={{
-                items: [
-                  {
-                    key: 'excel',
-                    label: '导出 Excel',
-                    icon: <FileExcelOutlined />,
-                  },
-                  { key: 'csv', label: '导出 CSV', icon: <FileTextOutlined /> },
-                ],
-                onClick: ({ key }) => handleExport(key as 'excel' | 'csv'),
-              }}
-            >
-              <Button icon={<DeliveredProcedureOutlined />} aria-label="导出" />
-            </Dropdown>
-            <Button
-              icon={<RedoOutlined />}
-              onClick={() => void refreshList()}
-              aria-label="刷新"
-            />
-          </Space>
+          <TableToolbar
+            columnMenuItems={columnMenuItems}
+            onExport={handleExport}
+            onRefresh={() => void refreshList()}
+            extra={
+              canCreate && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={openCreate}
+                >
+                  新建菜单
+                </Button>
+              )
+            }
+          />
         }
       >
         <Table<MenuRowItem>

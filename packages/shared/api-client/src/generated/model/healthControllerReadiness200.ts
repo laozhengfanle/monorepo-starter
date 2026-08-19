@@ -3,7 +3,7 @@
  * Do not edit manually.
  * monorepo-starter API
  * 企业级 monorepo starter 的 NestJS + Express API
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 2.0.0
  */
 import type { HealthControllerReadiness200Details } from './healthControllerReadiness200Details';
 import type { HealthControllerReadiness200Error } from './healthControllerReadiness200Error';

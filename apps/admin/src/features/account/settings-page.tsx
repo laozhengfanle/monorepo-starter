@@ -21,14 +21,16 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/auth/auth-context.js';
+import { useSystemConfig } from '../../app/providers/system-config-provider.js';
 import { changePasswordApi, updateSelfApi, uploadAvatarApi } from './api.js';
-import { ChangePasswordSchema, UpdateSelfSchema } from '@starter/api-client';
+import { UpdateSelfSchema } from '@starter/api-client';
 import {
   formatDateTime,
   ROLE_LABEL_MAP,
   ROLE_TAG_COLOR_MAP,
 } from './shared.js';
 import { applyZodErrors } from '../../shared/utils/form-errors.js';
+import { passwordPolicyRule } from '../../shared/utils/password-policy.js';
 
 const { Text, Title } = Typography;
 
@@ -73,6 +75,7 @@ export function AccountSettingsPage(): React.JSX.Element {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const { user, refreshMe } = useAuth();
+  const { settings } = useSystemConfig();
 
   const displayRole =
     (user?.roleCodes ?? []).map((c) => ROLE_LABEL_MAP[c] ?? c).join(' / ') ||
@@ -192,22 +195,19 @@ export function AccountSettingsPage(): React.JSX.Element {
     }
   };
 
-  /** 修改密码（提交前用 ChangePasswordSchema 做契约校验，失败映射到表单字段） */
+  /** 修改密码（密码策略为后台设置动态值：由表单 passwordPolicyRule 规则校验，提交前 validateFields） */
   const onChangePassword = async (): Promise<void> => {
-    const values = passwordForm.getFieldsValue();
-    const parsed = ChangePasswordSchema.safeParse({
-      currentPassword: values.currentPassword,
-      newPassword: values.newPassword,
-    });
-    if (!parsed.success) {
-      applyZodErrors(passwordForm, parsed);
+    try {
+      await passwordForm.validateFields();
+    } catch {
       return;
     }
+    const values = passwordForm.getFieldsValue();
     setPasswordSaving(true);
     try {
       await changePasswordApi({
-        currentPassword: parsed.data.currentPassword,
-        newPassword: parsed.data.newPassword,
+        currentPassword: values.currentPassword as string,
+        newPassword: values.newPassword as string,
       });
       void message.success('密码已修改，请重新登录');
       passwordForm.resetFields();
@@ -441,11 +441,11 @@ export function AccountSettingsPage(): React.JSX.Element {
               label="新密码"
               rules={[
                 { required: true, message: '请输入新密码' },
-                { min: 8, max: 100, message: '新密码至少 8 位' },
+                passwordPolicyRule(settings),
               ]}
             >
               <Input.Password
-                placeholder="至少 8 位"
+                placeholder={`至少 ${settings.passwordMinLength} 位`}
                 autoComplete="new-password"
               />
             </Form.Item>

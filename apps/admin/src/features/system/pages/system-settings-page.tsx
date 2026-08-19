@@ -20,6 +20,7 @@ import {
   useBatchUpdateConfigsMutation,
 } from '../../../generated/graphql';
 import { uploadFileApi } from '../../../shared/utils/upload.js';
+import { useSettings } from '../../../app/providers/settings-provider.js';
 import heroPng from '../../../assets/hero.png';
 
 const { Text } = Typography;
@@ -64,6 +65,7 @@ interface SettingsFormValues {
  */
 export function SystemSettingsPage(): React.JSX.Element {
   const { message } = App.useApp();
+  const { setWatermarkContent, setWatermarkVisible } = useSettings();
   const [form] = Form.useForm<SettingsFormValues>();
   const [logoPreview, setLogoPreview] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -171,6 +173,14 @@ export function SystemSettingsPage(): React.JSX.Element {
         },
       });
       document.title = values.systemName;
+      // 水印写入本地偏好，保存后立即生效（其他用户下次进入后台由服务端配置兜底）
+      if (values.watermarkContent?.trim()) {
+        setWatermarkContent(values.watermarkContent);
+        setWatermarkVisible(true);
+      } else {
+        setWatermarkContent('');
+        setWatermarkVisible(false);
+      }
       void message.success('设置已保存');
     } catch (error) {
       const msg = error instanceof Error ? error.message : '保存失败，请重试';

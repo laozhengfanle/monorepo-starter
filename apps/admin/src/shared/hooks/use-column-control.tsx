@@ -12,9 +12,9 @@ export interface ColumnControlOptions<TRow> {
   /** 初始可见列 key */
   initialVisibleKeys: string[];
   /** 导出文件名前缀（如「账户管理」→ 账户管理_20240101120000.csv） */
-  exportFileNamePrefix: string;
+  exportFileNamePrefix?: string;
   /** 导出数据源（当前筛选/过滤后的行，保持与表格展示一致） */
-  exportData: TRow[];
+  exportData?: TRow[];
   /**
    * 导出单元格自定义取值：返回 undefined 时回退到 dataIndex（无则 key）取值。
    * 用于把布尔/枚举/对象列渲染成可读文本（如 status → 正常/禁用）。
@@ -92,6 +92,11 @@ export function useColumnControl<TRow>(
   const columns = fullColumns.filter((c) => visibleKeys.has(c.key as string));
 
   const handleExport = (format: 'excel' | 'csv'): void => {
+    // 未配置导出（exportFileNamePrefix/exportData 缺失）时不可用，页面应自行处理导出
+    if (!exportFileNamePrefix || !exportData) {
+      void message.warning('当前列表未配置导出');
+      return;
+    }
     const exportCols = fullColumns.filter(
       (c) => visibleKeys.has(c.key as string) && c.key !== 'actions',
     );

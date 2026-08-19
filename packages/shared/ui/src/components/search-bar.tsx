@@ -118,6 +118,8 @@ export function SearchBar({
       <Form
         form={form}
         labelCol={{ flex: `0 0 ${LABEL_WIDTH}px` }}
+        // 全站规范：label 一律不加冒号（antd 默认 colon，显式关闭）
+        colon={false}
         onFinish={(values) => onSearch(values as SearchValues)}
       >
         <Row gutter={[12, 12]}>
