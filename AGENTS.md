@@ -172,6 +172,31 @@ antd doc <组件> --format json           # 完整文档（可加 --lang zh）
 
 <!-- account terminology end-->
 
+<!-- fork port adjustment start-->
+<!-- Leave the start & end comments to automatically receive updates. -->
+
+# Fork 实战第一要务：调整本地端口（必须第一步做）
+
+> 违反视为代码评审不通过。**fork 出去的项目，clone 后第一件事就是调整本地开发端口**，
+> 不能沿用基座的 3301/3302，否则与基座本地开发环境端口冲突（两个仓库可能同机同时开发）。
+
+1. **为什么**：基座本地开发端口固定为 server `3301`、admin `3302`。fork 项目若不改，
+   与基座同机开发时端口被占用（服务起不来）或互相干扰（代理指错目标）。
+2. **改哪里（三处，必须一起改，避免只改一半）**：
+   - `apps/server/.env` → `PORT=<新端口>`（后端）；
+   - `apps/admin/vite.config.mts` → `server.port = <新 admin 端口>`（前端）；
+   - `apps/admin/vite.config.mts` → 代理目标 `localhost:3301` **全部**改为新后端端口
+     （`/api`、`/graphql`、`/uploads` 三处转发目标）。
+3. **选端口**：避开基座占用的 3301/3302 及本机其他服务；建议 fork 项目用独立区间
+   （如 43xx/44xx），并同步更新 README 端口说明。
+4. **数据库独立**：`apps/server/.env` 的 `DATABASE_URL` 库名改为 `monorepo_<项目名>`
+   （如 `monorepo_his`），创建独立库后依次 `pnpm db:deploy`（应用迁移）→ `pnpm db:seed`（主数据），
+   避免与基座共库互相污染数据。
+5. **验证**：改完端口后 `pnpm nx run server:serve` + `pnpm nx run @starter/admin:serve`，
+   登录初始管理员（root / Root!123）确认端到端可用，再开始业务开发。
+
+<!-- fork port adjustment end-->
+
 <!-- upstream feedback start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 

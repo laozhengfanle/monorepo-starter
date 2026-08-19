@@ -100,8 +100,6 @@ export function SearchBar({
         return (
           <Input
             allowClear
-            // 输入类字段默认带搜索图标（搜索语义：用户名/关键词/Pattern 等）；
-            // 页面传 prefix 可覆盖，传 prefix={null} 可显式去掉
             prefix={
               field.prefix !== undefined ? field.prefix : <SearchOutlined />
             }
@@ -113,12 +111,12 @@ export function SearchBar({
     }
   };
 
+  // 全站规范：label 一律不加冒号（antd 默认 colon，显式关闭）
   return (
     <Card style={{ marginBottom: 16 }}>
       <Form
         form={form}
         labelCol={{ flex: `0 0 ${LABEL_WIDTH}px` }}
-        // 全站规范：label 一律不加冒号（antd 默认 colon，显式关闭）
         colon={false}
         onFinish={(values) => onSearch(values as SearchValues)}
       >
