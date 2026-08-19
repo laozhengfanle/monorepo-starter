@@ -10,8 +10,8 @@ import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { SysDictService } from './system-dict.service.js';
 import {
   CreateDictItemInputType,
@@ -37,62 +37,86 @@ export class SysDictResolver {
   @Mutation(() => SysDictTypeType)
   @RequirePermission('config:dict:update')
   async createDictType(
-    @Args('input', { type: () => CreateDictTypeInputType }, new ZodArgsPipe(CreateDictTypeSchema))
+    @Args(
+      'input',
+      { type: () => CreateDictTypeInputType },
+      new ZodArgsPipe(CreateDictTypeSchema),
+    )
     input: CreateDictTypeInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<SysDictTypeType> {
-    return this.sysDictService.createType(input as never, user.accountId);
+    return this.sysDictService.createType(input as never, account.accountId);
   }
 
   @Mutation(() => SysDictTypeType)
   @RequirePermission('config:dict:update')
   async updateDictType(
     @Args('id', { type: () => ID }) id: string,
-    @Args('input', { type: () => UpdateDictTypeInputType }, new ZodArgsPipe(UpdateDictTypeSchema))
+    @Args(
+      'input',
+      { type: () => UpdateDictTypeInputType },
+      new ZodArgsPipe(UpdateDictTypeSchema),
+    )
     input: UpdateDictTypeInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<SysDictTypeType> {
-    return this.sysDictService.updateType(id, input as never, user.accountId);
+    return this.sysDictService.updateType(
+      id,
+      input as never,
+      account.accountId,
+    );
   }
 
   @Mutation(() => Boolean)
   @RequirePermission('config:dict:update')
   async deleteDictType(
     @Args('id', { type: () => ID }) id: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<boolean> {
-    await this.sysDictService.removeType(id, user.accountId);
+    await this.sysDictService.removeType(id, account.accountId);
     return true;
   }
 
   @Mutation(() => SysDictItemType)
   @RequirePermission('config:dict:update')
   async createDictItem(
-    @Args('input', { type: () => CreateDictItemInputType }, new ZodArgsPipe(CreateDictItemSchema))
+    @Args(
+      'input',
+      { type: () => CreateDictItemInputType },
+      new ZodArgsPipe(CreateDictItemSchema),
+    )
     input: CreateDictItemInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<SysDictItemType> {
-    return this.sysDictService.createItem(input as never, user.accountId);
+    return this.sysDictService.createItem(input as never, account.accountId);
   }
 
   @Mutation(() => SysDictItemType)
   @RequirePermission('config:dict:update')
   async updateDictItem(
     @Args('id', { type: () => ID }) id: string,
-    @Args('input', { type: () => UpdateDictItemInputType }, new ZodArgsPipe(UpdateDictItemSchema))
+    @Args(
+      'input',
+      { type: () => UpdateDictItemInputType },
+      new ZodArgsPipe(UpdateDictItemSchema),
+    )
     input: UpdateDictItemInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<SysDictItemType> {
-    return this.sysDictService.updateItem(id, input as never, user.accountId);
+    return this.sysDictService.updateItem(
+      id,
+      input as never,
+      account.accountId,
+    );
   }
 
   @Mutation(() => Boolean)
   @RequirePermission('config:dict:update')
   async deleteDictItem(
     @Args('id', { type: () => ID }) id: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<boolean> {
-    await this.sysDictService.removeItem(id, user.accountId);
+    await this.sysDictService.removeItem(id, account.accountId);
     return true;
   }
 }

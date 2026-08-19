@@ -86,7 +86,7 @@ describe('WsJwtGuard', () => {
     guard = moduleRef.get(WsJwtGuard);
   });
 
-  it('verifyHandshake：有效 token → 挂 user 并 next()', async () => {
+  it('verifyHandshake：有效 token → 挂 account 并 next()', async () => {
     const client = makeSocket({
       handshake: { auth: { token: 'valid' }, headers: {} },
     });
@@ -95,7 +95,10 @@ describe('WsJwtGuard', () => {
     await guard.verifyHandshake(client as never, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect(client.data.user).toEqual({ accountId: 'acc-1', userType: 'admin' });
+    expect(client.data.account).toEqual({
+      accountId: 'acc-1',
+      userType: 'admin',
+    });
   });
 
   it('verifyHandshake：无 token → next(err)', async () => {

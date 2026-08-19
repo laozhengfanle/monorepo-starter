@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import type { Socket } from 'socket.io';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import type { AuthUser, JwtPayload } from '../auth/auth.types.js';
+import type { AuthAccount, JwtPayload } from '../auth/auth.types.js';
 import { TokenBlacklistService } from '../auth/token-blacklist.service.js';
 
 /**
@@ -50,7 +50,7 @@ export class WsJwtGuard {
       return;
     }
     try {
-      client.data.user = await this.resolveUser(token);
+      client.data.account = await this.resolveAccount(token);
       next();
     } catch (err) {
       next(err instanceof Error ? err : new Error('Token 无效或已过期'));
@@ -76,7 +76,7 @@ export class WsJwtGuard {
       throw new WsException('未认证或 Token 缺失');
     }
     try {
-      client.data.user = await this.resolveUser(token);
+      client.data.account = await this.resolveAccount(token);
       return true;
     } catch (err) {
       throw new WsException(
@@ -88,9 +88,9 @@ export class WsJwtGuard {
   /**
    * 验签 + 账户态校验（与 JwtAuthGuard 同一套语义）：
    * 签名 → 账户存在/启用 → tokenVersion 一致 → jti 未撤销。
-   * 校验通过返回挂到 client.data.user 的认证信息。
+   * 校验通过返回挂到 client.data.account 的认证信息。
    */
-  private async resolveUser(token: string): Promise<AuthUser> {
+  private async resolveAccount(token: string): Promise<AuthAccount> {
     let payload: JwtPayload;
     try {
       payload = await this.jwtService.verifyAsync<JwtPayload>(token, {

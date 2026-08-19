@@ -294,21 +294,3 @@ model SystemConfig {
 
   @@map("system_config")
 }
-
-// ============================================================
-// 业务演示（阶段 1 保留）：User CRUD
-// ============================================================
-
-/// 用户表 — 阶段 1 演示 CRUD，验证数据层链路
-model User {
-  id        String    @id @db.Uuid
-  username  String    @unique @db.VarChar(30)
-  email     String    @unique @db.VarChar(100)
-  role      String    @default("member") @db.VarChar(20)
-  status    String    @default("active") @db.VarChar(20)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
-
-  @@map("user")
-}

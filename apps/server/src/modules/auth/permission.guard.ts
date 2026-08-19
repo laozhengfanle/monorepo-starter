@@ -9,7 +9,7 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { resolveAccountPermissions } from './account-permission.util.js';
 import { PERMISSIONS_KEY } from './permission.decorator.js';
-import type { AuthUser } from './auth.types.js';
+import type { AuthAccount } from './auth.types.js';
 
 /**
  * 权限守卫：校验当前用户是否拥有 @RequirePermission 声明的权限点。
@@ -17,7 +17,7 @@ import type { AuthUser } from './auth.types.js';
  *   再叠加账户级特例授权覆盖（admin_account_menu）：grant 追加、deny 移除（deny 优先）
  * - 与 me() 共用 resolveAccountPermissions，保证前端显示与后端校验一致
  * - 超级管理员（super_admin 角色）自动绕过（不看权限）
- * - 必须排在 JwtAuthGuard 之后（依赖 request.user）
+ * - 必须排在 JwtAuthGuard 之后（依赖 request.account）
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -27,10 +27,10 @@ export class PermissionGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const required = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const required = this.reflector.getAllAndOverride<string[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!required?.length) {
       return true;
     }
@@ -39,17 +39,20 @@ export class PermissionGuard implements CanActivate {
     const req =
       type === 'graphql'
         ? GqlExecutionContext.create(context).getContext().req
-        : context.switchToHttp().getRequest<{ user?: AuthUser }>();
-    const user = req.user;
-    if (!user) {
+        : context.switchToHttp().getRequest<{ account?: AuthAccount }>();
+    // 认证主体（JwtAuthGuard 挂载的轻量信息，仅 accountId + userType）
+    const principal = req.account;
+    if (!principal) {
       throw new ForbiddenException('未认证');
     }
 
     const account = await this.prisma.client.account.findUnique({
-      where: { id: user.accountId },
+      where: { id: principal.accountId },
       include: {
         adminRoles: {
-          include: { role: { include: { roleMenus: { include: { menu: true } } } } },
+          include: {
+            role: { include: { roleMenus: { include: { menu: true } } } },
+          },
         },
       },
     });

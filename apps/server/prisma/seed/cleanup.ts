@@ -2,19 +2,13 @@ import type { SeedDb } from './shared.js';
 
 /**
  * 清理旧菜单（老结构遗留）：
- * 对齐老项目：管理端无"用户中心"、无独立"回收站"菜单，
+ * 对齐老项目：管理端无独立"回收站"菜单，
  * 软删除已集成到账户列表（显示已删除），权限点在隐藏的全局权限目录下。
  * 注意：种子只做增量对齐，被移除的菜单不会自动消失，必须在此显式清理，
  * 否则旧行会一直残留在侧栏（回收站曾因此反复出现）。
  */
 export async function cleanupLegacyMenus(db: SeedDb): Promise<void> {
   const LEGACY_MENU_CODES = [
-    // 用户中心 分支（user-center / user:*）
-    'user-center',
-    'user:list',
-    'user:create',
-    'user:update',
-    'user:delete',
     // 独立回收站菜单（已废弃，软删除集成进账户列表）
     'recycle:list',
     // 旧后台设置权限码 config:admin → 已升级为 config:admin:view

@@ -1,10 +1,10 @@
 import { Query, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { CurrentUser } from './current-user.decorator.js';
+import { CurrentAccount } from './current-account.decorator.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 import { AuthService } from './auth.service.js';
 import { AdminMeType } from './auth.type.js';
-import type { AuthUser } from './auth.types.js';
+import type { AuthAccount } from './auth.types.js';
 
 /**
  * 认证 GraphQL Resolver：仅保留 me query。
@@ -17,7 +17,7 @@ export class AuthResolver {
 
   @Query(() => AdminMeType)
   @UseGuards(JwtAuthGuard)
-  async me(@CurrentUser() user: AuthUser): Promise<AdminMeType> {
-    return this.authService.me(user.accountId);
+  async me(@CurrentAccount() account: AuthAccount): Promise<AdminMeType> {
+    return this.authService.me(account.accountId);
   }
 }

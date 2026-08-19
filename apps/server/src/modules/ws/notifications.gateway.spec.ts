@@ -93,9 +93,9 @@ describe('NotificationsGateway', () => {
     expect(gateway.handlePing()).toBe('pong');
   });
 
-  it('whoami → 返回握手时挂载的当前用户', () => {
+  it('whoami → 返回握手时挂载的当前账户', () => {
     const client = {
-      data: { user: { accountId: 'acc-1', userType: 'admin' } },
+      data: { account: { accountId: 'acc-1', userType: 'admin' } },
     };
 
     expect(gateway.handleWhoAmI(client as never)).toEqual({

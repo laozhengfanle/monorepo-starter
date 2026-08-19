@@ -9,14 +9,14 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
-import type { AuthUser, JwtPayload } from './auth.types.js';
+import type { AuthAccount, JwtPayload } from './auth.types.js';
 import { TokenBlacklistService } from './token-blacklist.service.js';
 
 /**
  * JWT 认证守卫（自研，不依赖 passport）。
  * - REST / GraphQL 统一处理：从 Authorization: Bearer 提取 token
  * - 三层校验：签名（HS256）→ tokenVersion（改密/踢人后失效）→ jti 黑名单（精确撤销）
- * - 校验通过后挂 request.user = { accountId, userType }
+ * - 校验通过后挂 request.account = { accountId, userType }
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -72,10 +72,10 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Token 已撤销，请重新登录');
     }
 
-    req.user = {
+    req.account = {
       accountId: payload.sub,
       userType: payload.userType,
-    } satisfies AuthUser;
+    } satisfies AuthAccount;
     return true;
   }
 

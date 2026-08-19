@@ -6,8 +6,8 @@ import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { AuditLogService } from './audit-log.service.js';
 import {
   AuditLogItemType,
@@ -62,18 +62,18 @@ export class AuditLogResolver {
   @Mutation(() => ClearAuditLogsResultType)
   @RequirePermission('config:audit:clear')
   clearAuditLogs(
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<ClearAuditLogsResultType> {
-    return this.auditLogService.clear(user.accountId);
+    return this.auditLogService.clear(account.accountId);
   }
 
   @Mutation(() => Boolean)
   @RequirePermission('config:audit:delete')
   async deleteAuditLog(
     @Args('id', { type: () => ID }) id: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<boolean> {
-    await this.auditLogService.deleteOne(id, user.accountId);
+    await this.auditLogService.deleteOne(id, account.accountId);
     return true;
   }
 }

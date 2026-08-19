@@ -21,12 +21,12 @@ function makeAccount(roleCode: string, roleMenus: string[] = []) {
   };
 }
 
-function httpContext(user: unknown): ExecutionContext {
+function httpContext(account: unknown): ExecutionContext {
   return {
     getType: () => 'http',
     getHandler: () => ({}),
     getClass: () => ({}),
-    switchToHttp: () => ({ getRequest: () => ({ user }) }),
+    switchToHttp: () => ({ getRequest: () => ({ account }) }),
   } as unknown as ExecutionContext;
 }
 
@@ -46,13 +46,13 @@ describe('PermissionGuard', () => {
         account: {
           findUnique: vi
             .fn<any>()
-            .mockResolvedValue(makeAccount('admin', ['user:read'])),
+            .mockResolvedValue(makeAccount('admin', ['account:read'])),
         },
         adminAccountMenu: { findMany: vi.fn<any>().mockResolvedValue([]) },
       },
     };
     reflector = {
-      getAllAndOverride: vi.fn<any>().mockReturnValue(['user:read']),
+      getAllAndOverride: vi.fn<any>().mockReturnValue(['account:read']),
     };
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -72,7 +72,7 @@ describe('PermissionGuard', () => {
     );
   });
 
-  it('未认证（无 user）→ 403', async () => {
+  it('未认证（无 account）→ 403', async () => {
     await expect(guard.canActivate(httpContext(undefined))).rejects.toThrow(
       ForbiddenException,
     );

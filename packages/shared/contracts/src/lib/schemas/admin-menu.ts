@@ -10,7 +10,7 @@ export const AdminMenuSchema = z.object({
   id: z.string(),
   parentId: z.string().nullable(),
   name: z.string(),
-  /** 权限机器编码：menu/button 为 permissionCode（如 user:list），directory 为占位编码（如 user-center） */
+  /** 权限机器编码：menu/button 为 permissionCode（如 account:list），directory 为占位编码（如 account-center） */
   code: z.string(),
   type: MenuTypeSchema,
   /** 前端路由路径（仅 menu 类型），如 /admin/roles */
@@ -31,9 +31,10 @@ export interface AdminMenuNode extends AdminMenu {
   children: AdminMenuNode[];
 }
 
-export const AdminMenuNodeSchema: z.ZodType<AdminMenuNode> = AdminMenuSchema.extend({
-  children: z.array(z.lazy(() => AdminMenuNodeSchema)),
-});
+export const AdminMenuNodeSchema: z.ZodType<AdminMenuNode> =
+  AdminMenuSchema.extend({
+    children: z.array(z.lazy(() => AdminMenuNodeSchema)),
+  });
 
 /** 创建菜单入参 */
 export const CreateMenuSchema = z.object({
@@ -43,11 +44,19 @@ export const CreateMenuSchema = z.object({
     .string()
     .min(1, '编码不能为空')
     .max(100, '编码最多 100 个字符')
-    .regex(/^[a-z][a-z0-9:_-]*$/, '编码需小写字母开头，仅含小写字母/数字/下划线/冒号/中划线'),
+    .regex(
+      /^[a-z][a-z0-9:_-]*$/,
+      '编码需小写字母开头，仅含小写字母/数字/下划线/冒号/中划线',
+    ),
   type: MenuTypeSchema,
   path: z.string().max(200, '路由最多 200 个字符').optional(),
   icon: z.string().max(50, '图标名最多 50 个字符').optional(),
-  sort: z.number().int().min(0, '排序不小于 0').max(9999, '排序不超过 9999').optional(),
+  sort: z
+    .number()
+    .int()
+    .min(0, '排序不小于 0')
+    .max(9999, '排序不超过 9999')
+    .optional(),
   visible: z.boolean().optional(),
 });
 
@@ -56,7 +65,11 @@ export type CreateMenuInput = z.input<typeof CreateMenuSchema>;
 /** 更新菜单入参（全字段可选） */
 export const UpdateMenuSchema = z.object({
   parentId: z.string().nullable().optional(),
-  name: z.string().min(1, '菜单名不能为空').max(50, '菜单名最多 50 个字符').optional(),
+  name: z
+    .string()
+    .min(1, '菜单名不能为空')
+    .max(50, '菜单名最多 50 个字符')
+    .optional(),
   type: MenuTypeSchema.optional(),
   path: z.string().max(200, '路由最多 200 个字符').optional(),
   icon: z.string().max(50, '图标名最多 50 个字符').optional(),

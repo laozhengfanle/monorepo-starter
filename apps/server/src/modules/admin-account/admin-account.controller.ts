@@ -1,12 +1,22 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { SaveAccountMenusDto } from '@starter/server-core';
 import type { AccountMenusResult, AdminAccount } from '@starter/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { AdminAccountService } from './admin-account.service.js';
 
 /**
@@ -27,9 +37,9 @@ export class AdminAccountController {
   @ApiOkResponse({ description: '恢复已软删账户' })
   restore(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AdminAccount> {
-    return this.adminAccountService.restore(id, user.accountId);
+    return this.adminAccountService.restore(id, account.accountId);
   }
 
   @Delete(':id/hard')
@@ -37,15 +47,17 @@ export class AdminAccountController {
   @ApiOkResponse({ description: '彻底删除（清级联表后硬删）' })
   hardRemove(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AdminAccount> {
-    return this.adminAccountService.hardRemove(id, user.accountId);
+    return this.adminAccountService.hardRemove(id, account.accountId);
   }
 
   @Get(':id/menus')
   @RequirePermission('account:update')
   @ApiOkResponse({ description: '账户特例授权（覆盖 + 角色基线菜单）' })
-  getAccountMenus(@Param('id', new ParseUUIDPipe()) id: string): Promise<AccountMenusResult> {
+  getAccountMenus(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<AccountMenusResult> {
     return this.adminAccountService.getAccountMenus(id);
   }
 
@@ -56,8 +68,12 @@ export class AdminAccountController {
   saveAccountMenus(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: SaveAccountMenusDto,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AccountMenusResult> {
-    return this.adminAccountService.saveAccountMenus(id, body, user.accountId);
+    return this.adminAccountService.saveAccountMenus(
+      id,
+      body,
+      account.accountId,
+    );
   }
 }

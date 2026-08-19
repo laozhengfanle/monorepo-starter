@@ -1,14 +1,21 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { BatchUpdateConfigsSchema, UpdateConfigSchema } from '@starter/contracts';
+import {
+  BatchUpdateConfigsSchema,
+  UpdateConfigSchema,
+} from '@starter/contracts';
 import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { SystemConfigService } from './system-config.service.js';
-import { BatchUpdateConfigsInputType, SystemConfigType, UpdateConfigInputType } from './system-config.type.js';
+import {
+  BatchUpdateConfigsInputType,
+  SystemConfigType,
+  UpdateConfigInputType,
+} from './system-config.type.js';
 
 /** 系统配置 GraphQL Resolver（config:admin:* 通用 + config:file:* / config:turnstile:* 页面级） */
 @Resolver(() => SystemConfigType)
@@ -27,11 +34,15 @@ export class SystemConfigResolver {
   @Mutation(() => [SystemConfigType])
   @RequirePermission('config:admin:update')
   async batchUpdateConfigs(
-    @Args('input', { type: () => BatchUpdateConfigsInputType }, new ZodArgsPipe(BatchUpdateConfigsSchema))
+    @Args(
+      'input',
+      { type: () => BatchUpdateConfigsInputType },
+      new ZodArgsPipe(BatchUpdateConfigsSchema),
+    )
     input: BatchUpdateConfigsInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<SystemConfigType[]> {
-    return this.systemConfigService.batchUpdate(input, user.accountId);
+    return this.systemConfigService.batchUpdate(input, account.accountId);
   }
 
   /** 文件存储配置（storage.driver，config:file:view） */
@@ -52,10 +63,18 @@ export class SystemConfigResolver {
   @Mutation(() => SystemConfigType)
   @RequirePermission('config:turnstile:update')
   async updateTurnstileConfig(
-    @Args('input', { type: () => UpdateConfigInputType }, new ZodArgsPipe(UpdateConfigSchema))
+    @Args(
+      'input',
+      { type: () => UpdateConfigInputType },
+      new ZodArgsPipe(UpdateConfigSchema),
+    )
     input: UpdateConfigInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<SystemConfigType> {
-    return this.systemConfigService.update('turnstile.config', input, user.accountId);
+    return this.systemConfigService.update(
+      'turnstile.config',
+      input,
+      account.accountId,
+    );
   }
 }

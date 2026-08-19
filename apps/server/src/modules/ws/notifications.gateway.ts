@@ -10,7 +10,7 @@ import type { OnModuleDestroy } from '@nestjs/common';
 import type { Server, Socket } from 'socket.io';
 import { WsJwtGuard } from './ws-jwt.guard.js';
 
-interface WsUser {
+interface WsAccount {
   accountId: string;
   userType: string;
 }
@@ -104,8 +104,8 @@ export class NotificationsGateway implements OnGatewayInit, OnModuleDestroy {
   }
 
   @SubscribeMessage('whoami')
-  handleWhoAmI(@ConnectedSocket() client: Socket): WsUser {
-    return client.data.user as WsUser;
+  handleWhoAmI(@ConnectedSocket() client: Socket): WsAccount {
+    return client.data.account as WsAccount;
   }
 
   @SubscribeMessage('notify')

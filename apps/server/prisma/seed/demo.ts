@@ -4,7 +4,6 @@ import type { SeedDb } from './shared.js';
 
 /**
  * 演示数据（仅非生产创建，入口 seed.ts 已做生产守卫）：
- * - 演示用户 alice/bob/carol（C 端 User）
  * - 演示角色 运营专员（operator）+ 部分权限绑定
  * - 演示账号 operator1（特例授权演示）+ 特例授权实例（admin_account_menu）
  * - 软删除演示账号 deleted_demo（「显示已删除」视图可见）
@@ -12,38 +11,6 @@ import type { SeedDb } from './shared.js';
  * 生产环境不需要这些数据；如需裁剪，删除 seed.ts 中对 seedDemo 的调用即可。
  */
 export async function seedDemo(db: SeedDb): Promise<void> {
-  // ── 演示用户（幂等补数据：只创建缺失的，重复执行安全） ──
-  const DEMO_USERS = [
-    {
-      username: 'alice',
-      email: 'alice@example.com',
-      role: 'member' as const,
-      status: 'active' as const,
-    },
-    {
-      username: 'bob',
-      email: 'bob@example.com',
-      role: 'member' as const,
-      status: 'active' as const,
-    },
-    {
-      username: 'carol',
-      email: 'carol@example.com',
-      role: 'admin' as const,
-      status: 'active' as const,
-    },
-  ];
-  for (const demo of DEMO_USERS) {
-    // rawClient 查含软删记录（username 唯一约束包括软删行），存在则跳过
-    const existing = await db.user.findFirst({
-      where: { username: demo.username },
-    });
-    if (!existing) {
-      await db.user.create({ data: { id: newId(), ...demo } });
-      console.log(`✅ 已创建演示用户 ${demo.username}`);
-    }
-  }
-
   // ── 演示角色 运营专员（operator）：只拥有部分权限，用于特例授权演示 ──
   // 基线权限 account:list / account:update / role:list，
   // 配合 operator1 的账户级特例授权，可在「特例授权」弹窗直观看到覆盖效果

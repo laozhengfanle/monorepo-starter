@@ -18,8 +18,8 @@ import { memoryStorage } from 'multer';
 import type { Request } from 'express';
 import type { UploadResult } from '@starter/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { clientInfo } from '../auth/auth.service.js';
 import { UploadService } from './upload.service.js';
 import {
@@ -74,7 +74,7 @@ export class UploadController {
     )
     file: Express.Multer.File,
     @Body() body: { folder?: string },
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
     @Req() req: Request,
   ): Promise<UploadResult> {
     // 防伪装：mimetype 必须与扩展名一致（mimetype 是客户端声明的，不可全信；
@@ -85,7 +85,7 @@ export class UploadController {
     }
     return this.uploadService.save(
       file,
-      user.accountId,
+      account.accountId,
       body.folder ?? 'files',
       clientInfo(req),
     );

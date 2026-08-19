@@ -18,8 +18,8 @@ import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { AdminAccountService } from './admin-account.service.js';
 import {
   AdminAccountType,
@@ -105,10 +105,10 @@ export class AdminAccountResolver {
       new ZodArgsPipe(CreateAdminAccountSchema),
     )
     input: CreateAdminAccountInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AdminAccountType> {
     // input 类 implements CreateAdminAccountInput（契约），ZodArgsPipe 已按 schema 解析
-    return this.adminAccountService.create(input, user.accountId);
+    return this.adminAccountService.create(input, account.accountId);
   }
 
   @Mutation(() => AdminAccountType)
@@ -121,17 +121,17 @@ export class AdminAccountResolver {
       new ZodArgsPipe(UpdateAdminAccountSchema),
     )
     input: UpdateAdminAccountInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AdminAccountType> {
-    return this.adminAccountService.update(id, input, user.accountId);
+    return this.adminAccountService.update(id, input, account.accountId);
   }
 
   @Mutation(() => AdminAccountType)
   @RequirePermission('account:delete')
   async deleteAdminAccount(
     @Args('id', { type: () => ID }) id: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AdminAccountType> {
-    return this.adminAccountService.remove(id, user.accountId);
+    return this.adminAccountService.remove(id, account.accountId);
   }
 }

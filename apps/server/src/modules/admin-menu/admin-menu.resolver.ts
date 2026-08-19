@@ -5,8 +5,8 @@ import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { AdminMenuService } from './admin-menu.service.js';
 import {
   AdminMenuNodeType,
@@ -30,30 +30,38 @@ export class AdminMenuResolver {
   @Mutation(() => AdminMenuNodeType)
   @RequirePermission('menu:create')
   async createMenu(
-    @Args('input', { type: () => CreateMenuInputType }, new ZodArgsPipe(CreateMenuSchema))
+    @Args(
+      'input',
+      { type: () => CreateMenuInputType },
+      new ZodArgsPipe(CreateMenuSchema),
+    )
     input: CreateMenuInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AdminMenuNodeType> {
-    return this.adminMenuService.create(input as never, user.accountId);
+    return this.adminMenuService.create(input as never, account.accountId);
   }
 
   @Mutation(() => AdminMenuNodeType)
   @RequirePermission('menu:update')
   async updateMenu(
     @Args('id', { type: () => ID }) id: string,
-    @Args('input', { type: () => UpdateMenuInputType }, new ZodArgsPipe(UpdateMenuSchema))
+    @Args(
+      'input',
+      { type: () => UpdateMenuInputType },
+      new ZodArgsPipe(UpdateMenuSchema),
+    )
     input: UpdateMenuInputType,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AdminMenuNodeType> {
-    return this.adminMenuService.update(id, input as never, user.accountId);
+    return this.adminMenuService.update(id, input as never, account.accountId);
   }
 
   @Mutation(() => AdminMenuNodeType)
   @RequirePermission('menu:delete')
   async deleteMenu(
     @Args('id', { type: () => ID }) id: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<AdminMenuNodeType> {
-    return this.adminMenuService.remove(id, user.accountId);
+    return this.adminMenuService.remove(id, account.accountId);
   }
 }

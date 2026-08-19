@@ -38,23 +38,23 @@ describe('resolveAccountPermissions', () => {
     const prisma = createPrisma([]);
     const codes = await resolveAccountPermissions(
       prisma,
-      makeAccount(['user']),
+      makeAccount(['member']),
     );
 
-    expect(codes.has('user:read')).toBe(true);
-    expect(codes.has('user:write')).toBe(true);
-    expect(codes.has('user:disabled')).toBe(false);
+    expect(codes.has('member:read')).toBe(true);
+    expect(codes.has('member:write')).toBe(true);
+    expect(codes.has('member:disabled')).toBe(false);
   });
 
   it('多角色权限合并', async () => {
     const prisma = createPrisma([]);
     const codes = await resolveAccountPermissions(
       prisma,
-      makeAccount(['user', 'role']),
+      makeAccount(['member', 'role']),
     );
 
     expect(codes.size).toBe(4);
-    expect(codes.has('user:read')).toBe(true);
+    expect(codes.has('member:read')).toBe(true);
     expect(codes.has('role:write')).toBe(true);
   });
 
@@ -64,7 +64,7 @@ describe('resolveAccountPermissions', () => {
     ]);
     const codes = await resolveAccountPermissions(
       prisma,
-      makeAccount(['user']),
+      makeAccount(['member']),
     );
 
     expect(codes.has('config:view')).toBe(true);
@@ -72,28 +72,28 @@ describe('resolveAccountPermissions', () => {
 
   it('deny 覆盖：移除角色已授权的权限点（deny 优先）', async () => {
     const prisma = createPrisma([
-      { type: 'deny', menu: { code: 'user:write' } },
+      { type: 'deny', menu: { code: 'member:write' } },
     ]);
     const codes = await resolveAccountPermissions(
       prisma,
-      makeAccount(['user']),
+      makeAccount(['member']),
     );
 
-    expect(codes.has('user:read')).toBe(true);
-    expect(codes.has('user:write')).toBe(false);
+    expect(codes.has('member:read')).toBe(true);
+    expect(codes.has('member:write')).toBe(false);
   });
 
   it('grant 与 deny 同时存在时 deny 生效', async () => {
     const prisma = createPrisma([
-      { type: 'grant', menu: { code: 'user:write' } },
-      { type: 'deny', menu: { code: 'user:write' } },
+      { type: 'grant', menu: { code: 'member:write' } },
+      { type: 'deny', menu: { code: 'member:write' } },
     ]);
     const codes = await resolveAccountPermissions(
       prisma,
-      makeAccount(['user']),
+      makeAccount(['member']),
     );
 
     // 顺序执行：grant 后 deny，最终移除
-    expect(codes.has('user:write')).toBe(false);
+    expect(codes.has('member:write')).toBe(false);
   });
 });

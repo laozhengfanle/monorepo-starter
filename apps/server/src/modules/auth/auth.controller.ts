@@ -14,10 +14,10 @@ import type { Response } from 'express';
 import { ChangePasswordDto, UpdateSelfDto } from '@starter/server-core';
 import type { AdminMe, LoginInput, RefreshInput } from '@starter/contracts';
 import type { Request } from 'express';
-import { CurrentUser } from './current-user.decorator.js';
+import { CurrentAccount } from './current-account.decorator.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 import { AuthService } from './auth.service.js';
-import type { AuthUser } from './auth.types.js';
+import type { AuthAccount } from './auth.types.js';
 import type { IssuedTokens } from './token-issuance.service.js';
 
 /** access token cookie 名（与 jwt-auth.guard 的 cookie 回退一致） */
@@ -109,19 +109,19 @@ export class AuthController {
     description: '登出成功（撤销 token + 清除 httpOnly cookie）',
   })
   async logout(
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    await this.authService.logout(user.accountId, req);
+    await this.authService.logout(account.accountId, req);
     res.clearCookie(ACCESS_TOKEN_COOKIE, { path: '/' });
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiOkResponse({ description: '当前账户信息' })
-  me(@CurrentUser() user: AuthUser): Promise<AdminMe> {
-    return this.authService.me(user.accountId);
+  me(@CurrentAccount() account: AuthAccount): Promise<AdminMe> {
+    return this.authService.me(account.accountId);
   }
 
   @Patch('me')
@@ -131,10 +131,10 @@ export class AuthController {
   })
   @ApiBody({ type: UpdateSelfDto })
   updateSelf(
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
     @Body() body: UpdateSelfDto,
   ): Promise<AdminMe> {
-    return this.authService.updateSelf(user.accountId, body);
+    return this.authService.updateSelf(account.accountId, body);
   }
 
   @Post('me/password')
@@ -146,11 +146,11 @@ export class AuthController {
   })
   @ApiBody({ type: ChangePasswordDto })
   async changePassword(
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
     @Body() body: ChangePasswordDto,
     @Req() req: Request,
   ): Promise<{ success: true }> {
-    await this.authService.changePassword(user.accountId, body, req);
+    await this.authService.changePassword(account.accountId, body, req);
     return { success: true };
   }
 }

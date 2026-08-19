@@ -41,7 +41,6 @@ export const autoIdExtension = {
 
 /** 有 deleted_at 字段的模型名称集合（只有这些模型应用软删除过滤） */
 const SOFT_DELETE_MODELS = new Set([
-  'User',
   'Account',
   'AdminProfile',
   'UploadFile',

@@ -55,12 +55,12 @@ describe('JwtAuthGuard', () => {
     guard = moduleRef.get(JwtAuthGuard);
   });
 
-  it('有效 token → 放行并挂载 req.user', async () => {
+  it('有效 token → 放行并挂载 req.account', async () => {
     const req = { headers: { authorization: 'Bearer valid-token' } } as never;
     const ok = await guard.canActivate(httpContext(req));
 
     expect(ok).toBe(true);
-    expect((req as { user: unknown }).user).toEqual({
+    expect((req as { account: unknown }).account).toEqual({
       accountId: 'acc-1',
       userType: 'admin',
     });

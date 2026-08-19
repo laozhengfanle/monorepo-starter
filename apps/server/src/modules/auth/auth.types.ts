@@ -8,8 +8,8 @@ export interface JwtPayload {
   jti?: string;
 }
 
-/** 认证后的用户信息（挂到 request.user） */
-export interface AuthUser {
+/** 认证后的账户信息（挂到 request.account） */
+export interface AuthAccount {
   accountId: string;
   userType: string;
 }

@@ -5,8 +5,8 @@ import { ZodArgsPipe } from '@starter/server-core';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { FileManagerService } from './file-manager.service.js';
 import {
   PaginatedUploadFilesType,
@@ -59,8 +59,8 @@ export class FileManagerResolver {
   @RequirePermission('config:file:delete')
   async deleteUploadFile(
     @Args('id', { type: () => ID }) id: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<UploadFileType> {
-    return this.fileManagerService.remove(id, user.accountId);
+    return this.fileManagerService.remove(id, account.accountId);
   }
 }

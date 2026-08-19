@@ -3,8 +3,8 @@ import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/permission.decorator.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { AuthUser } from '../auth/auth.types.js';
+import { CurrentAccount } from '../auth/current-account.decorator.js';
+import type { AuthAccount } from '../auth/auth.types.js';
 import { CacheAdminService } from './cache-admin.service.js';
 import {
   CacheKeyType,
@@ -69,26 +69,26 @@ export class CacheAdminResolver {
   @RequirePermission('config:cache:delete')
   deleteCacheKey(
     @Args('key', { type: () => String }) key: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<boolean> {
-    return this.cacheAdminService.delete(key, user.accountId);
+    return this.cacheAdminService.delete(key, account.accountId);
   }
 
   @Mutation(() => DeleteCacheKeysResultType)
   @RequirePermission('config:cache:delete')
   deleteCacheKeys(
     @Args('keys', { type: () => [String] }) keys: string[],
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<DeleteCacheKeysResultType> {
-    return this.cacheAdminService.deleteKeys(keys, user.accountId);
+    return this.cacheAdminService.deleteKeys(keys, account.accountId);
   }
 
   @Mutation(() => Int)
   @RequirePermission('config:cache:delete')
   clearCacheByPattern(
     @Args('pattern', { type: () => String }) pattern: string,
-    @CurrentUser() user: AuthUser,
+    @CurrentAccount() account: AuthAccount,
   ): Promise<number> {
-    return this.cacheAdminService.clearByPattern(pattern, user.accountId);
+    return this.cacheAdminService.clearByPattern(pattern, account.accountId);
   }
 }

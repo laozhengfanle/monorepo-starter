@@ -78,11 +78,11 @@ describe('BusinessMetrics', () => {
 
   it('缓存命中率 Gauge 可设置 0~1 值', () => {
     const metrics = new BusinessMetrics();
-    metrics.setCacheHitRatio('user:', 0.87);
+    metrics.setCacheHitRatio('account:', 0.87);
 
     expect(
       counterValue(metrics.cacheHitRatio as unknown as Counter<string>, {
-        key_prefix: 'user:',
+        key_prefix: 'account:',
       }),
     ).toBeCloseTo(0.87);
   });

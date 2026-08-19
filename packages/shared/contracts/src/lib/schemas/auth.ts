@@ -41,7 +41,7 @@ export const AdminMeSchema = z.object({
   createdAt: z.string(),
   /** 角色机器编码列表，如 ['super_admin'] */
   roleCodes: z.array(z.string()),
-  /** 聚合的权限点列表（角色 → AdminMenu.code），如 ['user:create'] */
+  /** 聚合的权限点列表（角色 → AdminMenu.code），如 ['account:create'] */
   permissions: z.array(z.string()),
   /** 可访问的菜单树（侧栏渲染；按 sort 升序，已裁剪无权限分支） */
   menus: z.array(AdminMenuNodeSchema),
@@ -51,11 +51,18 @@ export type AdminMe = z.infer<typeof AdminMeSchema>;
 
 /** 个人中心：更新自己的资料（全字段可选，仅本人可调） */
 export const UpdateSelfSchema = z.object({
-  nickname: z.string().min(2, '昵称长度 2-32 个字符').max(32, '昵称长度 2-32 个字符').optional(),
+  nickname: z
+    .string()
+    .min(2, '昵称长度 2-32 个字符')
+    .max(32, '昵称长度 2-32 个字符')
+    .optional(),
   email: z
     .string()
     .max(100, '邮箱最多 100 个字符')
-    .refine((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), '邮箱格式不正确')
+    .refine(
+      (v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+      '邮箱格式不正确',
+    )
     .optional(),
   phone: z
     .string()
@@ -70,8 +77,14 @@ export type UpdateSelfInput = z.input<typeof UpdateSelfSchema>;
 
 /** 个人中心：修改密码 */
 export const ChangePasswordSchema = z.object({
-  currentPassword: z.string().min(1, '当前密码不能为空').max(100, '当前密码过长'),
-  newPassword: z.string().min(8, '新密码至少 8 位').max(100, '新密码最多 100 个字符'),
+  currentPassword: z
+    .string()
+    .min(1, '当前密码不能为空')
+    .max(100, '当前密码过长'),
+  newPassword: z
+    .string()
+    .min(8, '新密码至少 8 位')
+    .max(100, '新密码最多 100 个字符'),
 });
 
 export type ChangePasswordInput = z.input<typeof ChangePasswordSchema>;
