@@ -44,7 +44,7 @@ import type {
   AdminAccount,
   CreateAdminAccountInput,
   UpdateAdminAccountInput,
-} from '../../../generated/graphql';
+} from '../../../generated/graphql-types';
 
 const DEFAULT_PAGE_SIZE = 10;
 

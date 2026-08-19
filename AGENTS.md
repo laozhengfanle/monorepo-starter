@@ -197,6 +197,24 @@ antd doc <组件> --format json           # 完整文档（可加 --lang zh）
 
 <!-- fork port adjustment end-->
 
+<!-- tmp files convention start-->
+<!-- Leave the start & end comments to automatically receive updates. -->
+
+# 临时文件规范（统一放 .tmp，谁产生谁删除）
+
+> 违反视为代码评审不通过。AI / 开发者需要创建临时文件（调试脚本、截图、下载的临时资源、
+> 迁移校验用的中间文件等）时，必须遵守：
+
+1. **统一放仓库根目录 `.tmp/`**：所有临时文件/目录一律创建在根目录 `.tmp/` 下
+   （如 `.tmp/debug.sh`、`.tmp/screenshot.png`），**禁止**散落在仓库其他位置
+   （仓库根、src、docs、各 package 目录等一律不允许）。
+2. **谁产生谁删除，自觉清理**：创建临时文件的代理/开发者负责在任务结束后删除自己产生的文件
+   （`rm -rf .tmp/<自己的文件>`），**每次任务收尾自觉清理，无需请示用户**，不允许把临时文件留在工作区。
+3. **永不入库**：`.tmp/` 已在 .gitignore 中，临时文件禁止 `git add` / 提交。
+4. 违反后果：工作区出现 `.tmp` 之外散落的临时文件视为事故，代码评审直接打回。
+
+<!-- tmp files convention end-->
+
 <!-- upstream feedback start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 

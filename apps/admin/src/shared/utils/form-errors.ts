@@ -1,4 +1,3 @@
-import { ApolloError } from '@apollo/client';
 import type { FormInstance } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
 
@@ -29,14 +28,15 @@ export function applyZodErrors(
 
 /**
  * 未知错误 → 用户可读文案：
- * GraphQL 错误取第一个 graphQLError 的 message，其余走兜底文案。
+ * Apollo v3 ApolloError / v4 CombinedGraphQLErrors 均为 Error 子类，
+ * message 即服务端 GraphQL 错误文案，其余走兜底文案。
  */
 export function toErrorMessage(
   error: unknown,
   fallback = DEFAULT_ERROR_MESSAGE,
 ): string {
-  if (error instanceof ApolloError) {
-    return error.graphQLErrors[0]?.message ?? fallback;
+  if (error instanceof Error && error.message) {
+    return error.message;
   }
   return fallback;
 }

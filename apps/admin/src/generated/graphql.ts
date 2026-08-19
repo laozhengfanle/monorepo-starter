@@ -1,917 +1,317 @@
+/** Internal type. DO NOT USE DIRECTLY. */
+type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+/** Internal type. DO NOT USE DIRECTLY. */
+export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+import type * as Types from './graphql-types';
+
 import { gql } from '@apollo/client';
 import * as Apollo from '@apollo/client';
-export type Maybe<T> = T | null;
-export type InputMaybe<T> = Maybe<T>;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
-export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 const defaultOptions = {} as const;
-/** All built-in and custom scalars, mapped to their actual values */
-export type Scalars = {
-  ID: { input: string; output: string; }
-  String: { input: string; output: string; }
-  Boolean: { input: boolean; output: boolean; }
-  Int: { input: number; output: number; }
-  Float: { input: number; output: number; }
-  /** 任意 JSON 值（对象 / 数组 / 字符串 / 数字 / 布尔 / null） */
-  JSON: { input: any; output: any; }
-};
-
-export type AdminAccount = {
-  __typename?: 'AdminAccount';
-  accountId: Scalars['ID']['output'];
-  avatar: Scalars['String']['output'];
-  createdAt: Scalars['String']['output'];
-  deletedAt?: Maybe<Scalars['String']['output']>;
-  email: Scalars['String']['output'];
-  enabled: Scalars['Boolean']['output'];
-  nickname: Scalars['String']['output'];
-  roleCodes: Array<Scalars['String']['output']>;
-  username: Scalars['String']['output'];
-};
-
-export type AdminAccountQueryInput = {
-  email?: InputMaybe<Scalars['String']['input']>;
-  enabled?: InputMaybe<Scalars['Boolean']['input']>;
-  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-  roleCode?: InputMaybe<Scalars['String']['input']>;
-  username?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type AdminMe = {
-  __typename?: 'AdminMe';
-  accountId: Scalars['ID']['output'];
-  avatar: Scalars['String']['output'];
-  createdAt: Scalars['String']['output'];
-  email: Scalars['String']['output'];
-  menus: Array<AdminMenuNode>;
-  nickname: Scalars['String']['output'];
-  permissions: Array<Scalars['String']['output']>;
-  phone: Scalars['String']['output'];
-  roleCodes: Array<Scalars['String']['output']>;
-  username: Scalars['String']['output'];
-};
-
-export type AdminMenuNode = {
-  __typename?: 'AdminMenuNode';
-  children: Array<AdminMenuNode>;
-  code: Scalars['String']['output'];
-  createdAt: Scalars['String']['output'];
-  enabled: Scalars['Boolean']['output'];
-  icon?: Maybe<Scalars['String']['output']>;
-  id: Scalars['ID']['output'];
-  name: Scalars['String']['output'];
-  parentId?: Maybe<Scalars['ID']['output']>;
-  path?: Maybe<Scalars['String']['output']>;
-  sort: Scalars['Int']['output'];
-  type: Scalars['String']['output'];
-  visible: Scalars['Boolean']['output'];
-};
-
-export type AdminRole = {
-  __typename?: 'AdminRole';
-  code: Scalars['String']['output'];
-  createdAt: Scalars['String']['output'];
-  description: Scalars['String']['output'];
-  enabled: Scalars['Boolean']['output'];
-  id: Scalars['ID']['output'];
-  name: Scalars['String']['output'];
-  permissionCodes: Array<Scalars['String']['output']>;
-};
-
-export type AuditLogItem = {
-  __typename?: 'AuditLogItem';
-  accountId?: Maybe<Scalars['String']['output']>;
-  accountUsername?: Maybe<Scalars['String']['output']>;
-  action: Scalars['String']['output'];
-  createdAt: Scalars['String']['output'];
-  detail?: Maybe<Scalars['String']['output']>;
-  id: Scalars['ID']['output'];
-  ip?: Maybe<Scalars['String']['output']>;
-  resourceId?: Maybe<Scalars['String']['output']>;
-  resourceType?: Maybe<Scalars['String']['output']>;
-  userAgent?: Maybe<Scalars['String']['output']>;
-};
-
-export type AuditLogQueryInput = {
-  action?: InputMaybe<Scalars['String']['input']>;
-  endDate?: InputMaybe<Scalars['String']['input']>;
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-  resourceType?: InputMaybe<Scalars['String']['input']>;
-  startDate?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type AuthResult = {
-  __typename?: 'AuthResult';
-  accessToken: Scalars['String']['output'];
-  expiresIn: Scalars['Int']['output'];
-  refreshToken: Scalars['String']['output'];
-};
-
-export type BatchUpdateConfigsInput = {
-  updates: Array<ConfigUpdateItemInput>;
-};
-
-export type CacheKey = {
-  __typename?: 'CacheKey';
-  key: Scalars['String']['output'];
-  size: Scalars['Int']['output'];
-  ttl: Scalars['Int']['output'];
-  type: Scalars['String']['output'];
-  value?: Maybe<Scalars['String']['output']>;
-};
-
-export type CacheStats = {
-  __typename?: 'CacheStats';
-  hitRate: Scalars['String']['output'];
-  uptime: Scalars['String']['output'];
-  usedMemory: Scalars['String']['output'];
-};
-
-export type ClearAuditLogsResult = {
-  __typename?: 'ClearAuditLogsResult';
-  deletedCount: Scalars['Int']['output'];
-};
-
-export type ConfigUpdateItemInput = {
-  key: Scalars['String']['input'];
-  value: Scalars['JSON']['input'];
-};
-
-export type CreateAdminAccountInput = {
-  email?: InputMaybe<Scalars['String']['input']>;
-  nickname?: InputMaybe<Scalars['String']['input']>;
-  password: Scalars['String']['input'];
-  roleCodes: Array<Scalars['String']['input']>;
-  username: Scalars['String']['input'];
-};
-
-export type CreateDictItemInput = {
-  dictTypeId: Scalars['ID']['input'];
-  enabled?: InputMaybe<Scalars['Boolean']['input']>;
-  label: Scalars['String']['input'];
-  remark?: InputMaybe<Scalars['String']['input']>;
-  sort?: InputMaybe<Scalars['Int']['input']>;
-  value: Scalars['String']['input'];
-};
-
-export type CreateDictTypeInput = {
-  code: Scalars['String']['input'];
-  enabled?: InputMaybe<Scalars['Boolean']['input']>;
-  name: Scalars['String']['input'];
-  remark?: InputMaybe<Scalars['String']['input']>;
-  sort?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type CreateMenuInput = {
-  code: Scalars['String']['input'];
-  icon?: InputMaybe<Scalars['String']['input']>;
-  name: Scalars['String']['input'];
-  parentId?: InputMaybe<Scalars['ID']['input']>;
-  path?: InputMaybe<Scalars['String']['input']>;
-  sort?: InputMaybe<Scalars['Int']['input']>;
-  type: Scalars['String']['input'];
-  visible?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type CreateRoleInput = {
-  code: Scalars['String']['input'];
-  description?: InputMaybe<Scalars['String']['input']>;
-  name: Scalars['String']['input'];
-  permissionCodes?: InputMaybe<Array<Scalars['String']['input']>>;
-};
-
-/** 操作类型分布项 */
-export type DashboardDistItem = {
-  __typename?: 'DashboardDistItem';
-  /** 饼图颜色 */
-  color: Scalars['String']['output'];
-  /** 操作中文标签（字典 audit_action） */
-  label: Scalars['String']['output'];
-  /** 占比（0-100） */
-  percent: Scalars['Int']['output'];
-};
-
-/** 最近操作记录 */
-export type DashboardOpLog = {
-  __typename?: 'DashboardOpLog';
-  /** 操作内容中文标签（字典 audit_action） */
-  content: Scalars['String']['output'];
-  /** IP */
-  ip: Scalars['String']['output'];
-  /** 资源类型中文标签（字典 audit_resource） */
-  module: Scalars['String']['output'];
-  /** 序号 */
-  seq: Scalars['Int']['output'];
-  /** 操作时间（YYYY-MM-DD HH:mm:ss） */
-  time: Scalars['String']['output'];
-  /** 操作类型分类：login/logout/create/update/delete/reset/grant/export */
-  type: Scalars['String']['output'];
-  /** 操作者用户名（无则系统） */
-  user: Scalars['String']['output'];
-};
-
-/** 分页操作记录 */
-export type DashboardOpLogPage = {
-  __typename?: 'DashboardOpLogPage';
-  list: Array<DashboardOpLog>;
-  page: Scalars['Int']['output'];
-  pageSize: Scalars['Int']['output'];
-  total: Scalars['Int']['output'];
-};
-
-/** 仪表盘统计卡片 */
-export type DashboardStat = {
-  __typename?: 'DashboardStat';
-  /** 标签名，如 管理员 / 角色 / 菜单项 / 近7日操作 */
-  label: Scalars['String']['output'];
-  /** 较上周趋势百分比（正=上升，负=下降） */
-  trend: Scalars['Int']['output'];
-  /** 当前值 */
-  value: Scalars['Int']['output'];
-};
-
-/** 敏感操作趋势数据点 */
-export type DashboardTrendItem = {
-  __typename?: 'DashboardTrendItem';
-  /** 高危操作次数 */
-  highRisk: Scalars['Int']['output'];
-  /** 时间段标签（周一 / MM-DD / M月） */
-  label: Scalars['String']['output'];
-  /** 低危操作次数 */
-  lowRisk: Scalars['Int']['output'];
-  /** 中危操作次数 */
-  midRisk: Scalars['Int']['output'];
-};
-
-export type DeleteCacheKeysResult = {
-  __typename?: 'DeleteCacheKeysResult';
-  deletedCount: Scalars['Int']['output'];
-  keys: Array<Scalars['String']['output']>;
-};
-
-export type LoginInput = {
-  password: Scalars['String']['input'];
-  username: Scalars['String']['input'];
-};
-
-export type Mutation = {
-  __typename?: 'Mutation';
-  batchUpdateConfigs: Array<SystemConfig>;
-  clearAuditLogs: ClearAuditLogsResult;
-  clearCacheByPattern: Scalars['Int']['output'];
-  createAdminAccount: AdminAccount;
-  createDictItem: SysDictItem;
-  createDictType: SysDictType;
-  createMenu: AdminMenuNode;
-  createRole: AdminRole;
-  deleteAdminAccount: AdminAccount;
-  deleteAuditLog: Scalars['Boolean']['output'];
-  deleteCacheKey: Scalars['Boolean']['output'];
-  deleteCacheKeys: DeleteCacheKeysResult;
-  deleteDictItem: Scalars['Boolean']['output'];
-  deleteDictType: Scalars['Boolean']['output'];
-  deleteMenu: AdminMenuNode;
-  deleteRole: AdminRole;
-  deleteUploadFile: UploadFile;
-  login: AuthResult;
-  updateAdminAccount: AdminAccount;
-  updateDictItem: SysDictItem;
-  updateDictType: SysDictType;
-  updateMenu: AdminMenuNode;
-  updateRole: AdminRole;
-  updateTurnstileConfig: SystemConfig;
-};
-
-
-export type MutationBatchUpdateConfigsArgs = {
-  input: BatchUpdateConfigsInput;
-};
-
-
-export type MutationClearCacheByPatternArgs = {
-  pattern: Scalars['String']['input'];
-};
-
-
-export type MutationCreateAdminAccountArgs = {
-  input: CreateAdminAccountInput;
-};
-
-
-export type MutationCreateDictItemArgs = {
-  input: CreateDictItemInput;
-};
-
-
-export type MutationCreateDictTypeArgs = {
-  input: CreateDictTypeInput;
-};
-
-
-export type MutationCreateMenuArgs = {
-  input: CreateMenuInput;
-};
-
-
-export type MutationCreateRoleArgs = {
-  input: CreateRoleInput;
-};
-
-
-export type MutationDeleteAdminAccountArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationDeleteAuditLogArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationDeleteCacheKeyArgs = {
-  key: Scalars['String']['input'];
-};
-
-
-export type MutationDeleteCacheKeysArgs = {
-  keys: Array<Scalars['String']['input']>;
-};
-
-
-export type MutationDeleteDictItemArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationDeleteDictTypeArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationDeleteMenuArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationDeleteRoleArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationDeleteUploadFileArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationLoginArgs = {
-  input: LoginInput;
-};
-
-
-export type MutationUpdateAdminAccountArgs = {
-  id: Scalars['ID']['input'];
-  input: UpdateAdminAccountInput;
-};
-
-
-export type MutationUpdateDictItemArgs = {
-  id: Scalars['ID']['input'];
-  input: UpdateDictItemInput;
-};
-
-
-export type MutationUpdateDictTypeArgs = {
-  id: Scalars['ID']['input'];
-  input: UpdateDictTypeInput;
-};
-
-
-export type MutationUpdateMenuArgs = {
-  id: Scalars['ID']['input'];
-  input: UpdateMenuInput;
-};
-
-
-export type MutationUpdateRoleArgs = {
-  id: Scalars['ID']['input'];
-  input: UpdateRoleInput;
-};
-
-
-export type MutationUpdateTurnstileConfigArgs = {
-  input: UpdateConfigInput;
-};
-
-export type PaginatedAdminAccounts = {
-  __typename?: 'PaginatedAdminAccounts';
-  items: Array<AdminAccount>;
-  page: Scalars['Int']['output'];
-  pageSize: Scalars['Int']['output'];
-  total: Scalars['Int']['output'];
-};
-
-export type PaginatedAuditLogs = {
-  __typename?: 'PaginatedAuditLogs';
-  items: Array<AuditLogItem>;
-  page: Scalars['Int']['output'];
-  pageSize: Scalars['Int']['output'];
-  total: Scalars['Int']['output'];
-};
-
-export type PaginatedUploadFiles = {
-  __typename?: 'PaginatedUploadFiles';
-  items: Array<UploadFile>;
-  page: Scalars['Int']['output'];
-  pageSize: Scalars['Int']['output'];
-  total: Scalars['Int']['output'];
-};
-
-export type PermissionCode = {
-  __typename?: 'PermissionCode';
-  code: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  name: Scalars['String']['output'];
-  type: Scalars['String']['output'];
-};
-
-export type Query = {
-  __typename?: 'Query';
-  adminAccounts: PaginatedAdminAccounts;
-  adminConfigs: Array<SystemConfig>;
-  adminLogs: PaginatedAuditLogs;
-  adminRoles: Array<AdminRole>;
-  cacheKey: CacheKey;
-  cacheKeyTotal: Scalars['Int']['output'];
-  cacheKeys: Array<CacheKey>;
-  cacheStats: CacheStats;
-  dashboardDistribution: Array<DashboardDistItem>;
-  dashboardOperationLogs: DashboardOpLogPage;
-  dashboardStats: Array<DashboardStat>;
-  dashboardTrend: Array<DashboardTrendItem>;
-  exportAuditLogs: Array<AuditLogItem>;
-  me: AdminMe;
-  menuTree: Array<AdminMenuNode>;
-  permissionCodes: Array<PermissionCode>;
-  publicConfigs: Array<SystemConfig>;
-  storageConfig?: Maybe<SystemConfig>;
-  sysDictTypes: Array<SysDictType>;
-  turnstileConfig?: Maybe<SystemConfig>;
-  uploadFiles: PaginatedUploadFiles;
-};
-
-
-export type QueryAdminAccountsArgs = {
-  query: AdminAccountQueryInput;
-};
-
-
-export type QueryAdminLogsArgs = {
-  query: AuditLogQueryInput;
-};
-
-
-export type QueryCacheKeyArgs = {
-  key: Scalars['String']['input'];
-};
-
-
-export type QueryCacheKeyTotalArgs = {
-  pattern?: InputMaybe<Scalars['String']['input']>;
-};
-
-
-export type QueryCacheKeysArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
-  pattern?: InputMaybe<Scalars['String']['input']>;
-};
-
-
-export type QueryDashboardOperationLogsArgs = {
-  page?: Scalars['Int']['input'];
-  pageSize?: Scalars['Int']['input'];
-};
-
-
-export type QueryDashboardTrendArgs = {
-  range?: Scalars['String']['input'];
-};
-
-
-export type QueryExportAuditLogsArgs = {
-  query: AuditLogQueryInput;
-};
-
-
-export type QueryUploadFilesArgs = {
-  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type SysDictItem = {
-  __typename?: 'SysDictItem';
-  createdAt: Scalars['String']['output'];
-  enabled: Scalars['Boolean']['output'];
-  id: Scalars['ID']['output'];
-  label: Scalars['String']['output'];
-  remark?: Maybe<Scalars['String']['output']>;
-  sort: Scalars['Int']['output'];
-  updatedAt: Scalars['String']['output'];
-  value: Scalars['String']['output'];
-};
-
-export type SysDictType = {
-  __typename?: 'SysDictType';
-  code: Scalars['String']['output'];
-  createdAt: Scalars['String']['output'];
-  enabled: Scalars['Boolean']['output'];
-  id: Scalars['ID']['output'];
-  items: Array<SysDictItem>;
-  name: Scalars['String']['output'];
-  remark?: Maybe<Scalars['String']['output']>;
-  sort: Scalars['Int']['output'];
-  updatedAt: Scalars['String']['output'];
-};
-
-export type SystemConfig = {
-  __typename?: 'SystemConfig';
-  createdAt: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  key: Scalars['String']['output'];
-  remark?: Maybe<Scalars['String']['output']>;
-  updatedAt: Scalars['String']['output'];
-  updatedBy?: Maybe<Scalars['String']['output']>;
-  value: Scalars['JSON']['output'];
-};
-
-export type UpdateAdminAccountInput = {
-  email?: InputMaybe<Scalars['String']['input']>;
-  enabled?: InputMaybe<Scalars['Boolean']['input']>;
-  nickname?: InputMaybe<Scalars['String']['input']>;
-  roleCodes?: InputMaybe<Array<Scalars['String']['input']>>;
-};
-
-export type UpdateConfigInput = {
-  value: Scalars['JSON']['input'];
-};
-
-export type UpdateDictItemInput = {
-  enabled?: InputMaybe<Scalars['Boolean']['input']>;
-  label?: InputMaybe<Scalars['String']['input']>;
-  remark?: InputMaybe<Scalars['String']['input']>;
-  sort?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type UpdateDictTypeInput = {
-  enabled?: InputMaybe<Scalars['Boolean']['input']>;
-  name?: InputMaybe<Scalars['String']['input']>;
-  remark?: InputMaybe<Scalars['String']['input']>;
-  sort?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type UpdateMenuInput = {
-  enabled?: InputMaybe<Scalars['Boolean']['input']>;
-  icon?: InputMaybe<Scalars['String']['input']>;
-  name?: InputMaybe<Scalars['String']['input']>;
-  parentId?: InputMaybe<Scalars['ID']['input']>;
-  path?: InputMaybe<Scalars['String']['input']>;
-  sort?: InputMaybe<Scalars['Int']['input']>;
-  type?: InputMaybe<Scalars['String']['input']>;
-  visible?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type UpdateRoleInput = {
-  description?: InputMaybe<Scalars['String']['input']>;
-  enabled?: InputMaybe<Scalars['Boolean']['input']>;
-  name?: InputMaybe<Scalars['String']['input']>;
-  permissionCodes?: InputMaybe<Array<Scalars['String']['input']>>;
-};
-
-export type UploadFile = {
-  __typename?: 'UploadFile';
-  accountId?: Maybe<Scalars['String']['output']>;
-  createdAt: Scalars['String']['output'];
-  deletedAt?: Maybe<Scalars['String']['output']>;
-  id: Scalars['ID']['output'];
-  mimeType: Scalars['String']['output'];
-  originalName: Scalars['String']['output'];
-  size: Scalars['Int']['output'];
-  storedName: Scalars['String']['output'];
-  url: Scalars['String']['output'];
-};
-
 export type AdminAccountsQueryVariables = Exact<{
-  query: AdminAccountQueryInput;
+  query: Types.AdminAccountQueryInput;
 }>;
 
 
-export type AdminAccountsQuery = { __typename?: 'Query', adminAccounts: { __typename?: 'PaginatedAdminAccounts', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'AdminAccount', accountId: string, username: string, nickname: string, email: string, avatar: string, enabled: boolean, roleCodes: Array<string>, createdAt: string, deletedAt?: string | null }> } };
+export type AdminAccountsQuery = { adminAccounts: { total: number, page: number, pageSize: number, items: Array<{ accountId: string, username: string, nickname: string, email: string, avatar: string, enabled: boolean, roleCodes: Array<string>, createdAt: string, deletedAt: string | null }> } };
 
 export type AdminRolesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type AdminRolesQuery = { __typename?: 'Query', adminRoles: Array<{ __typename?: 'AdminRole', id: string, code: string, name: string }> };
+export type AdminRolesQuery = { adminRoles: Array<{ id: string, code: string, name: string }> };
 
 export type CreateAdminAccountMutationVariables = Exact<{
-  input: CreateAdminAccountInput;
+  input: Types.CreateAdminAccountInput;
 }>;
 
 
-export type CreateAdminAccountMutation = { __typename?: 'Mutation', createAdminAccount: { __typename?: 'AdminAccount', accountId: string, username: string, nickname: string, email: string, enabled: boolean, roleCodes: Array<string> } };
+export type CreateAdminAccountMutation = { createAdminAccount: { accountId: string, username: string, nickname: string, email: string, enabled: boolean, roleCodes: Array<string> } };
 
 export type UpdateAdminAccountMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  input: UpdateAdminAccountInput;
+  id: string | number;
+  input: Types.UpdateAdminAccountInput;
 }>;
 
 
-export type UpdateAdminAccountMutation = { __typename?: 'Mutation', updateAdminAccount: { __typename?: 'AdminAccount', accountId: string, username: string, nickname: string, email: string, enabled: boolean, roleCodes: Array<string> } };
+export type UpdateAdminAccountMutation = { updateAdminAccount: { accountId: string, username: string, nickname: string, email: string, enabled: boolean, roleCodes: Array<string> } };
 
 export type DeleteAdminAccountMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
-export type DeleteAdminAccountMutation = { __typename?: 'Mutation', deleteAdminAccount: { __typename?: 'AdminAccount', accountId: string } };
+export type DeleteAdminAccountMutation = { deleteAdminAccount: { accountId: string } };
 
-export type MenuNodeFieldsFragment = { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string };
+export type MenuNodeFieldsFragment = { id: string, parentId: string | null, name: string, code: string, type: string, path: string | null, icon: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string };
 
 export type MenuTreeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MenuTreeQuery = { __typename?: 'Query', menuTree: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string }> }> }> }> }> };
+export type MenuTreeQuery = { menuTree: Array<{ id: string, parentId: string | null, name: string, code: string, type: string, path: string | null, icon: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ id: string, parentId: string | null, name: string, code: string, type: string, path: string | null, icon: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ id: string, parentId: string | null, name: string, code: string, type: string, path: string | null, icon: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ id: string, parentId: string | null, name: string, code: string, type: string, path: string | null, icon: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string, children: Array<{ id: string, parentId: string | null, name: string, code: string, type: string, path: string | null, icon: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string }> }> }> }> }> };
 
 export type CreateMenuMutationVariables = Exact<{
-  input: CreateMenuInput;
+  input: Types.CreateMenuInput;
 }>;
 
 
-export type CreateMenuMutation = { __typename?: 'Mutation', createMenu: { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string } };
+export type CreateMenuMutation = { createMenu: { id: string, parentId: string | null, name: string, code: string, type: string, path: string | null, icon: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string } };
 
 export type UpdateMenuMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  input: UpdateMenuInput;
+  id: string | number;
+  input: Types.UpdateMenuInput;
 }>;
 
 
-export type UpdateMenuMutation = { __typename?: 'Mutation', updateMenu: { __typename?: 'AdminMenuNode', id: string, parentId?: string | null, name: string, code: string, type: string, path?: string | null, icon?: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string } };
+export type UpdateMenuMutation = { updateMenu: { id: string, parentId: string | null, name: string, code: string, type: string, path: string | null, icon: string | null, sort: number, enabled: boolean, visible: boolean, createdAt: string } };
 
 export type DeleteMenuMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
-export type DeleteMenuMutation = { __typename?: 'Mutation', deleteMenu: { __typename?: 'AdminMenuNode', id: string } };
+export type DeleteMenuMutation = { deleteMenu: { id: string } };
 
 export type AdminRoleListQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type AdminRoleListQuery = { __typename?: 'Query', adminRoles: Array<{ __typename?: 'AdminRole', id: string, name: string, code: string, description: string, enabled: boolean, permissionCodes: Array<string>, createdAt: string }> };
+export type AdminRoleListQuery = { adminRoles: Array<{ id: string, name: string, code: string, description: string, enabled: boolean, permissionCodes: Array<string>, createdAt: string }> };
 
 export type PermissionCodeListQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type PermissionCodeListQuery = { __typename?: 'Query', permissionCodes: Array<{ __typename?: 'PermissionCode', id: string, code: string, name: string, type: string }> };
+export type PermissionCodeListQuery = { permissionCodes: Array<{ id: string, code: string, name: string, type: string }> };
 
 export type CreateRoleMutationVariables = Exact<{
-  input: CreateRoleInput;
+  input: Types.CreateRoleInput;
 }>;
 
 
-export type CreateRoleMutation = { __typename?: 'Mutation', createRole: { __typename?: 'AdminRole', id: string, name: string, code: string, description: string, enabled: boolean, permissionCodes: Array<string> } };
+export type CreateRoleMutation = { createRole: { id: string, name: string, code: string, description: string, enabled: boolean, permissionCodes: Array<string> } };
 
 export type UpdateRoleMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  input: UpdateRoleInput;
+  id: string | number;
+  input: Types.UpdateRoleInput;
 }>;
 
 
-export type UpdateRoleMutation = { __typename?: 'Mutation', updateRole: { __typename?: 'AdminRole', id: string, name: string, code: string, description: string, enabled: boolean, permissionCodes: Array<string> } };
+export type UpdateRoleMutation = { updateRole: { id: string, name: string, code: string, description: string, enabled: boolean, permissionCodes: Array<string> } };
 
 export type DeleteRoleMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
-export type DeleteRoleMutation = { __typename?: 'Mutation', deleteRole: { __typename?: 'AdminRole', id: string } };
+export type DeleteRoleMutation = { deleteRole: { id: string } };
 
 export type DashboardStatsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type DashboardStatsQuery = { __typename?: 'Query', dashboardStats: Array<{ __typename?: 'DashboardStat', label: string, value: number, trend: number }> };
+export type DashboardStatsQuery = { dashboardStats: Array<{ label: string, value: number, trend: number }> };
 
 export type DashboardTrendQueryVariables = Exact<{
-  range?: InputMaybe<Scalars['String']['input']>;
+  range?: string | null | undefined;
 }>;
 
 
-export type DashboardTrendQuery = { __typename?: 'Query', dashboardTrend: Array<{ __typename?: 'DashboardTrendItem', label: string, highRisk: number, midRisk: number, lowRisk: number }> };
+export type DashboardTrendQuery = { dashboardTrend: Array<{ label: string, highRisk: number, midRisk: number, lowRisk: number }> };
 
 export type DashboardDistributionQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type DashboardDistributionQuery = { __typename?: 'Query', dashboardDistribution: Array<{ __typename?: 'DashboardDistItem', label: string, percent: number, color: string }> };
+export type DashboardDistributionQuery = { dashboardDistribution: Array<{ label: string, percent: number, color: string }> };
 
 export type DashboardOperationLogsQueryVariables = Exact<{
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  page?: number | null | undefined;
+  pageSize?: number | null | undefined;
 }>;
 
 
-export type DashboardOperationLogsQuery = { __typename?: 'Query', dashboardOperationLogs: { __typename?: 'DashboardOpLogPage', total: number, page: number, pageSize: number, list: Array<{ __typename?: 'DashboardOpLog', seq: number, user: string, content: string, module: string, type: string, ip: string, time: string }> } };
+export type DashboardOperationLogsQuery = { dashboardOperationLogs: { total: number, page: number, pageSize: number, list: Array<{ seq: number, user: string, content: string, module: string, type: string, ip: string, time: string }> } };
 
-export type SysDictItemFieldsFragment = { __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string };
+export type SysDictItemFieldsFragment = { id: string, label: string, value: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string };
 
-export type SysDictTypeFieldsFragment = { __typename?: 'SysDictType', id: string, code: string, name: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> };
+export type SysDictTypeFieldsFragment = { id: string, code: string, name: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ id: string, label: string, value: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> };
 
 export type SysDictTypesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type SysDictTypesQuery = { __typename?: 'Query', sysDictTypes: Array<{ __typename?: 'SysDictType', id: string, code: string, name: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> }> };
+export type SysDictTypesQuery = { sysDictTypes: Array<{ id: string, code: string, name: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ id: string, label: string, value: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> }> };
 
 export type CreateDictTypeMutationVariables = Exact<{
-  input: CreateDictTypeInput;
+  input: Types.CreateDictTypeInput;
 }>;
 
 
-export type CreateDictTypeMutation = { __typename?: 'Mutation', createDictType: { __typename?: 'SysDictType', id: string, code: string, name: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> } };
+export type CreateDictTypeMutation = { createDictType: { id: string, code: string, name: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ id: string, label: string, value: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> } };
 
 export type UpdateDictTypeMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  input: UpdateDictTypeInput;
+  id: string | number;
+  input: Types.UpdateDictTypeInput;
 }>;
 
 
-export type UpdateDictTypeMutation = { __typename?: 'Mutation', updateDictType: { __typename?: 'SysDictType', id: string, code: string, name: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> } };
+export type UpdateDictTypeMutation = { updateDictType: { id: string, code: string, name: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string, items: Array<{ id: string, label: string, value: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string }> } };
 
 export type DeleteDictTypeMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
-export type DeleteDictTypeMutation = { __typename?: 'Mutation', deleteDictType: boolean };
+export type DeleteDictTypeMutation = { deleteDictType: boolean };
 
 export type CreateDictItemMutationVariables = Exact<{
-  input: CreateDictItemInput;
+  input: Types.CreateDictItemInput;
 }>;
 
 
-export type CreateDictItemMutation = { __typename?: 'Mutation', createDictItem: { __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string } };
+export type CreateDictItemMutation = { createDictItem: { id: string, label: string, value: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string } };
 
 export type UpdateDictItemMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  input: UpdateDictItemInput;
+  id: string | number;
+  input: Types.UpdateDictItemInput;
 }>;
 
 
-export type UpdateDictItemMutation = { __typename?: 'Mutation', updateDictItem: { __typename?: 'SysDictItem', id: string, label: string, value: string, remark?: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string } };
+export type UpdateDictItemMutation = { updateDictItem: { id: string, label: string, value: string, remark: string | null, enabled: boolean, sort: number, createdAt: string, updatedAt: string } };
 
 export type DeleteDictItemMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
-export type DeleteDictItemMutation = { __typename?: 'Mutation', deleteDictItem: boolean };
+export type DeleteDictItemMutation = { deleteDictItem: boolean };
 
-export type SystemConfigFieldsFragment = { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string };
+export type SystemConfigFieldsFragment = { id: string, key: string, value: unknown, remark: string | null, updatedBy: string | null, createdAt: string, updatedAt: string };
 
 export type AdminConfigsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type AdminConfigsQuery = { __typename?: 'Query', adminConfigs: Array<{ __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string }> };
+export type AdminConfigsQuery = { adminConfigs: Array<{ id: string, key: string, value: unknown, remark: string | null, updatedBy: string | null, createdAt: string, updatedAt: string }> };
 
 export type BatchUpdateConfigsMutationVariables = Exact<{
-  input: BatchUpdateConfigsInput;
+  input: Types.BatchUpdateConfigsInput;
 }>;
 
 
-export type BatchUpdateConfigsMutation = { __typename?: 'Mutation', batchUpdateConfigs: Array<{ __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string }> };
+export type BatchUpdateConfigsMutation = { batchUpdateConfigs: Array<{ id: string, key: string, value: unknown, remark: string | null, updatedBy: string | null, createdAt: string, updatedAt: string }> };
 
-export type AuditLogFieldsFragment = { __typename?: 'AuditLogItem', id: string, accountId?: string | null, accountUsername?: string | null, action: string, resourceType?: string | null, resourceId?: string | null, detail?: string | null, ip?: string | null, userAgent?: string | null, createdAt: string };
+export type AuditLogFieldsFragment = { id: string, accountId: string | null, accountUsername: string | null, action: string, resourceType: string | null, resourceId: string | null, detail: string | null, ip: string | null, userAgent: string | null, createdAt: string };
 
 export type AdminLogsQueryVariables = Exact<{
-  query: AuditLogQueryInput;
+  query: Types.AuditLogQueryInput;
 }>;
 
 
-export type AdminLogsQuery = { __typename?: 'Query', adminLogs: { __typename?: 'PaginatedAuditLogs', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'AuditLogItem', id: string, accountId?: string | null, accountUsername?: string | null, action: string, resourceType?: string | null, resourceId?: string | null, detail?: string | null, ip?: string | null, userAgent?: string | null, createdAt: string }> } };
+export type AdminLogsQuery = { adminLogs: { total: number, page: number, pageSize: number, items: Array<{ id: string, accountId: string | null, accountUsername: string | null, action: string, resourceType: string | null, resourceId: string | null, detail: string | null, ip: string | null, userAgent: string | null, createdAt: string }> } };
 
 export type ExportAuditLogsQueryVariables = Exact<{
-  query: AuditLogQueryInput;
+  query: Types.AuditLogQueryInput;
 }>;
 
 
-export type ExportAuditLogsQuery = { __typename?: 'Query', exportAuditLogs: Array<{ __typename?: 'AuditLogItem', id: string, accountId?: string | null, accountUsername?: string | null, action: string, resourceType?: string | null, resourceId?: string | null, detail?: string | null, ip?: string | null, userAgent?: string | null, createdAt: string }> };
+export type ExportAuditLogsQuery = { exportAuditLogs: Array<{ id: string, accountId: string | null, accountUsername: string | null, action: string, resourceType: string | null, resourceId: string | null, detail: string | null, ip: string | null, userAgent: string | null, createdAt: string }> };
 
 export type ClearAuditLogsMutationVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ClearAuditLogsMutation = { __typename?: 'Mutation', clearAuditLogs: { __typename?: 'ClearAuditLogsResult', deletedCount: number } };
+export type ClearAuditLogsMutation = { clearAuditLogs: { deletedCount: number } };
 
 export type DeleteAuditLogMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
-export type DeleteAuditLogMutation = { __typename?: 'Mutation', deleteAuditLog: boolean };
+export type DeleteAuditLogMutation = { deleteAuditLog: boolean };
 
-export type CacheKeyFieldsFragment = { __typename?: 'CacheKey', key: string, type: string, ttl: number, value?: string | null, size: number };
+export type CacheKeyFieldsFragment = { key: string, type: string, ttl: number, value: string | null, size: number };
 
 export type CacheKeysQueryVariables = Exact<{
-  pattern?: InputMaybe<Scalars['String']['input']>;
-  offset?: InputMaybe<Scalars['Int']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
+  pattern?: string | null | undefined;
+  offset?: number | null | undefined;
+  limit?: number | null | undefined;
 }>;
 
 
-export type CacheKeysQuery = { __typename?: 'Query', cacheKeys: Array<{ __typename?: 'CacheKey', key: string, type: string, ttl: number, value?: string | null, size: number }> };
+export type CacheKeysQuery = { cacheKeys: Array<{ key: string, type: string, ttl: number, value: string | null, size: number }> };
 
 export type CacheKeyTotalQueryVariables = Exact<{
-  pattern?: InputMaybe<Scalars['String']['input']>;
+  pattern?: string | null | undefined;
 }>;
 
 
-export type CacheKeyTotalQuery = { __typename?: 'Query', cacheKeyTotal: number };
+export type CacheKeyTotalQuery = { cacheKeyTotal: number };
 
 export type CacheKeyQueryVariables = Exact<{
-  key: Scalars['String']['input'];
+  key: string;
 }>;
 
 
-export type CacheKeyQuery = { __typename?: 'Query', cacheKey: { __typename?: 'CacheKey', key: string, type: string, ttl: number, value?: string | null, size: number } };
+export type CacheKeyQuery = { cacheKey: { key: string, type: string, ttl: number, value: string | null, size: number } };
 
 export type CacheStatsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CacheStatsQuery = { __typename?: 'Query', cacheStats: { __typename?: 'CacheStats', usedMemory: string, hitRate: string, uptime: string } };
+export type CacheStatsQuery = { cacheStats: { usedMemory: string, hitRate: string, uptime: string } };
 
 export type DeleteCacheKeyMutationVariables = Exact<{
-  key: Scalars['String']['input'];
+  key: string;
 }>;
 
 
-export type DeleteCacheKeyMutation = { __typename?: 'Mutation', deleteCacheKey: boolean };
+export type DeleteCacheKeyMutation = { deleteCacheKey: boolean };
 
 export type DeleteCacheKeysMutationVariables = Exact<{
-  keys: Array<Scalars['String']['input']> | Scalars['String']['input'];
+  keys: Array<string> | string;
 }>;
 
 
-export type DeleteCacheKeysMutation = { __typename?: 'Mutation', deleteCacheKeys: { __typename?: 'DeleteCacheKeysResult', deletedCount: number, keys: Array<string> } };
+export type DeleteCacheKeysMutation = { deleteCacheKeys: { deletedCount: number, keys: Array<string> } };
 
 export type ClearCacheByPatternMutationVariables = Exact<{
-  pattern: Scalars['String']['input'];
+  pattern: string;
 }>;
 
 
-export type ClearCacheByPatternMutation = { __typename?: 'Mutation', clearCacheByPattern: number };
+export type ClearCacheByPatternMutation = { clearCacheByPattern: number };
 
 export type StorageConfigQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type StorageConfigQuery = { __typename?: 'Query', storageConfig?: { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string } | null };
+export type StorageConfigQuery = { storageConfig: { id: string, key: string, value: unknown, remark: string | null, updatedBy: string | null, createdAt: string, updatedAt: string } | null };
 
 export type TurnstileConfigQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type TurnstileConfigQuery = { __typename?: 'Query', turnstileConfig?: { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string } | null };
+export type TurnstileConfigQuery = { turnstileConfig: { id: string, key: string, value: unknown, remark: string | null, updatedBy: string | null, createdAt: string, updatedAt: string } | null };
 
 export type UpdateTurnstileConfigMutationVariables = Exact<{
-  input: UpdateConfigInput;
+  input: Types.UpdateConfigInput;
 }>;
 
 
-export type UpdateTurnstileConfigMutation = { __typename?: 'Mutation', updateTurnstileConfig: { __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string } };
+export type UpdateTurnstileConfigMutation = { updateTurnstileConfig: { id: string, key: string, value: unknown, remark: string | null, updatedBy: string | null, createdAt: string, updatedAt: string } };
 
-export type UploadFileFieldsFragment = { __typename?: 'UploadFile', id: string, originalName: string, storedName: string, mimeType: string, size: number, url: string, accountId?: string | null, createdAt: string, deletedAt?: string | null };
+export type UploadFileFieldsFragment = { id: string, originalName: string, storedName: string, mimeType: string, size: number, url: string, accountId: string | null, createdAt: string, deletedAt: string | null };
 
 export type UploadFilesQueryVariables = Exact<{
-  page?: InputMaybe<Scalars['Int']['input']>;
-  pageSize?: InputMaybe<Scalars['Int']['input']>;
-  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
+  page?: number | null | undefined;
+  pageSize?: number | null | undefined;
+  includeDeleted?: boolean | null | undefined;
 }>;
 
 
-export type UploadFilesQuery = { __typename?: 'Query', uploadFiles: { __typename?: 'PaginatedUploadFiles', total: number, page: number, pageSize: number, items: Array<{ __typename?: 'UploadFile', id: string, originalName: string, storedName: string, mimeType: string, size: number, url: string, accountId?: string | null, createdAt: string, deletedAt?: string | null }> } };
+export type UploadFilesQuery = { uploadFiles: { total: number, page: number, pageSize: number, items: Array<{ id: string, originalName: string, storedName: string, mimeType: string, size: number, url: string, accountId: string | null, createdAt: string, deletedAt: string | null }> } };
 
 export type DeleteUploadFileMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
-export type DeleteUploadFileMutation = { __typename?: 'Mutation', deleteUploadFile: { __typename?: 'UploadFile', id: string, deletedAt?: string | null } };
+export type DeleteUploadFileMutation = { deleteUploadFile: { id: string, deletedAt: string | null } };
 
 export type PublicConfigsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type PublicConfigsQuery = { __typename?: 'Query', publicConfigs: Array<{ __typename?: 'SystemConfig', id: string, key: string, value: any, remark?: string | null, updatedBy?: string | null, createdAt: string, updatedAt: string }> };
+export type PublicConfigsQuery = { publicConfigs: Array<{ id: string, key: string, value: unknown, remark: string | null, updatedBy: string | null, createdAt: string, updatedAt: string }> };
 
 export const MenuNodeFieldsFragmentDoc = gql`
     fragment MenuNodeFields on AdminMenuNode {

@@ -15,12 +15,23 @@
     // 允许样式文件、测试 setup 等副作用导入
     "import/no-unassigned-import": [
       "error",
-      { "allow": ["**/*.css", "**/*.scss", "**/*.less", "@testing-library/jest-dom", "@testing-library/jest-dom/vitest", "reflect-metadata"] }
+      {
+        "allow": [
+          "**/*.css",
+          "**/*.scss",
+          "**/*.less",
+          "@testing-library/jest-dom",
+          "@testing-library/jest-dom/vitest",
+          "reflect-metadata"
+        ]
+      }
     ],
     // React 17+ 新 JSX 转换无需 React 在作用域内（与 ESLint react 插件现代配置一致）
     "react/react-in-jsx-scope": "off",
     // NestJS 模块等空类由装饰器赋予语义
-    "typescript/no-extraneous-class": ["error", { "allowWithDecorator": true }]
+    "typescript/no-extraneous-class": ["error", { "allowWithDecorator": true }],
+    // echart dev 调试钩子（window.__charts 供控制台检查图表动画）
+    "eslint/no-underscore-dangle": ["error", { "allow": ["__charts"] }]
   },
   "ignorePatterns": [
     "**/dist",

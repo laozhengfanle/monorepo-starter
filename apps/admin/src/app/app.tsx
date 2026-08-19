@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ApolloProvider } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
 import { Suspense, useEffect } from 'react';
 import { useNavigate, Route, Routes } from 'react-router-dom';
 import { Button, Result, Spin } from 'antd';

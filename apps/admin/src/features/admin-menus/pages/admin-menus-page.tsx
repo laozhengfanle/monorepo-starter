@@ -40,7 +40,7 @@ import {
 import type {
   CreateMenuInput,
   UpdateMenuInput,
-} from '../../../generated/graphql';
+} from '../../../generated/graphql-types';
 
 const TYPE_LABELS: Record<string, string> = {
   directory: '目录',

@@ -55,11 +55,9 @@ export function EChart({
     // dev 调试：暴露实例便于检查动画配置（生产无此逻辑）
     if (import.meta.env.DEV) {
       const debugWindow = window as unknown as Record<string, unknown>;
-      // eslint-disable-next-line no-underscore-dangle -- dev 调试钩子（window.__charts 供控制台检查动画）
       const debugCharts = debugWindow.__charts as unknown[] | undefined;
       const charts = debugCharts ?? [];
       if (!debugCharts) {
-        // eslint-disable-next-line no-underscore-dangle -- dev 调试钩子
         debugWindow.__charts = charts;
       }
       charts.push(chart);
